@@ -1,0 +1,156 @@
+import type { Playlist, Track } from "@/types/domain";
+
+export const MOCK_TRACKS: Track[] = [
+  {
+    id: "t-001",
+    title: "Midnight Protocol",
+    artist: { id: "a-1", name: "VKTRS" },
+    duration: "3:42",
+    source: "youtube",
+    bitrate: "320k",
+    liked: true,
+  },
+  {
+    id: "t-002",
+    title: "Substratum",
+    artist: { id: "a-2", name: "Null Division" },
+    duration: "4:18",
+    source: "deezer",
+    bitrate: "FLAC",
+    lyrics: [
+      "Beneath the signal, wires hum",
+      "A frequency that makes you numb",
+      "The substratum calls your name",
+      "Nothing here will be the same",
+      "",
+      "Layers fold and layers break",
+      "Every breath a double take",
+      "Digital veins and analog hearts",
+      "We dissolve before it starts",
+      "",
+      "Echo, echo, through the void",
+      "Every silence is employed",
+      "The substratum holds us still",
+      "Beyond the edge, beyond the will",
+    ],
+  },
+  {
+    id: "t-003",
+    title: "Chrome Decay",
+    artist: { id: "a-3", name: "Aria Lune" },
+    duration: "2:56",
+    source: "soundcloud",
+    bitrate: "128k",
+  },
+  {
+    id: "t-004",
+    title: "Parallex Shift",
+    artist: { id: "a-4", name: "Kyra Lane" },
+    duration: "5:11",
+    source: "youtube",
+    bitrate: "320k",
+    liked: true,
+  },
+  {
+    id: "t-005",
+    title: "Black Ice Terminal",
+    artist: { id: "a-5", name: "Sound Atlas" },
+    duration: "3:07",
+    source: "deezer",
+    bitrate: "FLAC",
+  },
+  {
+    id: "t-006",
+    title: "Void Signal",
+    artist: { id: "a-6", name: "VKTRS" },
+    duration: "4:33",
+    source: "spotify",
+    bitrate: "320k",
+  },
+  {
+    id: "t-007",
+    title: "Drift Core",
+    artist: { id: "a-7", name: "Nova Gray" },
+    duration: "3:21",
+    source: "youtube",
+    bitrate: "256k",
+    liked: true,
+  },
+  {
+    id: "t-008",
+    title: "Static Memory",
+    artist: { id: "a-8", name: "Lowkey Echo" },
+    duration: "2:48",
+    source: "deezer",
+    bitrate: "FLAC",
+  },
+  {
+    id: "t-009",
+    title: "Neon Substrate",
+    artist: { id: "a-9", name: "Violet Sun" },
+    duration: "4:02",
+    source: "soundcloud",
+    bitrate: "128k",
+  },
+  {
+    id: "t-010",
+    title: "Afterimage",
+    artist: { id: "a-10", name: "Null Division" },
+    duration: "3:55",
+    source: "spotify",
+    bitrate: "320k",
+  },
+  {
+    id: "t-011",
+    title: "Deep Render",
+    artist: { id: "a-3", name: "Aria Lune" },
+    duration: "5:28",
+    source: "deezer",
+    bitrate: "FLAC",
+    liked: true,
+  },
+  {
+    id: "t-012",
+    title: "Low Orbit",
+    artist: { id: "a-7", name: "Nova Gray" },
+    duration: "3:14",
+    source: "youtube",
+    bitrate: "320k",
+  },
+];
+
+export const MOCK_RECENTLY_PLAYED: Track[] = MOCK_TRACKS.slice(0, 5);
+
+export const MOCK_DAILY_MIX: Track[] = MOCK_TRACKS.slice(5, 12);
+
+export const MOCK_TRENDING: Track[] = [...MOCK_TRACKS].reverse();
+
+export const MOCK_PLAYLISTS: Playlist[] = [
+  {
+    id: "pl-001",
+    name: "Industrial Ambient",
+    description: "Dark textures and machine hum",
+    tracksCount: 24,
+    source: "deezer",
+  },
+  {
+    id: "pl-002",
+    name: "Midnight Protocol",
+    description: "Late night coding sessions",
+    tracksCount: 18,
+    source: "youtube",
+  },
+  {
+    id: "pl-003",
+    name: "Chrome & Static",
+    description: "Post-digital soundscapes",
+    tracksCount: 31,
+    source: "soundcloud",
+  },
+  {
+    id: "pl-004",
+    name: "Void Sessions",
+    tracksCount: 12,
+    source: "spotify",
+  },
+];
