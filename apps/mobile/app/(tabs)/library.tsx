@@ -16,7 +16,7 @@ import type { Track } from '@/types/domain';
 
 export default function LibraryScreen() {
   const { t } = useI18n();
-  const { playLocal, setQueue } = usePlayerStore();
+  const { play, setQueue } = usePlayerStore();
   const revision = useDownloadStore((s) => s.revision);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [playlists, setPlaylists] = useState<PlaylistRow[]>([]);
@@ -43,7 +43,7 @@ export default function LibraryScreen() {
   }, [revision, load]);
 
   const handlePlay = (track: Track) => {
-    playLocal(track);
+    play(track);
     setQueue(tracks);
     router.push('/player' as const);
   };

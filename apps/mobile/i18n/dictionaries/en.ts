@@ -53,6 +53,20 @@ export const en = {
   nowPlayingBar: {
     label: 'Now playing',
   },
+  lyricsFaq: {
+    noLyrics: 'No lyrics yet',
+    why: 'Why?',
+    title: 'About lyrics',
+    body1: 'Lyrics are fetched when you download a track. If you\'re only streaming a preview, lyrics won\'t be loaded.',
+    body2: 'Even after downloading, lyrics may not be available for every track — it depends on whether the song exists in the lyrics database.',
+    dismiss: 'Got it',
+  },
+  previewFaq: {
+    title: 'Why 30 seconds?',
+    body1: 'Deezer only provides 30-second previews for streaming without a premium account. This is a limitation of the Deezer API.',
+    body2: 'You can still download the full track — the download uses a different source and gives you the complete song in your library.',
+    dismiss: 'Got it',
+  },
   sources: {
     youtube: 'YouTube',
     deezer: 'Deezer',

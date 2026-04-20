@@ -9,7 +9,7 @@ import { COLORS } from '@/constants/colors';
 import { usePlayerStore } from '@/store/usePlayerStore';
 
 export function MiniPlayer() {
-  const { currentTrack, isPlaying, isPreview, progress, togglePlayback } =
+  const { currentTrack, isPlaying, progress, togglePlayback } =
     usePlayerStore();
 
   if (!currentTrack) return null;
@@ -96,24 +96,6 @@ export function MiniPlayer() {
               {currentTrack.artist.name}
             </AppText>
             <SourceBadge source={currentTrack.source} />
-            {isPreview ? (
-              <View
-                style={{
-                  paddingHorizontal: 5,
-                  paddingVertical: 1,
-                  borderRadius: 3,
-                  backgroundColor: 'rgba(251, 191, 36, 0.15)',
-                }}
-              >
-                <AppText
-                  variant="caption"
-                  weight="medium"
-                  style={{ color: '#FBBF24', fontSize: 8, letterSpacing: 0.5 }}
-                >
-                  PREVIEW
-                </AppText>
-              </View>
-            ) : null}
           </View>
         </View>
 

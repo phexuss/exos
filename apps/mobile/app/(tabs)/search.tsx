@@ -18,6 +18,7 @@ import type { Track } from '@/types/domain';
 const SOURCE_KEYS: SourceKey[] = ['deezer', 'soundcloud'];
 const DEBOUNCE_MS = 500;
 
+
 export default function SearchScreen() {
   const { t } = useI18n();
   const [query, setQuery] = useState('');
@@ -26,7 +27,7 @@ export default function SearchScreen() {
   );
   const [results, setResults] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
-  const { playPreview, playStream, setQueue } = usePlayerStore();
+  const { play, setQueue } = usePlayerStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchResults = useCallback(async (q: string) => {
@@ -64,11 +65,7 @@ export default function SearchScreen() {
   }, [results, selectedSource]);
 
   const handlePlay = (track: Track) => {
-    if (track.source === 'soundcloud') {
-      playStream(track);
-    } else {
-      playPreview(track);
-    }
+    play(track);
     router.push('/player' as const);
   };
 
@@ -168,28 +165,6 @@ export default function SearchScreen() {
             >
               {t('search.results').toUpperCase()}
             </AppText>
-            {selectedSource !== 'soundcloud' && (
-              <View
-                style={{
-                  paddingHorizontal: 6,
-                  paddingVertical: 2,
-                  borderRadius: 4,
-                  backgroundColor: 'rgba(251, 191, 36, 0.15)',
-                }}
-              >
-                <AppText
-                  variant="caption"
-                  weight="medium"
-                  style={{
-                    color: '#FBBF24',
-                    fontSize: 9,
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  30s PREVIEW
-                </AppText>
-              </View>
-            )}
           </View>
         ) : null}
         {loading ? (

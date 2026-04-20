@@ -23,7 +23,6 @@ export default function PlayerScreen() {
   const {
     currentTrack,
     isPlaying,
-    isPreview,
     progress,
     setProgress,
     togglePlayback,
@@ -36,8 +35,7 @@ export default function PlayerScreen() {
     queue,
     showQueue,
     setShowQueue,
-    playPreview,
-    playLocal,
+    play,
     markTrackDownloaded,
   } = usePlayerStore();
   const startSeeking = audio.startSeeking;
@@ -46,34 +44,15 @@ export default function PlayerScreen() {
   const totalDurationSec =
     currentTrack?.durationSec ||
     (currentTrack ? parseDuration(currentTrack.duration) : 0);
-  const previewDurationSec = 30;
-  const previewLimitRatio =
-    isPreview && totalDurationSec > 0
-      ? Math.min(1, previewDurationSec / totalDurationSec)
-      : 1;
-  const displayProgress = isPreview ? progress * previewLimitRatio : progress;
-  const displayedCurrentTimeSec =
-    displayProgress * (totalDurationSec || previewDurationSec);
+  const displayedCurrentTimeSec = progress * (totalDurationSec || 0);
 
   const handleSeek = (value: number) => {
-    if (isPreview) {
-      const clamped = Math.min(value, previewLimitRatio);
-      const normalized = previewLimitRatio > 0 ? clamped / previewLimitRatio : 0;
-      setProgress(normalized);
-      return;
-    }
     setProgress(value);
   };
 
   const handleLyricSeek = (seconds: number) => {
     if (!totalDurationSec) return;
     const ratio = Math.max(0, Math.min(1, seconds / totalDurationSec));
-    if (isPreview) {
-      const clamped = Math.min(ratio, previewLimitRatio);
-      const normalized = previewLimitRatio > 0 ? clamped / previewLimitRatio : 0;
-      setProgress(normalized);
-      return;
-    }
     setProgress(ratio);
   };
 
@@ -174,8 +153,7 @@ export default function PlayerScreen() {
             <TrackItem
               track={item}
               onPress={(t) => {
-                if (t.filePath) playLocal(t);
-                else playPreview(t);
+                play(t);
                 setShowQueue(false);
               }}
             />
@@ -235,7 +213,7 @@ export default function PlayerScreen() {
               <LyricsView
                 syncedLyrics={currentTrack.syncedLyrics}
                 plainLyrics={currentTrack.plainLyrics}
-                progress={displayProgress}
+                progress={progress}
                 duration={totalDurationSec}
                 onSeekToTime={handleLyricSeek}
               />
@@ -290,24 +268,6 @@ export default function PlayerScreen() {
               }}
             >
               <SourceBadge source={currentTrack.source} />
-              {isPreview ? (
-                <View
-                  style={{
-                    paddingHorizontal: 6,
-                    paddingVertical: 2,
-                    borderRadius: 4,
-                    backgroundColor: 'rgba(251, 191, 36, 0.15)',
-                  }}
-                >
-                  <AppText
-                    variant="caption"
-                    weight="medium"
-                    style={{ color: '#FBBF24', fontSize: 9, letterSpacing: 0.5 }}
-                  >
-                    PREVIEW
-                  </AppText>
-                </View>
-              ) : null}
               <DownloadButton
                 track={currentTrack}
                 size={18}
@@ -331,11 +291,10 @@ export default function PlayerScreen() {
 
         <View style={{ gap: 4 }}>
           <SeekBar
-            progress={displayProgress}
+            progress={progress}
             onSeek={handleSeek}
             onSeekStart={startSeeking}
             onSeekEnd={stopSeeking}
-            boundaryRatio={isPreview ? previewLimitRatio : undefined}
           />
           <View
             style={{
@@ -349,29 +308,12 @@ export default function PlayerScreen() {
             >
               {formatTime(displayedCurrentTimeSec)}
             </AppText>
-            {isPreview ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <AppText
-                  variant="caption"
-                  style={{ color: COLORS.textMuted, fontSize: 10 }}
-                >
-                  {formatTime(previewDurationSec)} PREVIEW
-                </AppText>
-                <AppText
-                  variant="caption"
-                  style={{ color: COLORS.textMuted, fontSize: 10, opacity: 0.7 }}
-                >
-                  / {currentTrack.duration}
-                </AppText>
-              </View>
-            ) : (
-              <AppText
-                variant="caption"
-                style={{ color: COLORS.textMuted, fontSize: 10 }}
-              >
-                {currentTrack.duration}
-              </AppText>
-            )}
+            <AppText
+              variant="caption"
+              style={{ color: COLORS.textMuted, fontSize: 10 }}
+            >
+              {currentTrack.duration}
+            </AppText>
           </View>
         </View>
 

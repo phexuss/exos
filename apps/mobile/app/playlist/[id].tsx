@@ -24,7 +24,7 @@ import type { Track } from '@/types/domain';
 
 export default function PlaylistScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { playLocal, setQueue } = usePlayerStore();
+  const { play, setQueue } = usePlayerStore();
 
   const [playlist, setPlaylist] = useState<PlaylistRow | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -46,7 +46,7 @@ export default function PlaylistScreen() {
   }, [load]);
 
   const handlePlay = (track: Track) => {
-    playLocal(track);
+    play(track);
     setQueue(tracks);
     router.push('/player');
   };

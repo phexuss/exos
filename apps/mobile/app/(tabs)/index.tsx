@@ -74,7 +74,7 @@ function RecentCard({ track, onPress }: { track: Track; onPress: () => void }) {
 
 export default function HomeScreen() {
   const { t } = useI18n();
-  const { playPreview, playLocal, playStream, setQueue } = usePlayerStore();
+  const { play, setQueue } = usePlayerStore();
   const [recentTracks, setRecentTracks] = useState<Track[]>([]);
 
   const loadRecent = useCallback(async () => {
@@ -92,15 +92,7 @@ export default function HomeScreen() {
 
   const handlePlay = (track: Track) => {
     setQueue(recentTracks);
-    if (track.filePath) {
-      playLocal(track);
-    } else if (track.source === 'soundcloud') {
-      playStream(track);
-    } else if (track.previewUrl) {
-      playPreview(track);
-    } else {
-      return;
-    }
+    play(track);
     router.push('/player' as const);
   };
 

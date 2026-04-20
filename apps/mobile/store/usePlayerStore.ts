@@ -11,16 +11,13 @@ export type RepeatMode = 'off' | 'all' | 'one';
 type PlayerState = {
   currentTrack: Track | null;
   isPlaying: boolean;
-  isPreview: boolean;
   progress: number;
   queue: Track[];
   shuffle: boolean;
   repeat: RepeatMode;
   showQueue: boolean;
 
-  playPreview: (track: Track) => void;
-  playLocal: (track: Track) => void;
-  playStream: (track: Track) => void;
+  play: (track: Track) => void;
   pause: () => void;
   resume: () => void;
   togglePlayback: () => void;
@@ -34,19 +31,28 @@ type PlayerState = {
   setShowQueue: (show: boolean) => void;
 };
 
-function startPlayback(track: Track, isPreview: boolean) {
+/**
+ * Smart playback — local file or resolve stream via backend.
+ */
+function smartPlay(track: Track, set: Function): boolean {
+  if (__DEV__) console.log('[SmartPlay]', track.id, track.source, 'filePath:', !!track.filePath);
+  addRecentlyPlayed(track).catch(() => {});
+
   if (track.filePath) {
     audio.playLocalFile(track.filePath);
-  } else if (isPreview && track.previewUrl) {
-    audio.playUrl(track.previewUrl);
+    return true;
   }
-  addRecentlyPlayed(track).catch(() => {});
+
+  resolveAndPlayStream(track, set);
+  return true;
 }
 
 async function resolveAndPlayStream(track: Track, set: Function) {
   try {
-    // For SC tracks, isrc holds the webpage_url
-    const query = track.isrc ?? `${track.artist.name} ${track.title}`;
+    const query = track.source === 'soundcloud'
+      ? (track.isrc ?? `${track.artist.name} ${track.title}`)
+      : `${track.artist.name} ${track.title}`;
+    if (__DEV__) console.log('[Stream] Resolving:', query);
     const { url } = await apiPost<{ url: string }>(API_ENDPOINTS.download, {
       query,
       format: 'mp3',
@@ -61,29 +67,15 @@ async function resolveAndPlayStream(track: Track, set: Function) {
 export const usePlayerStore = create<PlayerState>((set, get) => ({
   currentTrack: null,
   isPlaying: false,
-  isPreview: false,
   progress: 0,
   queue: [],
   shuffle: false,
   repeat: 'off',
   showQueue: false,
 
-  playPreview: (track) => {
-    if (!track.previewUrl) return;
-    set({ currentTrack: track, isPlaying: true, isPreview: true, progress: 0 });
-    startPlayback(track, true);
-  },
-
-  playLocal: (track) => {
-    if (!track.filePath) return;
-    set({ currentTrack: track, isPlaying: true, isPreview: false, progress: 0 });
-    startPlayback(track, false);
-  },
-
-  playStream: (track) => {
-    set({ currentTrack: track, isPlaying: true, isPreview: false, progress: 0 });
-    addRecentlyPlayed(track).catch(() => {});
-    resolveAndPlayStream(track, set);
+  play: (track) => {
+    smartPlay(track, set);
+    set({ currentTrack: track, isPlaying: true, progress: 0 });
   },
 
   pause: () => {
@@ -113,7 +105,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   skipNext: () => {
-    const { queue, currentTrack, shuffle, isPreview } = get();
+    const { queue, currentTrack, shuffle } = get();
     if (!currentTrack || queue.length === 0) return;
     let next: Track | undefined;
     if (shuffle) {
@@ -123,28 +115,24 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       next = queue[(idx + 1) % queue.length];
     }
     if (next) {
-      set({ currentTrack: next, progress: 0, isPlaying: true });
-      if (next.source === 'soundcloud' && !next.filePath) {
-        addRecentlyPlayed(next).catch(() => {});
-        resolveAndPlayStream(next, set);
+      if (smartPlay(next, set)) {
+        set({ currentTrack: next, progress: 0, isPlaying: true });
       } else {
-        startPlayback(next, isPreview);
+        set({ isPlaying: false });
       }
     }
   },
 
   skipPrevious: () => {
-    const { queue, currentTrack, isPreview } = get();
+    const { queue, currentTrack } = get();
     if (!currentTrack || queue.length === 0) return;
     const idx = queue.findIndex((t) => t.id === currentTrack.id);
     const prev = queue[(idx - 1 + queue.length) % queue.length];
     if (prev) {
-      set({ currentTrack: prev, progress: 0, isPlaying: true });
-      if (prev.source === 'soundcloud' && !prev.filePath) {
-        addRecentlyPlayed(prev).catch(() => {});
-        resolveAndPlayStream(prev, set);
+      if (smartPlay(prev, set)) {
+        set({ currentTrack: prev, progress: 0, isPlaying: true });
       } else {
-        startPlayback(prev, isPreview);
+        set({ isPlaying: false });
       }
     }
   },
