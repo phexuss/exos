@@ -1,12 +1,12 @@
-import type { TextProps, TextStyle } from "react-native";
-import { Text } from "react-native";
+import type { TextProps, TextStyle } from 'react-native';
+import { Text } from 'react-native';
 
-import { COLORS } from "@/constants/colors";
+import { COLORS } from '@/constants/colors';
 import {
   FONT_FAMILY,
   TEXT_VARIANTS,
   type TextVariant,
-} from "@/constants/typography";
+} from '@/constants/typography';
 
 type Weight = keyof typeof FONT_FAMILY;
 
@@ -17,8 +17,8 @@ type AppTextProps = TextProps & {
 };
 
 export function AppText({
-  variant = "body",
-  weight = "regular",
+  variant = 'body',
+  weight = 'regular',
   style,
   children,
   ...props

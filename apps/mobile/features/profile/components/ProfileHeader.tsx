@@ -1,10 +1,10 @@
-import { Image, View } from "react-native";
+import { Image, View } from 'react-native';
 
-import { AppText } from "@/components/ui/AppText";
-import { COLORS } from "@/constants/colors";
-import { SPACING } from "@/constants/spacing";
-import { useI18n } from "@/hooks/useI18n";
-import type { UserProfile } from "@/types/domain";
+import { AppText } from '@/components/ui/AppText';
+import { COLORS } from '@/constants/colors';
+import { SPACING } from '@/constants/spacing';
+import { useI18n } from '@/hooks/useI18n';
+import type { UserProfile } from '@/types/domain';
 
 type ProfileHeaderProps = {
   profile: UserProfile;
@@ -16,8 +16,8 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
   return (
     <View
       style={{
-        flexDirection: "row",
-        alignItems: "center",
+        flexDirection: 'row',
+        alignItems: 'center',
         gap: SPACING.lg,
         padding: SPACING.lg,
         borderRadius: 20,
@@ -38,8 +38,8 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
             height: 72,
             borderRadius: 36,
             backgroundColor: COLORS.surfaceMuted,
-            alignItems: "center",
-            justifyContent: "center",
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <AppText variant="title" weight="bold">
@@ -54,12 +54,12 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
         <AppText variant="caption" style={{ color: COLORS.textSecondary }}>
           @{profile.username}
         </AppText>
-        <View style={{ flexDirection: "row", gap: SPACING.lg }}>
+        <View style={{ flexDirection: 'row', gap: SPACING.lg }}>
           <AppText variant="caption" style={{ color: COLORS.textSecondary }}>
-            {profile.followers} {t("profile.followers")}
+            {profile.followers} {t('profile.followers')}
           </AppText>
           <AppText variant="caption" style={{ color: COLORS.textSecondary }}>
-            {profile.following} {t("profile.following")}
+            {profile.following} {t('profile.following')}
           </AppText>
         </View>
       </View>

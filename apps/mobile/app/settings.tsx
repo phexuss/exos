@@ -1,10 +1,10 @@
-import { Pressable, View } from "react-native";
+import { Pressable, View } from 'react-native';
 
-import { AppIcon } from "@/components/ui/AppIcon";
-import { AppText } from "@/components/ui/AppText";
-import { ScreenContainer } from "@/components/ui/ScreenContainer";
-import { COLORS } from "@/constants/colors";
-import { useI18n } from "@/hooks/useI18n";
+import { AppIcon } from '@/components/ui/AppIcon';
+import { AppText } from '@/components/ui/AppText';
+import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { COLORS } from '@/constants/colors';
+import { useI18n } from '@/hooks/useI18n';
 
 export default function SettingsScreen() {
   const { locale, setLocale, t } = useI18n();
@@ -12,14 +12,14 @@ export default function SettingsScreen() {
   return (
     <ScreenContainer>
       <AppText variant="display" weight="bold">
-        {t("settings.title")}
+        {t('settings.title')}
       </AppText>
 
       <View style={{ gap: 14 }}>
         <View
           style={{
-            flexDirection: "row",
-            alignItems: "center",
+            flexDirection: 'row',
+            alignItems: 'center',
             gap: 8,
           }}
         >
@@ -27,9 +27,13 @@ export default function SettingsScreen() {
           <AppText
             variant="label"
             weight="medium"
-            style={{ color: COLORS.textSecondary, letterSpacing: 1, fontSize: 11 }}
+            style={{
+              color: COLORS.textSecondary,
+              letterSpacing: 1,
+              fontSize: 11,
+            }}
           >
-            {t("settings.languageSection").toUpperCase()}
+            {t('settings.languageSection').toUpperCase()}
           </AppText>
         </View>
 
@@ -40,39 +44,39 @@ export default function SettingsScreen() {
           }}
         >
           <Pressable
-            onPress={() => setLocale("en")}
+            onPress={() => setLocale('en')}
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
               paddingVertical: 14,
               borderBottomWidth: 0.5,
               borderBottomColor: COLORS.divider,
             }}
           >
             <AppText variant="label" weight="medium">
-              {t("common.english")}
+              {t('common.english')}
             </AppText>
-            {locale === "en" ? (
+            {locale === 'en' ? (
               <AppIcon name="check" size={16} color={COLORS.accent} />
             ) : null}
           </Pressable>
 
           <Pressable
-            onPress={() => setLocale("ru")}
+            onPress={() => setLocale('ru')}
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
               paddingVertical: 14,
               borderBottomWidth: 0.5,
               borderBottomColor: COLORS.divider,
             }}
           >
             <AppText variant="label" weight="medium">
-              {t("common.russian")}
+              {t('common.russian')}
             </AppText>
-            {locale === "ru" ? (
+            {locale === 'ru' ? (
               <AppIcon name="check" size={16} color={COLORS.accent} />
             ) : null}
           </Pressable>

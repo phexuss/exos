@@ -1,50 +1,109 @@
-# Welcome to your Expo app 👋
+# EXOS Mobile — Integration Map
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Где что менять при подключении бэкенда.
 
-## Get started
+---
 
-1. Install dependencies
+## Mock Data → API
 
-   ```bash
-   npm install
-   ```
+Все моки в `mocks/data.ts`. Ниже — точные файлы и строки, где они используются.
 
-2. Start the app
+### Home Screen — `app/(tabs)/index.tsx`
 
-   ```bash
-   npx expo start
-   ```
+| Мок | Строка импорта | Описание |
+|-----|---------------|----------|
+| `MOCK_RECENTLY_PLAYED` | `import { MOCK_DAILY_MIX, MOCK_RECENTLY_PLAYED } from "@/mocks/data"` (строка 12) | Горизонтальные карточки "Recently Played" |
+| `MOCK_DAILY_MIX` | там же | Вертикальный список треков "Daily Mix" |
 
-In the output, you'll find options to open the app in a
+Оба массива — `Track[]`. Заменить на fetch.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Search Screen — `app/(tabs)/search.tsx`
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+| Мок | Строка импорта | Описание |
+|-----|---------------|----------|
+| `MOCK_TRENDING` | `import { MOCK_TRENDING } from "@/mocks/data"` (строка 14) | Все результаты поиска, фильтрация идёт на клиенте (строка 28–40) |
 
-## Get a fresh project
+Заменить `MOCK_TRENDING` на серверный поиск. Фильтрация по `query` и `selectedSource` уже на клиенте — можно перенести на API.
 
-When you're ready, run:
+### Library Screen — `app/(tabs)/library.tsx`
 
-```bash
-npm run reset-project
+| Мок | Строка импорта | Описание |
+|-----|---------------|----------|
+| `MOCK_PLAYLISTS` | `import { MOCK_PLAYLISTS, MOCK_TRACKS } from "@/mocks/data"` (строка 11) | Список плейлистов |
+| `MOCK_TRACKS` (liked) | там же, `const SAVED_TRACKS = MOCK_TRACKS.filter((t) => t.liked)` (строка 15) | Сохранённые треки |
+
+---
+
+## Playback — Mock Timer → Audio Engine
+
+### Что удалить
+- `hooks/useMockPlayback.ts` — фейковый таймер, тикает `progress` +1/duration каждую секунду
+
+### Где подключён
+- `app/player.tsx` строка 15: `import { useMockPlayback } from "@/hooks/useMockPlayback"`
+- `app/player.tsx` строка 38: `const { startSeeking, stopSeeking } = useMockPlayback()`
+
+### Что должен делать аудио-движок
+- Писать в `usePlayerStore.getState().setProgress(pos / duration)` при обновлении позиции
+- Вызывать `skipNext()` при окончании трека
+- Читать `repeat` (`"off" | "all" | "one"`) для логики повтора
+
+### SeekBar (`components/SeekBar.tsx`)
+- `onSeek(ratio)` — 0..1, маппить в `audioEngine.seekTo(ratio * duration)`
+- `onSeekStart()` — остановить пуш позиции из движка
+- `onSeekEnd()` — возобновить
+
+---
+
+## Player Store — `store/usePlayerStore.ts`
+
+Единый стейт плеера, к нему подключается UI и аудио-движок:
+
+```
+setProgress(0..1)      — обновить позицию
+play(track)            — новый трек, progress=0, isPlaying=true
+pause() / resume()     — пауза/возобновление
+togglePlayback()       — toggle
+skipNext()             — следующий трек (учитывает shuffle)
+skipPrevious()         — предыдущий
+setQueue(tracks)       — установить очередь
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+## Domain Types — `types/domain.ts`
 
-To learn more about developing your project with Expo, look at the following resources:
+```typescript
+Track = {
+  id, title, artist: { id, name },
+  duration: "m:ss",     // parseDuration() в player.tsx конвертит в секунды
+  coverUrl?: string,    // пока placeholder, подставить в player + MiniPlayer
+  source: "youtube" | "deezer" | "soundcloud" | "spotify",
+  lyrics?: string[],    // массив строк, "" = разрыв строфы
+}
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- `coverUrl` — заменить `<AppIcon name="music">` placeholder в `player.tsx` (строка 235) и `MiniPlayer.tsx`
+- `lyrics` — сейчас хардкод в `mocks/data.ts` (трек "Substratum"), заменить на API fetch
+- Новые источники → `constants/sources.ts`
 
-## Join the community
+---
 
-Join our community of developers creating universal apps.
+## API Layer — `services/`
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+| Файл | Что |
+|------|-----|
+| `api/client.ts` | `mockRequest()` — заменить на реальный HTTP клиент |
+| `api/endpoints.ts` | Карта эндпоинтов: `/auth`, `/search`, `/tracks`, `/playlists`, `/profile` |
+| `api/search.ts` | `mockSearch()` — заменить на реальный запрос |
+| `adapters/search.adapter.ts` | `mapApiTrackToTrack()` — маппинг DTO→Track, пока identity |
+
+---
+
+## Чеклист
+
+- [ ] `mocks/data.ts` → заменить все `MOCK_*` на API fetchers в 3 экранах
+- [ ] `services/api/client.ts` → реальный HTTP клиент вместо `mockRequest()`
+- [ ] `hooks/useMockPlayback.ts` → удалить, подключить аудио-движок к store
+- [ ] `coverUrl` → подставить `<Image>` в player и MiniPlayer
+- [ ] `lyrics` → fetch с API вместо хардкода в моках

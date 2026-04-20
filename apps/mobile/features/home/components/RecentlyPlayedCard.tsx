@@ -1,11 +1,11 @@
-import { Image, View } from "react-native";
+import { Image, View } from 'react-native';
 
-import { AppIcon } from "@/components/ui/AppIcon";
-import { AppText } from "@/components/ui/AppText";
-import { SourcePill } from "@/components/ui/SourcePill";
-import { COLORS } from "@/constants/colors";
-import { SPACING } from "@/constants/spacing";
-import type { Track } from "@/types/domain";
+import { AppIcon } from '@/components/ui/AppIcon';
+import { AppText } from '@/components/ui/AppText';
+import { SourcePill } from '@/components/ui/SourcePill';
+import { COLORS } from '@/constants/colors';
+import { SPACING } from '@/constants/spacing';
+import type { Track } from '@/types/domain';
 
 type RecentlyPlayedCardProps = {
   track: Track;
@@ -15,8 +15,8 @@ export function RecentlyPlayedCard({ track }: RecentlyPlayedCardProps) {
   return (
     <View
       style={{
-        flexDirection: "row",
-        alignItems: "center",
+        flexDirection: 'row',
+        alignItems: 'center',
         gap: SPACING.md,
         padding: SPACING.md,
         borderRadius: 16,
@@ -37,8 +37,8 @@ export function RecentlyPlayedCard({ track }: RecentlyPlayedCardProps) {
             height: 56,
             borderRadius: 12,
             backgroundColor: COLORS.surfaceMuted,
-            alignItems: "center",
-            justifyContent: "center",
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <AppIcon name="play" size={24} color={COLORS.textSecondary} />

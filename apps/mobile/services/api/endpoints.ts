@@ -1,7 +1,9 @@
 export const API_ENDPOINTS = {
-  auth: "/auth",
-  search: "/search",
-  tracks: "/tracks",
-  playlists: "/playlists",
-  profile: "/profile",
+  search: '/search',
+  searchSoundCloud: '/search/soundcloud',
+  tracks: '/tracks',
+  artists: '/artists',
+  albums: '/albums',
+  download: '/download',
+  lyrics: '/lyrics',
 } as const;

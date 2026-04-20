@@ -1,12 +1,12 @@
-import { router } from "expo-router";
-import { Pressable, View } from "react-native";
+import { router } from 'expo-router';
+import { Pressable, View } from 'react-native';
 
-import { AppIcon } from "@/components/ui/AppIcon";
-import { AppText } from "@/components/ui/AppText";
-import { COLORS } from "@/constants/colors";
-import { SPACING } from "@/constants/spacing";
-import { useI18n } from "@/hooks/useI18n";
-import type { Track } from "@/types/domain";
+import { AppIcon } from '@/components/ui/AppIcon';
+import { AppText } from '@/components/ui/AppText';
+import { COLORS } from '@/constants/colors';
+import { SPACING } from '@/constants/spacing';
+import { useI18n } from '@/hooks/useI18n';
+import type { Track } from '@/types/domain';
 
 type NowPlayingBarProps = {
   track: Track;
@@ -18,11 +18,11 @@ export function NowPlayingBar({ track, isPlaying }: NowPlayingBarProps) {
 
   return (
     <Pressable
-      onPress={() => router.push("/player" as const)}
+      onPress={() => router.push('/player' as const)}
       style={{
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         gap: SPACING.md,
         padding: SPACING.md,
         borderRadius: 18,
@@ -36,11 +36,11 @@ export function NowPlayingBar({ track, isPlaying }: NowPlayingBarProps) {
           {track.title}
         </AppText>
         <AppText variant="caption" style={{ color: COLORS.textSecondary }}>
-          {t("nowPlayingBar.label")} · {track.artist.name}
+          {t('nowPlayingBar.label')} · {track.artist.name}
         </AppText>
       </View>
       <AppIcon
-        name={isPlaying ? "pause" : "play"}
+        name={isPlaying ? 'pause' : 'play'}
         size={30}
         color={COLORS.textPrimary}
       />

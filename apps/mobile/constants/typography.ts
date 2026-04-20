@@ -1,14 +1,14 @@
-import type { TextStyle } from "react-native";
+import type { TextStyle } from 'react-native';
 
 export const FONT_FAMILY = {
-  light: "Satoshi-Light",
-  regular: "Satoshi-Regular",
-  medium: "Satoshi-Medium",
-  bold: "Satoshi-Bold",
-  black: "Satoshi-Black",
+  light: 'Satoshi-Light',
+  regular: 'Satoshi-Regular',
+  medium: 'Satoshi-Medium',
+  bold: 'Satoshi-Bold',
+  black: 'Satoshi-Black',
 } as const;
 
-export type TextVariant = "display" | "title" | "body" | "caption" | "label";
+export type TextVariant = 'display' | 'title' | 'body' | 'caption' | 'label';
 
 export const TEXT_VARIANTS: Record<TextVariant, TextStyle> = {
   display: {

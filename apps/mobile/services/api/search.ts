@@ -1,17 +1,22 @@
-import { MOCK_TRENDING } from "@/mocks/data";
-import { mockRequest } from "@/services/api/client";
-import type { ApiResponse } from "@/types/api";
-import type { Track } from "@/types/domain";
+import { mapDeezerTrackToTrack } from '@/services/adapters/search.adapter';
+import { mapSoundCloudTrackToTrack } from '@/services/adapters/soundcloud.adapter';
+import { apiGet } from '@/services/api/client';
+import { API_ENDPOINTS } from '@/services/api/endpoints';
+import type { DeezerSearchResponse } from '@/types/deezer';
+import type { Track } from '@/types/domain';
+import type { SoundCloudSearchResponse } from '@/types/soundcloud';
 
-export async function mockSearch(query: string): Promise<ApiResponse<Track[]>> {
-  const normalized = query.trim().toLowerCase();
-  const results = normalized
-    ? MOCK_TRENDING.filter((track) =>
-        `${track.title} ${track.artist.name}`
-          .toLowerCase()
-          .includes(normalized),
-      )
-    : MOCK_TRENDING;
+export async function searchTracks(query: string): Promise<Track[]> {
+  const data = await apiGet<DeezerSearchResponse>(API_ENDPOINTS.search, {
+    q: query,
+  });
+  return data.data.map(mapDeezerTrackToTrack);
+}
 
-  return mockRequest(results);
+export async function searchSoundCloud(query: string): Promise<Track[]> {
+  const data = await apiGet<SoundCloudSearchResponse>(
+    API_ENDPOINTS.searchSoundCloud,
+    { q: query },
+  );
+  return data.data.map(mapSoundCloudTrackToTrack);
 }

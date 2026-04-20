@@ -1,19 +1,21 @@
-import { router } from "expo-router";
-import { useState } from "react";
-import { FlatList, Pressable, ScrollView, View } from "react-native";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { FlatList, Image, Pressable, View } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedPressable } from "@/components/AnimatedPressable";
-import { SeekBar } from "@/components/SeekBar";
-import { SourceBadge } from "@/components/SourceBadge";
-import { TrackItem } from "@/components/TrackItem";
-import { AppIcon } from "@/components/ui/AppIcon";
-import { AppText } from "@/components/ui/AppText";
-import { COLORS } from "@/constants/colors";
-import { useI18n } from "@/hooks/useI18n";
-import { useMockPlayback } from "@/hooks/useMockPlayback";
-import { usePlayerStore } from "@/store/usePlayerStore";
+import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { DownloadButton } from '@/components/DownloadButton';
+import { LyricsView } from '@/components/LyricsView';
+import { SeekBar } from '@/components/SeekBar';
+import { SourceBadge } from '@/components/SourceBadge';
+import { TrackItem } from '@/components/TrackItem';
+import { AppIcon } from '@/components/ui/AppIcon';
+import { AppText } from '@/components/ui/AppText';
+import { COLORS } from '@/constants/colors';
+import { useI18n } from '@/hooks/useI18n';
+import * as audio from '@/services/audio/audioService';
+import { usePlayerStore } from '@/store/usePlayerStore';
 
 export default function PlayerScreen() {
   const { t } = useI18n();
@@ -21,6 +23,7 @@ export default function PlayerScreen() {
   const {
     currentTrack,
     isPlaying,
+    isPreview,
     progress,
     setProgress,
     togglePlayback,
@@ -33,15 +36,52 @@ export default function PlayerScreen() {
     queue,
     showQueue,
     setShowQueue,
-    play,
+    playPreview,
+    playLocal,
+    markTrackDownloaded,
   } = usePlayerStore();
-  const { startSeeking, stopSeeking } = useMockPlayback();
+  const startSeeking = audio.startSeeking;
+  const stopSeeking = audio.stopSeeking;
+
+  const totalDurationSec =
+    currentTrack?.durationSec ||
+    (currentTrack ? parseDuration(currentTrack.duration) : 0);
+  const previewDurationSec = 30;
+  const previewLimitRatio =
+    isPreview && totalDurationSec > 0
+      ? Math.min(1, previewDurationSec / totalDurationSec)
+      : 1;
+  const displayProgress = isPreview ? progress * previewLimitRatio : progress;
+  const displayedCurrentTimeSec =
+    displayProgress * (totalDurationSec || previewDurationSec);
+
+  const handleSeek = (value: number) => {
+    if (isPreview) {
+      const clamped = Math.min(value, previewLimitRatio);
+      const normalized = previewLimitRatio > 0 ? clamped / previewLimitRatio : 0;
+      setProgress(normalized);
+      return;
+    }
+    setProgress(value);
+  };
+
+  const handleLyricSeek = (seconds: number) => {
+    if (!totalDurationSec) return;
+    const ratio = Math.max(0, Math.min(1, seconds / totalDurationSec));
+    if (isPreview) {
+      const clamped = Math.min(ratio, previewLimitRatio);
+      const normalized = previewLimitRatio > 0 ? clamped / previewLimitRatio : 0;
+      setProgress(normalized);
+      return;
+    }
+    setProgress(ratio);
+  };
 
   if (!currentTrack) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
         <View
-          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
         >
           <AppText variant="body" style={{ color: COLORS.textMuted }}>
             No track selected
@@ -62,9 +102,9 @@ export default function PlayerScreen() {
       >
         <View
           style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             paddingVertical: 12,
           }}
         >
@@ -134,10 +174,10 @@ export default function PlayerScreen() {
             <TrackItem
               track={item}
               onPress={(t) => {
-                play(t);
+                if (t.filePath) playLocal(t);
+                else playPreview(t);
                 setShowQueue(false);
               }}
-              showBitrate
             />
           )}
         />
@@ -155,9 +195,9 @@ export default function PlayerScreen() {
     >
       <View
         style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           paddingVertical: 12,
         }}
       >
@@ -169,68 +209,53 @@ export default function PlayerScreen() {
           weight="medium"
           style={{ color: COLORS.textMuted, letterSpacing: 1, fontSize: 10 }}
         >
-          {t("player.title").toUpperCase()}
+          {t('player.title').toUpperCase()}
         </AppText>
         <Pressable onPress={() => setShowQueue(true)} hitSlop={12}>
           <AppIcon name="queue" size={22} color={COLORS.textMuted} />
         </Pressable>
       </View>
 
-      <View style={{ flex: 1, justifyContent: "center", gap: 24 }}>
+      <View style={{ flex: 1, justifyContent: 'center', gap: 24 }}>
         <View
           style={{
             aspectRatio: 1,
-            width: "100%",
+            width: '100%',
           }}
         >
           <Animated.View
-            key={showLyrics && currentTrack.lyrics ? "lyrics" : "art"}
+            key={showLyrics ? 'lyrics' : 'art'}
             entering={FadeIn.duration(350)}
             exiting={FadeOut.duration(250)}
             style={{
               flex: 1,
             }}
           >
-            {showLyrics && currentTrack.lyrics ? (
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                fadingEdgeLength={40}
-                contentContainerStyle={{
-                  paddingVertical: 12,
-                  paddingHorizontal: 4,
-                  gap: 10,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexGrow: 1,
+            {showLyrics ? (
+              <LyricsView
+                syncedLyrics={currentTrack.syncedLyrics}
+                plainLyrics={currentTrack.plainLyrics}
+                progress={displayProgress}
+                duration={totalDurationSec}
+                onSeekToTime={handleLyricSeek}
+              />
+            ) : currentTrack.coverUrl ? (
+              <Image
+                source={{ uri: currentTrack.coverUrl }}
+                style={{
+                  flex: 1,
+                  borderRadius: 16,
                 }}
-              >
-                {currentTrack.lyrics.map((line, i) => (
-                  <AppText
-                    key={i}
-                    variant="title"
-                    weight={line ? "bold" : "regular"}
-                    style={{
-                      color: line
-                        ? COLORS.textPrimary
-                        : "transparent",
-                      fontSize: 20,
-                      lineHeight: 32,
-                      textAlign: "center",
-                      opacity: line ? 0.85 : 0,
-                    }}
-                  >
-                    {line || " "}
-                  </AppText>
-                ))}
-              </ScrollView>
+                resizeMode="cover"
+              />
             ) : (
               <View
                 style={{
                   flex: 1,
                   borderRadius: 16,
                   backgroundColor: COLORS.surfaceMuted,
-                  alignItems: "center",
-                  justifyContent: "center",
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   borderWidth: 0.5,
                   borderColor: COLORS.border,
                 }}
@@ -244,46 +269,60 @@ export default function PlayerScreen() {
         <View style={{ gap: 6 }}>
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
             }}
           >
             <View style={{ flex: 1, gap: 4 }}>
               <AppText variant="title" weight="bold">
                 {currentTrack.title}
               </AppText>
-              <AppText
-                variant="body"
-                style={{ color: COLORS.textSecondary }}
-              >
+              <AppText variant="body" style={{ color: COLORS.textSecondary }}>
                 {currentTrack.artist.name}
               </AppText>
             </View>
             <View
               style={{
-                flexDirection: "row",
-                alignItems: "center",
+                flexDirection: 'row',
+                alignItems: 'center',
                 gap: 12,
               }}
             >
               <SourceBadge source={currentTrack.source} />
+              {isPreview ? (
+                <View
+                  style={{
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 4,
+                    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+                  }}
+                >
+                  <AppText
+                    variant="caption"
+                    weight="medium"
+                    style={{ color: '#FBBF24', fontSize: 9, letterSpacing: 0.5 }}
+                  >
+                    PREVIEW
+                  </AppText>
+                </View>
+              ) : null}
+              <DownloadButton
+                track={currentTrack}
+                size={18}
+                onDownloaded={(track, filePath) => {
+                  markTrackDownloaded(track.id, filePath);
+                }}
+              />
               <Pressable
                 hitSlop={10}
-                onPress={() =>
-                  currentTrack.lyrics && setShowLyrics((v) => !v)
-                }
+                onPress={() => setShowLyrics((v) => !v)}
               >
                 <AppIcon
                   name="lyrics"
                   size={20}
-                  color={
-                    showLyrics
-                      ? COLORS.accent
-                      : currentTrack.lyrics
-                        ? COLORS.textSecondary
-                        : COLORS.textMuted
-                  }
+                  color={showLyrics ? COLORS.accent : COLORS.textSecondary}
                 />
               </Pressable>
             </View>
@@ -292,37 +331,55 @@ export default function PlayerScreen() {
 
         <View style={{ gap: 4 }}>
           <SeekBar
-            progress={progress}
-            onSeek={setProgress}
+            progress={displayProgress}
+            onSeek={handleSeek}
             onSeekStart={startSeeking}
             onSeekEnd={stopSeeking}
+            boundaryRatio={isPreview ? previewLimitRatio : undefined}
           />
           <View
             style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
+              flexDirection: 'row',
+              justifyContent: 'space-between',
             }}
           >
             <AppText
               variant="caption"
               style={{ color: COLORS.textMuted, fontSize: 10 }}
             >
-              {formatTime(progress * parseDuration(currentTrack.duration))}
+              {formatTime(displayedCurrentTimeSec)}
             </AppText>
-            <AppText
-              variant="caption"
-              style={{ color: COLORS.textMuted, fontSize: 10 }}
-            >
-              {currentTrack.duration}
-            </AppText>
+            {isPreview ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <AppText
+                  variant="caption"
+                  style={{ color: COLORS.textMuted, fontSize: 10 }}
+                >
+                  {formatTime(previewDurationSec)} PREVIEW
+                </AppText>
+                <AppText
+                  variant="caption"
+                  style={{ color: COLORS.textMuted, fontSize: 10, opacity: 0.7 }}
+                >
+                  / {currentTrack.duration}
+                </AppText>
+              </View>
+            ) : (
+              <AppText
+                variant="caption"
+                style={{ color: COLORS.textMuted, fontSize: 10 }}
+              >
+                {currentTrack.duration}
+              </AppText>
+            )}
           </View>
         </View>
 
         <View
           style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             paddingHorizontal: 4,
           }}
         >
@@ -332,8 +389,8 @@ export default function PlayerScreen() {
             style={{
               width: 40,
               height: 40,
-              alignItems: "center",
-              justifyContent: "center",
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             <AppIcon
@@ -350,8 +407,8 @@ export default function PlayerScreen() {
             style={{
               width: 48,
               height: 48,
-              alignItems: "center",
-              justifyContent: "center",
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             <AppIcon name="previous" size={24} color={COLORS.textPrimary} />
@@ -364,13 +421,13 @@ export default function PlayerScreen() {
               width: 64,
               height: 64,
               borderRadius: 32,
-              alignItems: "center",
-              justifyContent: "center",
+              alignItems: 'center',
+              justifyContent: 'center',
               backgroundColor: COLORS.textPrimary,
             }}
           >
             <AppIcon
-              name={isPlaying ? "pause" : "play"}
+              name={isPlaying ? 'pause' : 'play'}
               size={28}
               color={COLORS.background}
             />
@@ -383,8 +440,8 @@ export default function PlayerScreen() {
             style={{
               width: 48,
               height: 48,
-              alignItems: "center",
-              justifyContent: "center",
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             <AppIcon name="next" size={24} color={COLORS.textPrimary} />
@@ -396,14 +453,14 @@ export default function PlayerScreen() {
             style={{
               width: 40,
               height: 40,
-              alignItems: "center",
-              justifyContent: "center",
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             <AppIcon
-              name={repeat === "one" ? "repeat-one" : "repeat"}
+              name={repeat === 'one' ? 'repeat-one' : 'repeat'}
               size={20}
-              color={repeat !== "off" ? COLORS.accent : COLORS.textMuted}
+              color={repeat !== 'off' ? COLORS.accent : COLORS.textMuted}
             />
           </Pressable>
         </View>
@@ -413,12 +470,12 @@ export default function PlayerScreen() {
 }
 
 function parseDuration(duration: string): number {
-  const [min, sec] = duration.split(":").map(Number);
+  const [min, sec] = duration.split(':').map(Number);
   return (min ?? 0) * 60 + (sec ?? 0);
 }
 
 function formatTime(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = Math.floor(totalSeconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }

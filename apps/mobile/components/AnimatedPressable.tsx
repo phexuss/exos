@@ -1,10 +1,10 @@
-import type { ReactNode } from "react";
-import { Pressable, type PressableProps } from "react-native";
+import type { ReactNode } from 'react';
+import { Pressable, type PressableProps } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-} from "react-native-reanimated";
+} from 'react-native-reanimated';
 
 type AnimatedPressableProps = PressableProps & {
   children: ReactNode;

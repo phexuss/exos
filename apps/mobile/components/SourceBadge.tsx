@@ -1,8 +1,8 @@
-import { View } from "react-native";
+import { View } from 'react-native';
 
-import { AppText } from "@/components/ui/AppText";
-import { COLORS } from "@/constants/colors";
-import { SOURCES, type SourceKey } from "@/constants/sources";
+import { AppText } from '@/components/ui/AppText';
+import { COLORS } from '@/constants/colors';
+import { SOURCES, type SourceKey } from '@/constants/sources';
 
 type SourceBadgeProps = {
   source: SourceKey;

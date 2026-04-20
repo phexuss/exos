@@ -1,9 +1,9 @@
-import type { ReactNode } from "react";
-import { ScrollView, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import type { ReactNode } from 'react';
+import { ScrollView, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { COLORS } from "@/constants/colors";
-import { SPACING } from "@/constants/spacing";
+import { COLORS } from '@/constants/colors';
+import { SPACING } from '@/constants/spacing';
 
 type ScreenContainerProps = {
   children: ReactNode;

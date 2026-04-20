@@ -1,4 +1,4 @@
-import type { SourceKey } from "@/constants/sources";
+import type { SourceKey } from '@/constants/sources';
 
 export type Artist = {
   id: string;
@@ -9,12 +9,19 @@ export type Track = {
   id: string;
   title: string;
   artist: Artist;
+  album?: string;
   duration: string;
+  durationSec: number;
   coverUrl?: string;
+  previewUrl?: string;
+  isrc?: string;
   source: SourceKey;
   bitrate?: string;
   liked?: boolean;
-  lyrics?: string[];
+  syncedLyrics?: string;
+  plainLyrics?: string;
+  filePath?: string;
+  isDownloaded?: boolean;
 };
 
 export type Playlist = {

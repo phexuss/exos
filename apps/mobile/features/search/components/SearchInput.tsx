@@ -1,10 +1,10 @@
-import type { TextInputProps } from "react-native";
-import { TextInput, View } from "react-native";
+import type { TextInputProps } from 'react-native';
+import { TextInput, View } from 'react-native';
 
-import { AppIcon } from "@/components/ui/AppIcon";
-import { COLORS } from "@/constants/colors";
-import { SPACING } from "@/constants/spacing";
-import { FONT_FAMILY } from "@/constants/typography";
+import { AppIcon } from '@/components/ui/AppIcon';
+import { COLORS } from '@/constants/colors';
+import { SPACING } from '@/constants/spacing';
+import { FONT_FAMILY } from '@/constants/typography';
 
 type SearchInputProps = TextInputProps;
 
@@ -12,8 +12,8 @@ export function SearchInput(props: SearchInputProps) {
   return (
     <View
       style={{
-        flexDirection: "row",
-        alignItems: "center",
+        flexDirection: 'row',
+        alignItems: 'center',
         gap: SPACING.sm,
         paddingHorizontal: SPACING.lg,
         paddingVertical: SPACING.sm,

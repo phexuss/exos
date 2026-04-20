@@ -1,9 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef } from 'react';
 
-import { usePlayerStore } from "@/store/usePlayerStore";
+import { usePlayerStore } from '@/store/usePlayerStore';
 
 function parseDuration(duration: string): number {
-  const [min, sec] = duration.split(":").map(Number);
+  const [min, sec] = duration.split(':').map(Number);
   return (min ?? 0) * 60 + (sec ?? 0);
 }
 
@@ -25,7 +25,7 @@ export function useMockPlayback() {
       const next = progress + step;
 
       if (next >= 1) {
-        if (repeat === "one") {
+        if (repeat === 'one') {
           usePlayerStore.setState({ progress: 0 });
         } else {
           skipNext();

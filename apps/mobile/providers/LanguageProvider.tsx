@@ -1,20 +1,20 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { ReactNode } from "react";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { ReactNode } from 'react';
 import {
   createContext,
   useCallback,
   useEffect,
   useMemo,
   useState,
-} from "react";
+} from 'react';
 
 import {
   DEFAULT_LOCALE,
   type Locale,
   STORAGE_KEY,
   SUPPORTED_LOCALES,
-} from "@/constants/i18n";
-import { getTranslation, type TranslationPath } from "@/i18n";
+} from '@/constants/i18n';
+import { getTranslation, type TranslationPath } from '@/i18n';
 
 type LanguageContextValue = {
   locale: Locale;

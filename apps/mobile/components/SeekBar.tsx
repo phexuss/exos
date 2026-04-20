@@ -1,20 +1,26 @@
-import { useCallback, useEffect, useRef } from "react";
-import { View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { useCallback, useEffect, useRef } from 'react';
+import { View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-} from "react-native-reanimated";
+} from 'react-native-reanimated';
 
-import { COLORS } from "@/constants/colors";
+import { COLORS } from '@/constants/colors';
 
 type SeekBarProps = {
   progress: number;
   onSeek: (value: number) => void;
   onSeekStart?: () => void;
   onSeekEnd?: () => void;
+  /**
+   * Optional boundary marker (0..1) drawn on the track,
+   * e.g. 30s preview limit against the full duration.
+   */
+  boundaryRatio?: number;
+  boundaryColor?: string;
 };
 
 const TRACK_HEIGHT = 4;
@@ -26,6 +32,8 @@ export function SeekBar({
   onSeek,
   onSeekStart,
   onSeekEnd,
+  boundaryRatio,
+  boundaryColor,
 }: SeekBarProps) {
   const width = useSharedValue(0);
   const draggingRef = useRef(false);
@@ -58,7 +66,7 @@ export function SeekBar({
   const pan = Gesture.Pan()
     .hitSlop({ top: HIT_SLOP, bottom: HIT_SLOP })
     .onStart((e) => {
-      "worklet";
+      'worklet';
       const w = width.value;
       const x = Math.max(0, Math.min(e.x, w));
       dragX.value = x;
@@ -67,14 +75,14 @@ export function SeekBar({
       if (w > 0) runOnJS(jsSeek)(x / w);
     })
     .onUpdate((e) => {
-      "worklet";
+      'worklet';
       const w = width.value;
       const x = Math.max(0, Math.min(e.x, w));
       dragX.value = x;
       if (w > 0) runOnJS(jsSeek)(x / w);
     })
     .onEnd(() => {
-      "worklet";
+      'worklet';
       thumbScale.value = withTiming(1, { duration: 200 });
       runOnJS(jsSeekEnd)();
     });
@@ -82,7 +90,7 @@ export function SeekBar({
   const tap = Gesture.Tap()
     .hitSlop({ top: HIT_SLOP, bottom: HIT_SLOP })
     .onEnd((e) => {
-      "worklet";
+      'worklet';
       const w = width.value;
       const x = Math.max(0, Math.min(e.x, w));
       dragX.value = x;
@@ -102,12 +110,24 @@ export function SeekBar({
     ],
   }));
 
+  const boundaryStyle = useAnimatedStyle(() => {
+    const r = boundaryRatio ?? -1;
+    const w = width.value;
+    if (r <= 0 || r >= 1 || w <= 0) {
+      return { opacity: 0, transform: [{ translateX: 0 }] };
+    }
+    return {
+      opacity: 1,
+      transform: [{ translateX: r * w - 1 }],
+    };
+  });
+
   return (
     <GestureDetector gesture={gesture}>
       <View
         style={{
           height: THUMB_SIZE + HIT_SLOP * 2,
-          justifyContent: "center",
+          justifyContent: 'center',
         }}
         onLayout={(e) => {
           width.value = e.nativeEvent.layout.width;
@@ -135,9 +155,23 @@ export function SeekBar({
           />
         </View>
         <Animated.View
+          pointerEvents="none"
           style={[
             {
-              position: "absolute",
+              position: 'absolute',
+              left: 0,
+              width: 2,
+              height: TRACK_HEIGHT + 6,
+              borderRadius: 1,
+              backgroundColor: boundaryColor ?? 'rgba(251, 191, 36, 0.9)',
+            },
+            boundaryStyle,
+          ]}
+        />
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
               width: THUMB_SIZE,
               height: THUMB_SIZE,
               borderRadius: THUMB_SIZE / 2,

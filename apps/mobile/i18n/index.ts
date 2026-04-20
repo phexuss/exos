@@ -1,6 +1,6 @@
-import type { Locale } from "@/constants/i18n";
-import { en } from "@/i18n/dictionaries/en";
-import { ru } from "@/i18n/dictionaries/ru";
+import type { Locale } from '@/constants/i18n';
+import { en } from '@/i18n/dictionaries/en';
+import { ru } from '@/i18n/dictionaries/ru';
 
 type TranslationDictionary = {
   [Section in keyof typeof en]: {
@@ -27,7 +27,7 @@ function getNestedValue(
   dictionary: TranslationDictionary,
   key: TranslationPath,
 ): string {
-  const [section, entry] = key.split(".") as [keyof typeof en, string];
+  const [section, entry] = key.split('.') as [keyof typeof en, string];
   const sectionValues = dictionary[section] as
     | Record<string, string>
     | undefined;

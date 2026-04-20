@@ -1,60 +1,88 @@
-import { router } from "expo-router";
-import { useMemo, useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { router } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
 
-import { TrackItem } from "@/components/TrackItem";
-import { AppIcon } from "@/components/ui/AppIcon";
-import { AppText } from "@/components/ui/AppText";
-import { ScreenContainer } from "@/components/ui/ScreenContainer";
-import { SourcePill } from "@/components/ui/SourcePill";
-import { COLORS } from "@/constants/colors";
-import type { SourceKey } from "@/constants/sources";
-import { FONT_FAMILY } from "@/constants/typography";
-import { useI18n } from "@/hooks/useI18n";
-import { MOCK_TRENDING } from "@/mocks/data";
-import { usePlayerStore } from "@/store/usePlayerStore";
-import type { Track } from "@/types/domain";
+import { TrackItem } from '@/components/TrackItem';
+import { AppIcon } from '@/components/ui/AppIcon';
+import { AppText } from '@/components/ui/AppText';
+import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { SourcePill } from '@/components/ui/SourcePill';
+import { COLORS } from '@/constants/colors';
+import type { SourceKey } from '@/constants/sources';
+import { FONT_FAMILY } from '@/constants/typography';
+import { useI18n } from '@/hooks/useI18n';
+import { searchSoundCloud, searchTracks } from '@/services/api/search';
+import { usePlayerStore } from '@/store/usePlayerStore';
+import type { Track } from '@/types/domain';
 
-const SOURCE_KEYS: SourceKey[] = ["youtube", "deezer", "soundcloud", "spotify"];
+const SOURCE_KEYS: SourceKey[] = ['deezer', 'soundcloud'];
+const DEBOUNCE_MS = 500;
 
 export default function SearchScreen() {
   const { t } = useI18n();
-  const [query, setQuery] = useState("");
-  const [selectedSource, setSelectedSource] = useState<SourceKey | "all">(
-    "all",
+  const [query, setQuery] = useState('');
+  const [selectedSource, setSelectedSource] = useState<SourceKey | 'all'>(
+    'all',
   );
-  const { play } = usePlayerStore();
+  const [results, setResults] = useState<Track[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { playPreview, playStream, setQueue } = usePlayerStore();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchResults = useCallback(async (q: string) => {
+    if (!q.trim()) {
+      setResults([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const effectiveSource = selectedSource === 'all' ? 'deezer' : selectedSource;
+      const data =
+        effectiveSource === 'soundcloud'
+          ? await searchSoundCloud(q)
+          : await searchTracks(q);
+      setResults(data);
+      setQueue(data);
+    } catch (e) {
+      console.warn('Search error:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [setQueue, selectedSource]);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchResults(query), DEBOUNCE_MS);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query, fetchResults, selectedSource]);
 
   const filteredResults = useMemo(() => {
-    let results = MOCK_TRENDING;
-    if (query.trim()) {
-      const q = query.trim().toLowerCase();
-      results = results.filter((track) =>
-        `${track.title} ${track.artist.name}`.toLowerCase().includes(q),
-      );
-    }
-    if (selectedSource !== "all") {
-      results = results.filter((track) => track.source === selectedSource);
-    }
-    return results;
-  }, [query, selectedSource]);
+    if (selectedSource === 'all') return results;
+    return results.filter((track) => track.source === selectedSource);
+  }, [results, selectedSource]);
 
   const handlePlay = (track: Track) => {
-    play(track);
-    router.push("/player" as const);
+    if (track.source === 'soundcloud') {
+      playStream(track);
+    } else {
+      playPreview(track);
+    }
+    router.push('/player' as const);
   };
 
   return (
     <ScreenContainer>
       <View style={{ gap: 16 }}>
         <AppText variant="display" weight="bold">
-          {t("common.search")}
+          {t('common.search')}
         </AppText>
 
         <View
           style={{
-            flexDirection: "row",
-            alignItems: "center",
+            flexDirection: 'row',
+            alignItems: 'center',
             gap: 8,
             paddingHorizontal: 14,
             paddingVertical: 10,
@@ -66,7 +94,7 @@ export default function SearchScreen() {
         >
           <AppIcon name="search" size={16} color={COLORS.textMuted} />
           <TextInput
-            placeholder={t("search.placeholder")}
+            placeholder={t('search.placeholder')}
             placeholderTextColor={COLORS.textMuted}
             value={query}
             onChangeText={setQuery}
@@ -82,12 +110,12 @@ export default function SearchScreen() {
 
         <View
           style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
+            flexDirection: 'row',
+            flexWrap: 'wrap',
             gap: 8,
           }}
         >
-          <Pressable onPress={() => setSelectedSource("all")}>
+          <Pressable onPress={() => setSelectedSource('all')}>
             <View
               style={{
                 paddingHorizontal: 12,
@@ -95,11 +123,11 @@ export default function SearchScreen() {
                 borderRadius: 999,
                 borderWidth: 0.5,
                 borderColor:
-                  selectedSource === "all" ? COLORS.accent : COLORS.border,
+                  selectedSource === 'all' ? COLORS.accent : COLORS.border,
                 backgroundColor:
-                  selectedSource === "all"
-                    ? "rgba(99, 102, 241, 0.12)"
-                    : "transparent",
+                  selectedSource === 'all'
+                    ? 'rgba(99, 102, 241, 0.12)'
+                    : 'transparent',
               }}
             >
               <AppText
@@ -107,13 +135,11 @@ export default function SearchScreen() {
                 weight="medium"
                 style={{
                   color:
-                    selectedSource === "all"
-                      ? COLORS.accent
-                      : COLORS.textMuted,
+                    selectedSource === 'all' ? COLORS.accent : COLORS.textMuted,
                   letterSpacing: 0.5,
                 }}
               >
-                {t("common.all")}
+                {t('common.all')}
               </AppText>
             </View>
           </Pressable>
@@ -129,28 +155,70 @@ export default function SearchScreen() {
       </View>
 
       <View style={{ gap: 8 }}>
-        <AppText
-          variant="label"
-          weight="medium"
-          style={{ color: COLORS.textSecondary, letterSpacing: 1, fontSize: 11 }}
-        >
-          {t("search.trending").toUpperCase()}
-        </AppText>
-        <View
-          style={{
-            borderTopWidth: 0.5,
-            borderTopColor: COLORS.border,
-          }}
-        >
-          {filteredResults.map((track) => (
-            <TrackItem
-              key={track.id}
-              track={track}
-              onPress={handlePlay}
-              showBitrate
-            />
-          ))}
-        </View>
+        {query.trim() ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <AppText
+              variant="label"
+              weight="medium"
+              style={{
+                color: COLORS.textSecondary,
+                letterSpacing: 1,
+                fontSize: 11,
+              }}
+            >
+              {t('search.results').toUpperCase()}
+            </AppText>
+            {selectedSource !== 'soundcloud' && (
+              <View
+                style={{
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  borderRadius: 4,
+                  backgroundColor: 'rgba(251, 191, 36, 0.15)',
+                }}
+              >
+                <AppText
+                  variant="caption"
+                  weight="medium"
+                  style={{
+                    color: '#FBBF24',
+                    fontSize: 9,
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  30s PREVIEW
+                </AppText>
+              </View>
+            )}
+          </View>
+        ) : null}
+        {loading ? (
+          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+            <ActivityIndicator color={COLORS.accent} />
+          </View>
+        ) : filteredResults.length === 0 && query.trim() ? (
+          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+            <AppText variant="body" style={{ color: COLORS.textMuted }}>
+              {t('search.noResults')}
+            </AppText>
+          </View>
+        ) : (
+          <View
+            style={{
+              borderTopWidth: 0.5,
+              borderTopColor: COLORS.border,
+            }}
+          >
+            {filteredResults.map((track) => (
+              <TrackItem
+                key={track.id}
+                track={track}
+                onPress={handlePlay}
+                showDownload
+              />
+            ))}
+          </View>
+        )}
       </View>
     </ScreenContainer>
   );

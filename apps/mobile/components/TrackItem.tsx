@@ -1,50 +1,73 @@
-import { View } from "react-native";
+import { Image, View } from 'react-native';
 
-import { AnimatedPressable } from "@/components/AnimatedPressable";
-import { SourceBadge } from "@/components/SourceBadge";
-import { AppText } from "@/components/ui/AppText";
-import { COLORS } from "@/constants/colors";
-import type { Track } from "@/types/domain";
+import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { DownloadButton } from '@/components/DownloadButton';
+import { SourceBadge } from '@/components/SourceBadge';
+import { AppText } from '@/components/ui/AppText';
+import { COLORS } from '@/constants/colors';
+import type { Track } from '@/types/domain';
 
 type TrackItemProps = {
   track: Track;
   onPress?: (track: Track) => void;
+  onLongPress?: (track: Track) => void;
+  onDownloaded?: (track: Track, filePath: string) => void;
   showBitrate?: boolean;
+  showDownload?: boolean;
 };
 
-export function TrackItem({ track, onPress, showBitrate }: TrackItemProps) {
+export function TrackItem({
+  track,
+  onPress,
+  onLongPress,
+  onDownloaded,
+  showBitrate,
+  showDownload,
+}: TrackItemProps) {
   return (
     <AnimatedPressable
       onPress={() => onPress?.(track)}
+      onLongPress={() => onLongPress?.(track)}
       style={{
-        flexDirection: "row",
-        alignItems: "center",
+        flexDirection: 'row',
+        alignItems: 'center',
         paddingVertical: 14,
         gap: 14,
         borderBottomWidth: 0.5,
         borderBottomColor: COLORS.divider,
       }}
     >
-      <View
-        style={{
-          width: 52,
-          height: 52,
-          borderRadius: 10,
-          backgroundColor: COLORS.surfaceMuted,
-          alignItems: "center",
-          justifyContent: "center",
-          borderWidth: 0.5,
-          borderColor: COLORS.border,
-        }}
-      >
-        <AppText
-          variant="body"
-          weight="bold"
-          style={{ color: COLORS.textMuted }}
+      {track.coverUrl ? (
+        <Image
+          source={{ uri: track.coverUrl }}
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 10,
+          }}
+        />
+      ) : (
+        <View
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 10,
+            backgroundColor: COLORS.surfaceMuted,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 0.5,
+            borderColor: COLORS.border,
+          }}
         >
-          {track.artist.name.charAt(0)}
-        </AppText>
-      </View>
+          <AppText
+            variant="body"
+            weight="bold"
+            style={{ color: COLORS.textMuted }}
+          >
+            {track.artist.name.charAt(0)}
+          </AppText>
+        </View>
+      )}
 
       <View style={{ flex: 1, gap: 3 }}>
         <AppText
@@ -55,7 +78,7 @@ export function TrackItem({ track, onPress, showBitrate }: TrackItemProps) {
         >
           {track.title}
         </AppText>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <AppText
             variant="caption"
             style={{ color: COLORS.textMuted, fontSize: 13 }}
@@ -72,7 +95,7 @@ export function TrackItem({ track, onPress, showBitrate }: TrackItemProps) {
                 fontSize: 10,
                 letterSpacing: 0.5,
                 color:
-                  track.bitrate === "FLAC" ? COLORS.accent : COLORS.textMuted,
+                  track.bitrate === 'FLAC' ? COLORS.accent : COLORS.textMuted,
               }}
             >
               {track.bitrate}
@@ -87,6 +110,14 @@ export function TrackItem({ track, onPress, showBitrate }: TrackItemProps) {
       >
         {track.duration}
       </AppText>
+
+      {showDownload ? (
+        <DownloadButton
+          track={track}
+          size={20}
+          onDownloaded={onDownloaded}
+        />
+      ) : null}
     </AnimatedPressable>
   );
 }
