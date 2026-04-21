@@ -14,6 +14,8 @@ type TrackItemProps = {
   onDownloaded?: (track: Track, filePath: string) => void;
   showBitrate?: boolean;
   showDownload?: boolean;
+  isActive?: boolean;
+  accentColor?: string;
 };
 
 export function TrackItem({
@@ -23,7 +25,11 @@ export function TrackItem({
   onDownloaded,
   showBitrate,
   showDownload,
+  isActive,
+  accentColor,
 }: TrackItemProps) {
+  const activeColor = accentColor ?? COLORS.accent;
+
   return (
     <AnimatedPressable
       onPress={() => onPress?.(track)}
@@ -32,11 +38,28 @@ export function TrackItem({
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 14,
+        paddingLeft: isActive ? 12 : 0,
         gap: 14,
         borderBottomWidth: 0.5,
         borderBottomColor: COLORS.divider,
+        backgroundColor: isActive ? activeColor + '14' : 'transparent',
+        borderRadius: isActive ? 12 : 0,
+        overflow: 'hidden',
       }}
     >
+      {isActive && (
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 4,
+            bottom: 4,
+            width: 3,
+            borderRadius: 2,
+            backgroundColor: activeColor,
+          }}
+        />
+      )}
       {track.coverUrl ? (
         <Image
           source={{ uri: track.coverUrl }}
@@ -73,7 +96,7 @@ export function TrackItem({
         <AppText
           variant="body"
           weight="medium"
-          style={{ color: COLORS.textPrimary, fontSize: 15 }}
+          style={{ color: isActive ? activeColor : COLORS.textPrimary, fontSize: 15 }}
           numberOfLines={1}
         >
           {track.title}

@@ -11,6 +11,7 @@ import { ProvidersModule } from './providers/providers.module';
 import { SearchModule } from './search/search.module';
 import { TracksModule } from './tracks/tracks.module';
 import { LyricsModule } from './lyrics/lyrics.module';
+import { ColorModule } from './color/color.module';
 import { DownloadModule } from './download/download.module';
 
 @Module({
@@ -46,6 +47,7 @@ import { DownloadModule } from './download/download.module';
     AlbumsModule,
     LyricsModule,
     DownloadModule,
+    ColorModule,
   ],
   controllers: [AppController],
   providers: [AppService],

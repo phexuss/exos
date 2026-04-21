@@ -12,6 +12,35 @@ import { useI18n } from '@/hooks/useI18n';
 
 type LyricLine = { time: number; text: string };
 
+/** Boost a hex colour's saturation & lightness so lyrics pop on dark bg */
+function vibrateHex(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s: number, l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  } else { s = 0; }
+  s = Math.min(1, s * 1.5 + 0.2);
+  l = Math.max(0.55, Math.min(0.75, l * 1.15 + 0.1));
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1; if (t > 1) t -= 1;
+    if (t < 1/6) return p + (q - p) * 6 * t;
+    if (t < 1/2) return q;
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+  };
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const toHex = (n: number) => Math.round(n * 255).toString(16).padStart(2, '0');
+  return `#${toHex(hue2rgb(p, q, h + 1/3))}${toHex(hue2rgb(p, q, h))}${toHex(hue2rgb(p, q, h - 1/3))}`;
+}
+
 function parseLRC(lrc: string): LyricLine[] {
   const lines: LyricLine[] = [];
   const regex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
@@ -29,7 +58,7 @@ function parseLRC(lrc: string): LyricLine[] {
   return lines.sort((a, b) => a.time - b.time);
 }
 
-const SPRING = { damping: 24, stiffness: 100, mass: 0.8 };
+const SPRING = { damping: 28, stiffness: 65, mass: 0.7 };
 const GAP = 16;
 
 function SyncedLine({
@@ -39,6 +68,7 @@ function SyncedLine({
   onPress,
   onMeasure,
   index,
+  accentColor,
 }: {
   text: string;
   isActive: boolean;
@@ -46,6 +76,7 @@ function SyncedLine({
   onPress?: () => void;
   onMeasure?: (index: number, height: number) => void;
   index: number;
+  accentColor?: string;
 }) {
   const scale = useSharedValue(isActive ? 1.04 : 1);
   const opacity = useSharedValue(isActive ? 1 : 0.35);
@@ -79,14 +110,14 @@ function SyncedLine({
           variant="title"
           weight={isActive ? 'bold' : 'medium'}
           style={{
-            color: isActive ? COLORS.accent : COLORS.textPrimary,
+            color: isActive ? (accentColor ? vibrateHex(accentColor) : COLORS.accent) : COLORS.textPrimary,
             fontSize: isActive ? 22 : 18,
             lineHeight: isActive ? 32 : 27,
             textAlign: 'center',
             paddingHorizontal: 4,
-            textShadowColor: isActive ? 'rgba(129,140,248,0.45)' : 'transparent',
+            textShadowColor: isActive ? (accentColor ? vibrateHex(accentColor) + 'CC' : 'rgba(129,140,248,0.45)') : 'transparent',
             textShadowOffset: { width: 0, height: 0 },
-            textShadowRadius: isActive ? 12 : 0,
+            textShadowRadius: isActive ? (accentColor ? 22 : 12) : 0,
           }}
         >
           {text}
@@ -102,6 +133,7 @@ type LyricsViewProps = {
   progress: number;
   duration: number;
   onSeekToTime?: (seconds: number) => void;
+  accentColor?: string;
 };
 
 export function LyricsView({
@@ -110,6 +142,7 @@ export function LyricsView({
   progress,
   duration,
   onSeekToTime,
+  accentColor,
 }: LyricsViewProps) {
   const scrollRef = useRef<ScrollView>(null);
   const lineHeights = useRef<number[]>([]);
@@ -253,6 +286,7 @@ export function LyricsView({
                 distance={dist}
                 onPress={onSeekToTime ? () => onSeekToTime(line.time) : undefined}
                 onMeasure={handleMeasure}
+                accentColor={accentColor}
               />
             );
           })}

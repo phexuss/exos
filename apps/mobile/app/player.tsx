@@ -13,6 +13,7 @@ import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useI18n } from '@/hooks/useI18n';
 import * as audio from '@/services/audio/audioService';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -38,6 +39,7 @@ export default function PlayerScreen() {
     play,
     markTrackDownloaded,
   } = usePlayerStore();
+  const accentColor = useDynamicAccent();
   const startSeeking = audio.startSeeking;
   const stopSeeking = audio.stopSeeking;
 
@@ -167,8 +169,8 @@ export default function PlayerScreen() {
     <SafeAreaView
       style={{
         flex: 1,
-        backgroundColor: COLORS.background,
         paddingHorizontal: 24,
+        backgroundColor: COLORS.background,
       }}
     >
       <View
@@ -216,6 +218,7 @@ export default function PlayerScreen() {
                 progress={progress}
                 duration={totalDurationSec}
                 onSeekToTime={handleLyricSeek}
+                accentColor={accentColor}
               />
             ) : currentTrack.coverUrl ? (
               <Image
@@ -295,6 +298,7 @@ export default function PlayerScreen() {
             onSeek={handleSeek}
             onSeekStart={startSeeking}
             onSeekEnd={stopSeeking}
+            accentColor={accentColor}
           />
           <View
             style={{

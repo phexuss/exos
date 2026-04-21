@@ -3,13 +3,47 @@ import * as SQLite from 'expo-sqlite';
 import type { Track } from '@/types/domain';
 
 let db: SQLite.SQLiteDatabase | null = null;
+let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
-export async function getDb(): Promise<SQLite.SQLiteDatabase> {
-  if (!db) {
-    db = await SQLite.openDatabaseAsync('exos.db');
-    await migrate(db);
+function openDb(): Promise<SQLite.SQLiteDatabase> {
+  dbPromise = SQLite.openDatabaseAsync('exos.db')
+    .then(async (database) => {
+      await migrate(database);
+      db = database;
+      return database;
+    })
+    .catch((e) => {
+      db = null;
+      dbPromise = null;
+      throw e;
+    });
+  return dbPromise;
+}
+
+export function getDb(): Promise<SQLite.SQLiteDatabase> {
+  if (db) return Promise.resolve(db);
+  if (!dbPromise) return openDb();
+  return dbPromise;
+}
+
+export function resetDb(): void {
+  db = null;
+  dbPromise = null;
+}
+
+export async function withDb<T>(fn: (database: SQLite.SQLiteDatabase) => Promise<T>): Promise<T> {
+  try {
+    const database = await getDb();
+    return await fn(database);
+  } catch (e: any) {
+    if (e?.message?.includes('NullPointerException') || e?.message?.includes('NativeDatabase')) {
+      if (__DEV__) console.warn('[DB] Handle corrupted, resetting…');
+      resetDb();
+      const database = await getDb();
+      return fn(database);
+    }
+    throw e;
   }
-  return db;
 }
 
 async function migrate(database: SQLite.SQLiteDatabase) {
@@ -81,37 +115,38 @@ export type LyricsData = {
   plainLyrics: string | null;
 };
 
-export async function insertDownloadedTrack(
+export function insertDownloadedTrack(
   track: Track,
   filePath: string,
   fileFormat = 'webm',
   lyrics?: LyricsData | null,
 ): Promise<void> {
-  const database = await getDb();
-  await database.runAsync(
-    `INSERT OR REPLACE INTO tracks (id, title, artist, artist_id, album, cover_url, duration, duration_sec, file_path, file_format, isrc, preview_url, synced_lyrics, plain_lyrics, source, downloaded_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    track.id,
-    track.title,
-    track.artist.name,
-    track.artist.id,
-    track.album ?? null,
-    track.coverUrl ?? null,
-    track.duration,
-    track.durationSec,
-    filePath,
-    fileFormat,
-    track.isrc ?? null,
-    track.previewUrl ?? null,
-    lyrics?.syncedLyrics ?? null,
-    lyrics?.plainLyrics ?? null,
-    track.source ?? 'deezer',
-    Date.now(),
-  );
+  return withDb(async (database) => {
+    await database.runAsync(
+      `INSERT OR REPLACE INTO tracks (id, title, artist, artist_id, album, cover_url, duration, duration_sec, file_path, file_format, isrc, preview_url, synced_lyrics, plain_lyrics, source, downloaded_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      track.id,
+      track.title,
+      track.artist.name,
+      track.artist.id,
+      track.album ?? null,
+      track.coverUrl ?? null,
+      track.duration,
+      track.durationSec,
+      filePath,
+      fileFormat,
+      track.isrc ?? null,
+      track.previewUrl ?? null,
+      lyrics?.syncedLyrics ?? null,
+      lyrics?.plainLyrics ?? null,
+      track.source ?? 'deezer',
+      Date.now(),
+    );
+  });
 }
 
 export async function getDownloadedTracks(): Promise<Track[]> {
-  const database = await getDb();
+  return withDb(async (database) => {
   const rows = await database.getAllAsync<{
     id: string;
     title: string;
@@ -145,31 +180,35 @@ export async function getDownloadedTracks(): Promise<Track[]> {
     isDownloaded: true,
     source: (r.source as Track['source']) ?? 'deezer',
   }));
+  });
 }
 
-export async function isTrackDownloaded(trackId: string): Promise<boolean> {
-  const database = await getDb();
-  const row = await database.getFirstAsync<{ id: string }>(
-    'SELECT id FROM tracks WHERE id = ?',
-    trackId,
-  );
-  return !!row;
+export function isTrackDownloaded(trackId: string): Promise<boolean> {
+  return withDb(async (database) => {
+    const row = await database.getFirstAsync<{ id: string }>(
+      'SELECT id FROM tracks WHERE id = ?',
+      trackId,
+    );
+    return !!row;
+  });
 }
 
-export async function getDownloadedTrack(trackId: string): Promise<{
+export function getDownloadedTrack(trackId: string): Promise<{
   file_path: string;
 } | null> {
-  const database = await getDb();
-  return database.getFirstAsync<{ file_path: string }>(
-    'SELECT file_path FROM tracks WHERE id = ?',
-    trackId,
+  return withDb((database) =>
+    database.getFirstAsync<{ file_path: string }>(
+      'SELECT file_path FROM tracks WHERE id = ?',
+      trackId,
+    ),
   );
 }
 
-export async function deleteDownloadedTrack(trackId: string): Promise<void> {
-  const database = await getDb();
-  await database.runAsync('DELETE FROM tracks WHERE id = ?', trackId);
-  await database.runAsync('DELETE FROM playlist_tracks WHERE track_id = ?', trackId);
+export function deleteDownloadedTrack(trackId: string): Promise<void> {
+  return withDb(async (database) => {
+    await database.runAsync('DELETE FROM tracks WHERE id = ?', trackId);
+    await database.runAsync('DELETE FROM playlist_tracks WHERE track_id = ?', trackId);
+  });
 }
 
 // ── Playlists ────────────────────────────────────────────────
@@ -182,72 +221,79 @@ export type PlaylistRow = {
   track_count: number;
 };
 
-export async function createPlaylist(name: string, coverUrl?: string): Promise<string> {
-  const database = await getDb();
-  const id = `pl-${Date.now()}`;
-  await database.runAsync(
-    'INSERT INTO playlists (id, name, cover_url, created_at) VALUES (?, ?, ?, ?)',
-    id,
-    name,
-    coverUrl ?? null,
-    Date.now(),
-  );
-  return id;
+export function createPlaylist(name: string, coverUrl?: string): Promise<string> {
+  return withDb(async (database) => {
+    const id = `pl-${Date.now()}`;
+    await database.runAsync(
+      'INSERT INTO playlists (id, name, cover_url, created_at) VALUES (?, ?, ?, ?)',
+      id,
+      name,
+      coverUrl ?? null,
+      Date.now(),
+    );
+    return id;
+  });
 }
 
-export async function getPlaylists(): Promise<PlaylistRow[]> {
-  const database = await getDb();
-  return database.getAllAsync<PlaylistRow>(`
-    SELECT p.*, COUNT(pt.track_id) as track_count
-    FROM playlists p
-    LEFT JOIN playlist_tracks pt ON p.id = pt.playlist_id
-    GROUP BY p.id
-    ORDER BY p.created_at DESC
-  `);
-}
-
-export async function deletePlaylist(playlistId: string): Promise<void> {
-  const database = await getDb();
-  await database.runAsync('DELETE FROM playlists WHERE id = ?', playlistId);
-  await database.runAsync('DELETE FROM playlist_tracks WHERE playlist_id = ?', playlistId);
-}
-
-export async function renamePlaylist(playlistId: string, name: string): Promise<void> {
-  const database = await getDb();
-  await database.runAsync('UPDATE playlists SET name = ? WHERE id = ?', name, playlistId);
-}
-
-export async function updatePlaylistCover(playlistId: string, coverUrl: string | null): Promise<void> {
-  const database = await getDb();
-  await database.runAsync('UPDATE playlists SET cover_url = ? WHERE id = ?', coverUrl, playlistId);
-}
-
-export async function addTrackToPlaylist(playlistId: string, trackId: string): Promise<void> {
-  const database = await getDb();
-  const maxPos = await database.getFirstAsync<{ max_pos: number | null }>(
-    'SELECT MAX(position) as max_pos FROM playlist_tracks WHERE playlist_id = ?',
-    playlistId,
-  );
-  const position = (maxPos?.max_pos ?? -1) + 1;
-  await database.runAsync(
-    'INSERT OR IGNORE INTO playlist_tracks (playlist_id, track_id, position) VALUES (?, ?, ?)',
-    playlistId,
-    trackId,
-    position,
+export function getPlaylists(): Promise<PlaylistRow[]> {
+  return withDb((database) =>
+    database.getAllAsync<PlaylistRow>(`
+      SELECT p.*, COUNT(pt.track_id) as track_count
+      FROM playlists p
+      LEFT JOIN playlist_tracks pt ON p.id = pt.playlist_id
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
+    `),
   );
 }
 
-export async function removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void> {
-  const database = await getDb();
-  await database.runAsync(
-    'DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?',
-    playlistId,
-    trackId,
-  );
+export function deletePlaylist(playlistId: string): Promise<void> {
+  return withDb(async (database) => {
+    await database.runAsync('DELETE FROM playlists WHERE id = ?', playlistId);
+    await database.runAsync('DELETE FROM playlist_tracks WHERE playlist_id = ?', playlistId);
+  });
+}
+
+export function renamePlaylist(playlistId: string, name: string): Promise<void> {
+  return withDb(async (database) => {
+    await database.runAsync('UPDATE playlists SET name = ? WHERE id = ?', name, playlistId);
+  });
+}
+
+export function updatePlaylistCover(playlistId: string, coverUrl: string | null): Promise<void> {
+  return withDb(async (database) => {
+    await database.runAsync('UPDATE playlists SET cover_url = ? WHERE id = ?', coverUrl, playlistId);
+  });
+}
+
+export function addTrackToPlaylist(playlistId: string, trackId: string): Promise<void> {
+  return withDb(async (database) => {
+    const maxPos = await database.getFirstAsync<{ max_pos: number | null }>(
+      'SELECT MAX(position) as max_pos FROM playlist_tracks WHERE playlist_id = ?',
+      playlistId,
+    );
+    const position = (maxPos?.max_pos ?? -1) + 1;
+    await database.runAsync(
+      'INSERT OR IGNORE INTO playlist_tracks (playlist_id, track_id, position) VALUES (?, ?, ?)',
+      playlistId,
+      trackId,
+      position,
+    );
+  });
+}
+
+export function removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void> {
+  return withDb(async (database) => {
+    await database.runAsync(
+      'DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?',
+      playlistId,
+      trackId,
+    );
+  });
 }
 
 export async function getPlaylistTracks(playlistId: string): Promise<Track[]> {
-  const database = await getDb();
+  return withDb(async (database) => {
   const rows = await database.getAllAsync<{
     id: string;
     title: string;
@@ -286,32 +332,34 @@ export async function getPlaylistTracks(playlistId: string): Promise<Track[]> {
     isDownloaded: true,
     source: (r.source as Track['source']) ?? 'deezer',
   }));
+  });
 }
 
 // ── Recently played ──────────────────────────────────────────
 
-export async function addRecentlyPlayed(track: Track): Promise<void> {
-  const database = await getDb();
-  await database.runAsync(
-    `INSERT OR REPLACE INTO recently_played (track_id, title, artist, artist_id, album, cover_url, duration, duration_sec, preview_url, isrc, source, played_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    track.id,
-    track.title,
-    track.artist.name,
-    track.artist.id,
-    track.album ?? null,
-    track.coverUrl ?? null,
-    track.duration,
-    track.durationSec,
-    track.previewUrl ?? null,
-    track.isrc ?? null,
-    track.source,
-    Date.now(),
-  );
+export function addRecentlyPlayed(track: Track): Promise<void> {
+  return withDb(async (database) => {
+    await database.runAsync(
+      `INSERT OR REPLACE INTO recently_played (track_id, title, artist, artist_id, album, cover_url, duration, duration_sec, preview_url, isrc, source, played_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      track.id,
+      track.title,
+      track.artist.name,
+      track.artist.id,
+      track.album ?? null,
+      track.coverUrl ?? null,
+      track.duration,
+      track.durationSec,
+      track.previewUrl ?? null,
+      track.isrc ?? null,
+      track.source,
+      Date.now(),
+    );
+  });
 }
 
 export async function getRecentlyPlayed(limit = 20): Promise<Track[]> {
-  const database = await getDb();
+  return withDb(async (database) => {
   const rows = await database.getAllAsync<{
     track_id: string;
     title: string;
@@ -325,8 +373,10 @@ export async function getRecentlyPlayed(limit = 20): Promise<Track[]> {
     isrc: string | null;
     source: string;
     file_path: string | null;
+    synced_lyrics: string | null;
+    plain_lyrics: string | null;
   }>(
-    `SELECT rp.*, t.file_path
+    `SELECT rp.*, t.file_path, t.synced_lyrics, t.plain_lyrics
      FROM recently_played rp
      LEFT JOIN tracks t ON rp.track_id = t.id
      ORDER BY rp.played_at DESC LIMIT ?`,
@@ -346,5 +396,8 @@ export async function getRecentlyPlayed(limit = 20): Promise<Track[]> {
     source: r.source as Track['source'],
     filePath: r.file_path ?? undefined,
     isDownloaded: !!r.file_path,
+    syncedLyrics: r.synced_lyrics ?? undefined,
+    plainLyrics: r.plain_lyrics ?? undefined,
   }));
+  });
 }

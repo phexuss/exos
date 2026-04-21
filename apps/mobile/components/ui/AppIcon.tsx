@@ -8,6 +8,7 @@ import { Global as GlobeLinear } from '@solar-icons/react-native/category/map/Li
 import { Magnifier as MagnifierLinear } from '@solar-icons/react-native/category/search/Linear/Magnifier';
 import { DocumentText as DocumentTextLinear } from '@solar-icons/react-native/category/notes/Linear/DocumentText';
 import { Settings as SettingsLinear } from '@solar-icons/react-native/category/settings/Linear/Settings';
+import { Palette as PaletteLinear } from '@solar-icons/react-native/category/tools/Linear/Palette';
 import { CheckCircle as CheckCircleLinear } from '@solar-icons/react-native/category/ui/Linear/CheckCircle';
 import { CloseCircle as CloseCircleLinear } from '@solar-icons/react-native/category/ui/Linear/CloseCircle';
 import { Home as HomeLinear } from '@solar-icons/react-native/category/ui/Linear/Home';
@@ -48,6 +49,7 @@ export type IconName =
   | 'repeat'
   | 'repeat-one'
   | 'lyrics'
+  | 'palette'
   | 'queue';
 
 const ICON_MAP: Record<IconName, ComponentType<IconProps>> = {
@@ -74,6 +76,7 @@ const ICON_MAP: Record<IconName, ComponentType<IconProps>> = {
   repeat: RepeatLinear,
   'repeat-one': RepeatOneLinear,
   lyrics: DocumentTextLinear,
+  palette: PaletteLinear,
   queue: PlaylistLinear,
 };
 

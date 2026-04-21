@@ -6,4 +6,5 @@ export const API_ENDPOINTS = {
   albums: '/albums',
   download: '/download',
   lyrics: '/lyrics',
+  color: '/color',
 } as const;

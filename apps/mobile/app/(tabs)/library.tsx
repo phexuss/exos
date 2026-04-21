@@ -8,6 +8,7 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { COLORS } from '@/constants/colors';
+import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useI18n } from '@/hooks/useI18n';
 import { getDownloadedTracks, getPlaylists, type PlaylistRow } from '@/services/db/database';
 import { useDownloadStore } from '@/store/useDownloadStore';
@@ -16,7 +17,8 @@ import type { Track } from '@/types/domain';
 
 export default function LibraryScreen() {
   const { t } = useI18n();
-  const { play, setQueue } = usePlayerStore();
+  const { play, setQueue, currentTrack } = usePlayerStore();
+  const accentColor = useDynamicAccent();
   const revision = useDownloadStore((s) => s.revision);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [playlists, setPlaylists] = useState<PlaylistRow[]>([]);
@@ -45,7 +47,6 @@ export default function LibraryScreen() {
   const handlePlay = (track: Track) => {
     play(track);
     setQueue(tracks);
-    router.push('/player' as const);
   };
 
   return (
@@ -182,6 +183,8 @@ export default function LibraryScreen() {
                 track={track}
                 onPress={handlePlay}
                 onLongPress={setSelectedTrack}
+                isActive={currentTrack?.id === track.id}
+                accentColor={accentColor}
               />
             ))}
           </View>

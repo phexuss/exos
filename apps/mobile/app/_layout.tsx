@@ -78,13 +78,14 @@ export default function RootLayout() {
             <Stack.Screen
               name="player"
               options={{
-                presentation: 'transparentModal',
+                presentation: 'fullScreenModal',
                 headerShown: false,
                 animation: 'slide_from_bottom',
-                animationDuration: 300,
+                animationDuration: 350,
                 gestureEnabled: true,
                 gestureDirection: 'vertical',
                 fullScreenGestureEnabled: true,
+                contentStyle: { backgroundColor: COLORS.background },
               }}
             />
             <Stack.Screen

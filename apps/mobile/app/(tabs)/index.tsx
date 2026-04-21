@@ -8,12 +8,14 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { COLORS } from '@/constants/colors';
+import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useI18n } from '@/hooks/useI18n';
 import { getRecentlyPlayed } from '@/services/db/database';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import type { Track } from '@/types/domain';
 
-function RecentCard({ track, onPress }: { track: Track; onPress: () => void }) {
+function RecentCard({ track, onPress, isActive, accentColor }: { track: Track; onPress: () => void; isActive?: boolean; accentColor?: string }) {
+  const activeColor = accentColor ?? COLORS.accent;
   return (
     <AnimatedPressable
       scaleValue={0.95}
@@ -30,6 +32,8 @@ function RecentCard({ track, onPress }: { track: Track; onPress: () => void }) {
             width: 160,
             height: 160,
             borderRadius: 14,
+            borderWidth: isActive ? 2 : 0,
+            borderColor: isActive ? activeColor : 'transparent',
           }}
         />
       ) : (
@@ -52,7 +56,7 @@ function RecentCard({ track, onPress }: { track: Track; onPress: () => void }) {
         <AppText
           variant="body"
           weight="medium"
-          style={{ color: COLORS.textPrimary, fontSize: 14 }}
+          style={{ color: isActive ? activeColor : COLORS.textPrimary, fontSize: 14 }}
           numberOfLines={1}
         >
           {track.title}
@@ -74,7 +78,8 @@ function RecentCard({ track, onPress }: { track: Track; onPress: () => void }) {
 
 export default function HomeScreen() {
   const { t } = useI18n();
-  const { play, setQueue } = usePlayerStore();
+  const { play, setQueue, currentTrack } = usePlayerStore();
+  const accentColor = useDynamicAccent();
   const [recentTracks, setRecentTracks] = useState<Track[]>([]);
 
   const loadRecent = useCallback(async () => {
@@ -93,7 +98,6 @@ export default function HomeScreen() {
   const handlePlay = (track: Track) => {
     setQueue(recentTracks);
     play(track);
-    router.push('/player' as const);
   };
 
   return (
@@ -153,7 +157,7 @@ export default function HomeScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ gap: 14 }}
             renderItem={({ item }) => (
-              <RecentCard track={item} onPress={() => handlePlay(item)} />
+              <RecentCard track={item} onPress={() => handlePlay(item)} isActive={currentTrack?.id === item.id} accentColor={accentColor} />
             )}
           />
         )}

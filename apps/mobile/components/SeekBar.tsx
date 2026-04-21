@@ -21,6 +21,7 @@ type SeekBarProps = {
    */
   boundaryRatio?: number;
   boundaryColor?: string;
+  accentColor?: string;
 };
 
 const TRACK_HEIGHT = 4;
@@ -34,6 +35,7 @@ export function SeekBar({
   onSeekEnd,
   boundaryRatio,
   boundaryColor,
+  accentColor,
 }: SeekBarProps) {
   const width = useSharedValue(0);
   const draggingRef = useRef(false);
@@ -148,7 +150,7 @@ export function SeekBar({
               {
                 height: TRACK_HEIGHT,
                 borderRadius: TRACK_HEIGHT / 2,
-                backgroundColor: COLORS.accent,
+                backgroundColor: accentColor ?? COLORS.accent,
               },
               fillStyle,
             ]}

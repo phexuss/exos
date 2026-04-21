@@ -44,6 +44,9 @@ export const ru = {
   settings: {
     title: 'Настройки',
     languageSection: 'Язык',
+    appearanceSection: 'Внешний вид',
+    dynamicAccent: 'Динамический акцент',
+    dynamicAccentDesc: 'Подкрашивает плеер доминирующим цветом обложки трека',
   },
   player: {
     title: 'Сейчас играет',

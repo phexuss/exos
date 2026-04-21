@@ -9,6 +9,7 @@ import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { FONT_FAMILY } from '@/constants/typography';
 import {
   deletePlaylist,
@@ -24,7 +25,8 @@ import type { Track } from '@/types/domain';
 
 export default function PlaylistScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { play, setQueue } = usePlayerStore();
+  const { play, setQueue, currentTrack } = usePlayerStore();
+  const accentColor = useDynamicAccent();
 
   const [playlist, setPlaylist] = useState<PlaylistRow | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -48,7 +50,6 @@ export default function PlaylistScreen() {
   const handlePlay = (track: Track) => {
     play(track);
     setQueue(tracks);
-    router.push('/player');
   };
 
   const handleRemoveFromPlaylist = useCallback(() => {
@@ -180,6 +181,8 @@ export default function PlaylistScreen() {
               track={track}
               onPress={handlePlay}
               onLongPress={() => setSelectedTrack(track)}
+              isActive={currentTrack?.id === track.id}
+              accentColor={accentColor}
             />
           ))}
         </View>

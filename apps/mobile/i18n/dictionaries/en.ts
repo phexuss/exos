@@ -44,6 +44,9 @@ export const en = {
   settings: {
     title: 'Settings',
     languageSection: 'Language',
+    appearanceSection: 'Appearance',
+    dynamicAccent: 'Dynamic accent color',
+    dynamicAccentDesc: 'Tint the player with the dominant color from the album cover',
   },
   player: {
     title: 'Now Playing',

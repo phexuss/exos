@@ -1,6 +1,5 @@
-import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, TextInput, View, FlatList } from 'react-native';
 
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
@@ -8,6 +7,7 @@ import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { SourcePill } from '@/components/ui/SourcePill';
 import { COLORS } from '@/constants/colors';
+import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import type { SourceKey } from '@/constants/sources';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useI18n } from '@/hooks/useI18n';
@@ -27,7 +27,8 @@ export default function SearchScreen() {
   );
   const [results, setResults] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
-  const { play, setQueue } = usePlayerStore();
+  const { play, setQueue, currentTrack } = usePlayerStore();
+  const accentColor = useDynamicAccent();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchResults = useCallback(async (q: string) => {
@@ -66,7 +67,6 @@ export default function SearchScreen() {
 
   const handlePlay = (track: Track) => {
     play(track);
-    router.push('/player' as const);
   };
 
   return (
@@ -190,6 +190,8 @@ export default function SearchScreen() {
                 track={track}
                 onPress={handlePlay}
                 showDownload
+                isActive={currentTrack?.id === track.id}
+                accentColor={accentColor}
               />
             ))}
           </View>

@@ -1,13 +1,15 @@
-import { Pressable, View } from 'react-native';
+import { Pressable, Switch, View } from 'react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { COLORS } from '@/constants/colors';
 import { useI18n } from '@/hooks/useI18n';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 export default function SettingsScreen() {
   const { locale, setLocale, t } = useI18n();
+  const { dynamicAccent, setDynamicAccent } = useSettingsStore();
 
   return (
     <ScreenContainer>
@@ -15,6 +17,7 @@ export default function SettingsScreen() {
         {t('settings.title')}
       </AppText>
 
+      {/* Language */}
       <View style={{ gap: 14 }}>
         <View
           style={{
@@ -80,6 +83,69 @@ export default function SettingsScreen() {
               <AppIcon name="check" size={16} color={COLORS.accent} />
             ) : null}
           </Pressable>
+        </View>
+      </View>
+
+      {/* Appearance */}
+      <View style={{ gap: 14, marginTop: 10 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <AppIcon name="palette" size={16} color={COLORS.textMuted} />
+          <AppText
+            variant="label"
+            weight="medium"
+            style={{
+              color: COLORS.textSecondary,
+              letterSpacing: 1,
+              fontSize: 11,
+            }}
+          >
+            {t('settings.appearanceSection').toUpperCase()}
+          </AppText>
+        </View>
+
+        <View
+          style={{
+            borderTopWidth: 0.5,
+            borderTopColor: COLORS.border,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 14,
+              borderBottomWidth: 0.5,
+              borderBottomColor: COLORS.divider,
+            }}
+          >
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <AppText variant="label" weight="medium">
+                {t('settings.dynamicAccent')}
+              </AppText>
+              <AppText
+                variant="caption"
+                style={{ color: COLORS.textMuted, marginTop: 2 }}
+              >
+                {t('settings.dynamicAccentDesc')}
+              </AppText>
+            </View>
+            <Switch
+              value={dynamicAccent}
+              onValueChange={setDynamicAccent}
+              trackColor={{
+                false: COLORS.surfaceMuted,
+                true: COLORS.accent,
+              }}
+              thumbColor={COLORS.textPrimary}
+            />
+          </View>
         </View>
       </View>
     </ScreenContainer>

@@ -6,11 +6,13 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { SourceBadge } from '@/components/SourceBadge';
 import { COLORS } from '@/constants/colors';
+import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { usePlayerStore } from '@/store/usePlayerStore';
 
 export function MiniPlayer() {
   const { currentTrack, isPlaying, progress, togglePlayback } =
     usePlayerStore();
+  const accentColor = useDynamicAccent();
 
   if (!currentTrack) return null;
 
@@ -38,7 +40,7 @@ export function MiniPlayer() {
           style={{
             height: 1,
             width: `${Math.max(progress * 100, 0.5)}%`,
-            backgroundColor: COLORS.accent,
+            backgroundColor: accentColor,
           }}
         />
       </View>
