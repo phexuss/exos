@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import sharp from 'sharp';
 
 @Injectable()
@@ -38,8 +38,11 @@ export class ColorService {
   }
 
   private rgbToHsl(r: number, g: number, b: number): [number, number, number] {
-    r /= 255; g /= 255; b /= 255;
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    const max = Math.max(r, g, b),
+      min = Math.min(r, g, b);
     const l = (max + min) / 2;
     if (max === min) return [0, 0, l];
     const d = max - min;
@@ -52,20 +55,24 @@ export class ColorService {
   }
 
   private hslToRgb(h: number, s: number, l: number): [number, number, number] {
-    if (s === 0) { const v = l * 255; return [v, v, v]; }
+    if (s === 0) {
+      const v = l * 255;
+      return [v, v, v];
+    }
     const hue2rgb = (p: number, q: number, t: number) => {
-      if (t < 0) t += 1; if (t > 1) t -= 1;
-      if (t < 1/6) return p + (q - p) * 6 * t;
-      if (t < 1/2) return q;
-      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
       return p;
     };
     const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
     const p = 2 * l - q;
     return [
-      hue2rgb(p, q, h + 1/3) * 255,
+      hue2rgb(p, q, h + 1 / 3) * 255,
       hue2rgb(p, q, h) * 255,
-      hue2rgb(p, q, h - 1/3) * 255,
+      hue2rgb(p, q, h - 1 / 3) * 255,
     ];
   }
 }

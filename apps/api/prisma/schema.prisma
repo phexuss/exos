@@ -1,7 +1,47 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "./generated"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id            String             @id @default(uuid())
+  name          String
+  email         String             @unique
+  username      String             @unique
+  passwordHash  String
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  userLibraries UserLibrary[]
+  sessions      Session[]
+  codes         VerificationCode[]
+}
+
+model VerificationCode {
+  id        String   @id @default(uuid())
+  code      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model UserLibrary {
+  id       String   @id @default(uuid())
+  userId   String
+  deezerId String
+  addedAt  DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+model Session {
+  id               String   @id @default(uuid())
+  userId           String
+  refreshTokenHash String   @unique
+  device           String?
+  expiresAt        DateTime
+  user             User     @relation(fields: [userId], references: [id])
 }

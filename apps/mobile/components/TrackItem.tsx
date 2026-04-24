@@ -39,11 +39,12 @@ export function TrackItem({
         alignItems: 'center',
         paddingVertical: 14,
         paddingLeft: isActive ? 12 : 0,
+        paddingRight: 14,
         gap: 14,
         borderBottomWidth: 0.5,
         borderBottomColor: COLORS.divider,
         backgroundColor: isActive ? activeColor + '14' : 'transparent',
-        borderRadius: isActive ? 12 : 0,
+        borderRadius: isActive ? 14 : 0,
         overflow: 'hidden',
       }}
     >
@@ -96,7 +97,10 @@ export function TrackItem({
         <AppText
           variant="body"
           weight="medium"
-          style={{ color: isActive ? activeColor : COLORS.textPrimary, fontSize: 15 }}
+          style={{
+            color: isActive ? activeColor : COLORS.textPrimary,
+            fontSize: 15,
+          }}
           numberOfLines={1}
         >
           {track.title}
@@ -135,11 +139,7 @@ export function TrackItem({
       </AppText>
 
       {showDownload ? (
-        <DownloadButton
-          track={track}
-          size={20}
-          onDownloaded={onDownloaded}
-        />
+        <DownloadButton track={track} size={20} onDownloaded={onDownloaded} />
       ) : null}
     </AnimatedPressable>
   );

@@ -9,16 +9,16 @@ import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
-import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { FONT_FAMILY } from '@/constants/typography';
+import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import {
   deletePlaylist,
-  getPlaylistTracks,
   getPlaylists,
+  getPlaylistTracks,
+  type PlaylistRow,
   removeTrackFromPlaylist,
   renamePlaylist,
   updatePlaylistCover,
-  type PlaylistRow,
 } from '@/services/db/database';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import type { Track } from '@/types/domain';
@@ -126,7 +126,9 @@ export default function PlaylistScreen() {
   if (!playlist) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <View
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+        >
           <AppText variant="body" style={{ color: COLORS.textMuted }}>
             Loading...
           </AppText>
@@ -152,7 +154,12 @@ export default function PlaylistScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <AppIcon name="chevron-down" size={24} color={COLORS.textMuted} />
         </Pressable>
-        <AppText variant="body" weight="bold" numberOfLines={1} style={{ flex: 1, textAlign: 'center', marginHorizontal: 12 }}>
+        <AppText
+          variant="body"
+          weight="bold"
+          numberOfLines={1}
+          style={{ flex: 1, textAlign: 'center', marginHorizontal: 12 }}
+        >
           {playlist.name}
         </AppText>
         <Pressable onPress={openEditModal} hitSlop={12}>
@@ -167,7 +174,14 @@ export default function PlaylistScreen() {
       </View>
 
       {tracks.length === 0 ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+          }}
+        >
           <AppIcon name="music" size={32} color={COLORS.textMuted} />
           <AppText variant="body" style={{ color: COLORS.textMuted }}>
             No tracks in this playlist
@@ -208,7 +222,12 @@ export default function PlaylistScreen() {
         onRequestClose={() => setShowEdit(false)}
       >
         <Pressable
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', paddingHorizontal: 24 }}
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            justifyContent: 'center',
+            paddingHorizontal: 24,
+          }}
           onPress={() => setShowEdit(false)}
         >
           <Pressable
@@ -219,7 +238,11 @@ export default function PlaylistScreen() {
               gap: 16,
             }}
           >
-            <AppText variant="title" weight="bold" style={{ textAlign: 'center' }}>
+            <AppText
+              variant="title"
+              weight="bold"
+              style={{ textAlign: 'center' }}
+            >
               Edit Playlist
             </AppText>
 
@@ -251,7 +274,14 @@ export default function PlaylistScreen() {
                   }}
                 >
                   <AppIcon name="music" size={32} color={COLORS.textMuted} />
-                  <AppText variant="caption" style={{ color: COLORS.textMuted, marginTop: 4, fontSize: 10 }}>
+                  <AppText
+                    variant="caption"
+                    style={{
+                      color: COLORS.textMuted,
+                      marginTop: 4,
+                      fontSize: 10,
+                    }}
+                  >
                     Add Cover
                   </AppText>
                 </View>
@@ -287,7 +317,11 @@ export default function PlaylistScreen() {
                   backgroundColor: COLORS.surfaceMuted,
                 }}
               >
-                <AppText variant="body" weight="medium" style={{ color: COLORS.textSecondary }}>
+                <AppText
+                  variant="body"
+                  weight="medium"
+                  style={{ color: COLORS.textSecondary }}
+                >
                   Cancel
                 </AppText>
               </Pressable>
@@ -301,7 +335,11 @@ export default function PlaylistScreen() {
                   backgroundColor: COLORS.accent,
                 }}
               >
-                <AppText variant="body" weight="medium" style={{ color: '#fff' }}>
+                <AppText
+                  variant="body"
+                  weight="medium"
+                  style={{ color: '#fff' }}
+                >
                   Save
                 </AppText>
               </Pressable>

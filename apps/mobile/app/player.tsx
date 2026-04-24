@@ -278,10 +278,7 @@ export default function PlayerScreen() {
                   markTrackDownloaded(track.id, filePath);
                 }}
               />
-              <Pressable
-                hitSlop={10}
-                onPress={() => setShowLyrics((v) => !v)}
-              >
+              <Pressable hitSlop={10} onPress={() => setShowLyrics((v) => !v)}>
                 <AppIcon
                   name="lyrics"
                   size={20}
@@ -347,7 +344,7 @@ export default function PlayerScreen() {
           </Pressable>
 
           <AnimatedPressable
-            scaleValue={0.85}
+            scaleValue={0.9}
             onPress={skipPrevious}
             hitSlop={12}
             style={{
@@ -361,7 +358,7 @@ export default function PlayerScreen() {
           </AnimatedPressable>
 
           <AnimatedPressable
-            scaleValue={0.9}
+            scaleValue={0.98}
             onPress={togglePlayback}
             style={{
               width: 64,
@@ -380,7 +377,7 @@ export default function PlayerScreen() {
           </AnimatedPressable>
 
           <AnimatedPressable
-            scaleValue={0.85}
+            scaleValue={0.9}
             onPress={skipNext}
             hitSlop={12}
             style={{
