@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
@@ -6,6 +5,7 @@ import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
 import { useI18n } from '@/hooks/useI18n';
+import { usePlayerStore } from '@/store/usePlayerStore';
 import type { Track } from '@/types/domain';
 
 type NowPlayingBarProps = {
@@ -18,7 +18,7 @@ export function NowPlayingBar({ track, isPlaying }: NowPlayingBarProps) {
 
   return (
     <Pressable
-      onPress={() => router.push('/player' as const)}
+      onPress={() => usePlayerStore.getState().openPlayer()}
       style={{
         flexDirection: 'row',
         alignItems: 'center',

@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { Image, Pressable, View } from 'react-native';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
@@ -19,7 +18,7 @@ export function MiniPlayer() {
   return (
     <AnimatedPressable
       scaleValue={0.975}
-      onPress={() => router.push('/player' as const)}
+      onPress={() => usePlayerStore.getState().openPlayer()}
       style={{
         backgroundColor: COLORS.surfaceElevated,
         marginHorizontal: 8,

@@ -16,6 +16,7 @@ type PlayerState = {
   shuffle: boolean;
   repeat: RepeatMode;
   showQueue: boolean;
+  isPlayerOpen: boolean;
 
   play: (track: Track) => void;
   pause: () => void;
@@ -29,6 +30,8 @@ type PlayerState = {
   toggleShuffle: () => void;
   cycleRepeat: () => void;
   setShowQueue: (show: boolean) => void;
+  openPlayer: () => void;
+  closePlayer: () => void;
 };
 
 /**
@@ -72,6 +75,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   shuffle: false,
   repeat: 'off',
   showQueue: false,
+  isPlayerOpen: false,
 
   play: (track) => {
     smartPlay(track, set);
@@ -158,6 +162,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     })),
 
   setShowQueue: (show) => set({ showQueue: show }),
+
+  openPlayer: () => set({ isPlayerOpen: true }),
+  closePlayer: () => set({ isPlayerOpen: false, showQueue: false }),
 }));
 
 audio.bindStore(() => usePlayerStore);

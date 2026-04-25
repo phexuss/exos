@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, Image, Pressable, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -38,6 +37,7 @@ export default function PlayerScreen() {
     setShowQueue,
     play,
     markTrackDownloaded,
+    closePlayer,
   } = usePlayerStore();
   const accentColor = useDynamicAccent();
   const startSeeking = audio.startSeeking;
@@ -181,7 +181,7 @@ export default function PlayerScreen() {
           paddingVertical: 12,
         }}
       >
-        <Pressable onPress={() => router.back()} hitSlop={12}>
+        <Pressable onPress={() => closePlayer()} hitSlop={12}>
           <AppIcon name="chevron-down" size={24} color={COLORS.textMuted} />
         </Pressable>
         <AppText

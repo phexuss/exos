@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 import '../global.css';
 
 import { COLORS } from '@/constants/colors';
+import { PlayerOverlay } from '@/components/PlayerOverlay';
 import { LanguageProvider } from '@/providers/LanguageProvider';
 import { getDownloadedTracks } from '@/services/db/database';
 import { useDownloadStore } from '@/store/useDownloadStore';
@@ -76,19 +77,6 @@ export default function RootLayout() {
           >
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen
-              name="player"
-              options={{
-                presentation: 'fullScreenModal',
-                headerShown: false,
-                animation: 'slide_from_bottom',
-                animationDuration: 350,
-                gestureEnabled: true,
-                gestureDirection: 'vertical',
-                fullScreenGestureEnabled: true,
-                contentStyle: { backgroundColor: COLORS.background },
-              }}
-            />
-            <Stack.Screen
               name="playlist/[id]"
               options={{
                 headerShown: false,
@@ -114,6 +102,7 @@ export default function RootLayout() {
             />
           </Stack>
           <StatusBar style="light" />
+          <PlayerOverlay />
         </ThemeProvider>
       </LanguageProvider>
     </GestureHandlerRootView>
