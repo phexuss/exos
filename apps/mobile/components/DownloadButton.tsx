@@ -1,14 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
-import {
-  downloadTrack,
-  isDownloading,
-  onDownloadProgress,
-} from '@/services/download/downloadService';
+import { downloadTrack } from '@/services/download/downloadService';
 import { useDownloadStore } from '@/store/useDownloadStore';
 import type { Track } from '@/types/domain';
 
@@ -19,41 +15,32 @@ type Props = {
 };
 
 export function DownloadButton({ track, size = 20, onDownloaded }: Props) {
-  const isGloballyDownloaded = useDownloadStore(
+  const isDownloaded = useDownloadStore(
     (s) => s.downloadedIds.has(track.id),
   );
-  const [status, setStatus] = useState<'idle' | 'loading' | 'done'>(
-    isGloballyDownloaded || track.isDownloaded ? 'done' : isDownloading(track.id) ? 'loading' : 'idle',
+  // Primitive selectors — zustand compares numbers/strings with Object.is reliably
+  const dlProgress = useDownloadStore(
+    (s) => s.activeDownloads[track.id]?.progress ?? -1,
   );
-  const [progress, setProgress] = useState(0);
+  const dlStatus = useDownloadStore(
+    (s) => s.activeDownloads[track.id]?.status,
+  );
 
-  useEffect(() => {
-    if (isGloballyDownloaded) {
-      setStatus('done');
-    } else if (!isDownloading(track.id)) {
-      setStatus('idle');
-    }
-  }, [track.id, isGloballyDownloaded]);
-
-  useEffect(() => {
-    if (status === 'loading' || isDownloading(track.id)) {
-      return onDownloadProgress(track.id, (s) => {
-        setProgress(s.progress);
-        if (s.status === 'done') setStatus('done');
-        if (s.status === 'error') setStatus('idle');
-      });
-    }
-  }, [track.id, status]);
+  const isLoading = dlStatus != null && dlStatus !== 'done' && dlStatus !== 'error';
+  const progress = dlProgress === -1 ? 0 : dlProgress;
+  const status: 'idle' | 'loading' | 'done' = isDownloaded || track.isDownloaded
+    ? 'done'
+    : isLoading
+      ? 'loading'
+      : 'idle';
 
   const handlePress = useCallback(async () => {
     if (status !== 'idle') return;
-    setStatus('loading');
     try {
       const filePath = await downloadTrack(track);
       onDownloaded?.(track, filePath);
     } catch (e) {
       console.warn('[Download]', e);
-      setStatus('idle');
     }
   }, [track, status, onDownloaded]);
 

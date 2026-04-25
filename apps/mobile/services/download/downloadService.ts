@@ -92,6 +92,7 @@ export async function downloadTrack(track: Track): Promise<string> {
     status: 'fetching_url',
   };
   emit(state);
+  useDownloadStore.getState().setDownloadProgress(track.id, 0, 'fetching_url');
 
   try {
     // For SC tracks, isrc holds the webpage_url — pass it directly as query
@@ -106,6 +107,7 @@ export async function downloadTrack(track: Track): Promise<string> {
 
     state.status = 'downloading';
     emit(state);
+    useDownloadStore.getState().setDownloadProgress(track.id, 0, 'downloading');
 
     ensureDir();
     const destination = new File(TRACKS_DIR, `${track.id}.mp3`);
@@ -118,6 +120,7 @@ export async function downloadTrack(track: Track): Promise<string> {
       downloadFile(url, destination, (p: number) => {
         state.progress = p;
         emit(state);
+        useDownloadStore.getState().setDownloadProgress(track.id, p, 'downloading');
       }),
     ]);
 
@@ -127,6 +130,7 @@ export async function downloadTrack(track: Track): Promise<string> {
     state.status = 'done';
     state.progress = 1;
     emit(state);
+    // markDownloaded already clears activeDownloads in the store
 
     if (__DEV__) console.log('[Download] Saved:', filePath, lyrics ? '+ lyrics' : '');
     return filePath;
@@ -135,6 +139,7 @@ export async function downloadTrack(track: Track): Promise<string> {
     state.error = e instanceof Error ? e.message : 'Unknown error';
     if (__DEV__) console.warn('[Download] Error:', state.error);
     emit(state);
+    useDownloadStore.getState().clearDownloadProgress(track.id);
     throw e;
   } finally {
     activeDownloads.delete(track.id);
