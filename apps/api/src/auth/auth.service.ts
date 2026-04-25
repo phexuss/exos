@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { AuthPayloadDto } from 'src/auth/dto/auth.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ResendService } from 'src/resend/resend.service';
 import { UserService } from 'src/user/user.service';
 
 type TokenExpiry =
@@ -38,6 +39,7 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly configService: ConfigService,
     private readonly prismaService: PrismaService,
+    private readonly resendService: ResendService,
   ) {}
 
   private get accessSecret(): string {
@@ -54,6 +56,10 @@ export class AuthService {
 
   private get refreshExpiresIn(): TokenExpiry {
     return this.configService.getOrThrow<TokenExpiry>('JWT_REFRESH_EXPIRES');
+  }
+
+  private generateVerifyCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
   private async validateCredentials(dto: AuthPayloadDto) {
@@ -235,5 +241,45 @@ export class AuthService {
   async validateUser(dto: AuthPayloadDto): Promise<string> {
     const tokens = await this.login(dto);
     return tokens.accessToken;
+  }
+
+  async sendVerificationEmail(userId: string, email: string): Promise<void> {
+    const code = this.generateVerifyCode();
+    const codeExp = new Date(Date.now() + 30 * 60 * 1000);
+
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: { verifyToken: code, verifyTokenExp: codeExp },
+    });
+
+    await this.resendService.sendVerificationEmail(email, code);
+  }
+
+  async verifyEmail(
+    userId: string,
+    code: string,
+  ): Promise<{ success: boolean }> {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user || user.verifyToken !== code) {
+      throw new UnauthorizedException('Invalid code');
+    }
+
+    if (!user.verifyTokenExp || user.verifyTokenExp < new Date()) {
+      throw new UnauthorizedException('Code expired');
+    }
+
+    await this.prismaService.user.update({
+      where: { id: user.id },
+      data: {
+        isVerified: true,
+        verifyToken: null,
+        verifyTokenExp: null,
+      },
+    });
+
+    return { success: true };
   }
 }

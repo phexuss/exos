@@ -8,16 +8,19 @@ datasource db {
 }
 
 model User {
-  id            String             @id @default(uuid())
-  name          String
-  email         String             @unique
-  username      String             @unique
-  passwordHash  String
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  userLibraries UserLibrary[]
-  sessions      Session[]
-  codes         VerificationCode[]
+  id             String             @id @default(uuid())
+  name           String
+  email          String             @unique
+  username       String             @unique
+  passwordHash   String
+  isVerified     Boolean            @default(false)
+  verifyToken    String?            @unique
+  verifyTokenExp DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  userLibraries  UserLibrary[]
+  sessions       Session[]
+  codes          VerificationCode[]
 }
 
 model VerificationCode {

@@ -1,12 +1,23 @@
 import { Controller, Get, Param } from '@nestjs/common';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+import { DeezerTrackFullDto } from 'src/providers/deezer/deezer.types';
 import { TracksService } from './tracks.service';
 
+@ApiTags('Tracks')
 @Controller('tracks')
 export class TracksController {
   constructor(private readonly tracksService: TracksService) {}
 
+  @ApiOperation({ summary: 'Get Deezer track by id' })
+  @ApiParam({ name: 'id', description: 'Track id' })
+  @ApiOkResponse({ description: 'Track details', type: DeezerTrackFullDto })
   @Get(':id')
-  async getTrack(@Param('id') id: string) {
+  async getTrack(@Param('id') id: string): Promise<DeezerTrackFullDto> {
     return this.tracksService.getTrack(id);
   }
 }

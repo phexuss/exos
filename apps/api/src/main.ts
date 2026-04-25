@@ -22,11 +22,13 @@ async function bootstrap() {
     }),
   );
 
-  const swaggerEnabled = configService.get<boolean>('SWAGGER_ENABLED') !== true;
+  const swaggerEnabled = configService.get<boolean>('SWAGGER_ENABLED') === true;
   if (swaggerEnabled) {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('Exos API')
-      .setDescription('API documentation for Exos backend')
+      .setDescription(
+        'API documentation for Exos backend. OpenAPI JSON is available at /docs-json for Orval generation.',
+      )
       .setVersion('1.0.0')
       .addBearerAuth()
       .build();
