@@ -7,7 +7,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ArtistsModule } from './artists/artists.module';
 import { AuthModule } from './auth/auth.module';
-import { ColorModule } from './color/color.module';
 import { DownloadModule } from './download/download.module';
 import { LyricsModule } from './lyrics/lyrics.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -54,7 +53,6 @@ import { UserModule } from './user/user.module';
     AlbumsModule,
     LyricsModule,
     DownloadModule,
-    ColorModule,
     UserModule,
     ResendModule,
     AuthModule,
