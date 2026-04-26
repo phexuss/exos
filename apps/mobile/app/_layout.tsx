@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import '../global.css';
 
+import { ArtistOverlay } from '@/components/ArtistOverlay';
 import { PlayerOverlay } from '@/components/PlayerOverlay';
 import { PlaylistOverlay } from '@/components/PlaylistOverlay';
 import { ProfileOverlay } from '@/components/ProfileOverlay';
@@ -126,6 +127,7 @@ export default function RootLayout() {
           <RootNavigator />
           <StatusBar style="light" />
           <PlaylistOverlay />
+          <ArtistOverlay />
           <PlayerOverlay />
           <ProfileOverlay />
           <SettingsOverlay />

@@ -6,6 +6,7 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
+import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 
 export function MiniPlayer() {
@@ -91,13 +92,31 @@ export function MiniPlayer() {
             {currentTrack.title}
           </AppText>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <AppText
-              variant="caption"
-              style={{ color: COLORS.textMuted, fontSize: 11 }}
-              numberOfLines={1}
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                if (
+                  currentTrack.source === 'deezer' &&
+                  currentTrack.artist.id
+                ) {
+                  useOverlayStore.getState().openArtist(currentTrack.artist.id);
+                }
+              }}
+              hitSlop={4}
             >
-              {currentTrack.artist.name}
-            </AppText>
+              <AppText
+                variant="caption"
+                style={{
+                  color: COLORS.textMuted,
+                  fontSize: 11,
+                  textDecorationLine:
+                    currentTrack.source === 'deezer' ? 'underline' : 'none',
+                }}
+                numberOfLines={1}
+              >
+                {currentTrack.artist.name}
+              </AppText>
+            </Pressable>
             <SourceBadge source={currentTrack.source} />
           </View>
         </View>

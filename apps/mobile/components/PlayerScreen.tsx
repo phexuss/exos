@@ -15,6 +15,7 @@ import { COLORS } from '@/constants/colors';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useI18n } from '@/hooks/useI18n';
 import * as audio from '@/services/audio/audioService';
+import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 
 export default function PlayerScreen() {
@@ -265,9 +266,31 @@ export default function PlayerScreen() {
               <AppText variant="title" weight="bold">
                 {currentTrack.title}
               </AppText>
-              <AppText variant="body" style={{ color: COLORS.textSecondary }}>
-                {currentTrack.artist.name}
-              </AppText>
+              <Pressable
+                onPress={() => {
+                  if (
+                    currentTrack.source === 'deezer' &&
+                    currentTrack.artist.id
+                  ) {
+                    closePlayer();
+                    useOverlayStore
+                      .getState()
+                      .openArtist(currentTrack.artist.id);
+                  }
+                }}
+                hitSlop={4}
+              >
+                <AppText
+                  variant="body"
+                  style={{
+                    color: COLORS.textSecondary,
+                    textDecorationLine:
+                      currentTrack.source === 'deezer' ? 'underline' : 'none',
+                  }}
+                >
+                  {currentTrack.artist.name}
+                </AppText>
+              </Pressable>
             </View>
             <View
               style={{

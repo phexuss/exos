@@ -4,6 +4,9 @@ type OverlayState = {
   isProfileOpen: boolean;
   isSettingsOpen: boolean;
   playlistId: string | null;
+  artistId: string | null;
+  albumId: string | null;
+  albumTitle: string | null;
 
   openProfile: () => void;
   closeProfile: () => void;
@@ -11,6 +14,10 @@ type OverlayState = {
   closeSettings: () => void;
   openPlaylist: (id: string) => void;
   closePlaylist: () => void;
+  openArtist: (id: string) => void;
+  closeArtist: () => void;
+  openAlbum: (id: string, title?: string) => void;
+  closeAlbum: () => void;
   closeAll: () => void;
 };
 
@@ -18,6 +25,9 @@ export const useOverlayStore = create<OverlayState>((set) => ({
   isProfileOpen: false,
   isSettingsOpen: false,
   playlistId: null,
+  artistId: null,
+  albumId: null,
+  albumTitle: null,
 
   openProfile: () => set({ isProfileOpen: true }),
   closeProfile: () => set({ isProfileOpen: false, isSettingsOpen: false }),
@@ -25,10 +35,17 @@ export const useOverlayStore = create<OverlayState>((set) => ({
   closeSettings: () => set({ isSettingsOpen: false }),
   openPlaylist: (id) => set({ playlistId: id }),
   closePlaylist: () => set({ playlistId: null }),
+  openArtist: (id) => set({ artistId: id }),
+  closeArtist: () => set({ artistId: null, albumId: null, albumTitle: null }),
+  openAlbum: (id, title) => set({ albumId: id, albumTitle: title ?? null }),
+  closeAlbum: () => set({ albumId: null, albumTitle: null }),
   closeAll: () =>
     set({
       isProfileOpen: false,
       isSettingsOpen: false,
       playlistId: null,
+      artistId: null,
+      albumId: null,
+      albumTitle: null,
     }),
 }));

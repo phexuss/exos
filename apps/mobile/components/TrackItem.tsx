@@ -1,11 +1,12 @@
 import { memo } from 'react';
-import { Image, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { DownloadButton } from '@/components/DownloadButton';
 import { SourceBadge } from '@/components/SourceBadge';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { useOverlayStore } from '@/store/useOverlayStore';
 import type { Track } from '@/types/domain';
 
 type TrackItemProps = {
@@ -107,13 +108,27 @@ function TrackItemComponent({
           {track.title}
         </AppText>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <AppText
-            variant="caption"
-            style={{ color: COLORS.textMuted, fontSize: 13 }}
-            numberOfLines={1}
+          <Pressable
+            onPress={() => {
+              if (track.source === 'deezer' && track.artist.id) {
+                useOverlayStore.getState().openArtist(track.artist.id);
+              }
+            }}
+            hitSlop={4}
           >
-            {track.artist.name}
-          </AppText>
+            <AppText
+              variant="caption"
+              style={{
+                color: COLORS.textMuted,
+                fontSize: 13,
+                textDecorationLine:
+                  track.source === 'deezer' ? 'underline' : 'none',
+              }}
+              numberOfLines={1}
+            >
+              {track.artist.name}
+            </AppText>
+          </Pressable>
           <SourceBadge source={track.source} />
           {showBitrate && track.bitrate ? (
             <AppText
