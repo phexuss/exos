@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { FlatList, Image, Pressable, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,25 +20,24 @@ import { usePlayerStore } from '@/store/usePlayerStore';
 export default function PlayerScreen() {
   const { t } = useI18n();
   const [showLyrics, setShowLyrics] = useState(false);
-  const {
-    currentTrack,
-    isPlaying,
-    progress,
-    setProgress,
-    togglePlayback,
-    skipNext,
-    skipPrevious,
-    shuffle,
-    repeat,
-    toggleShuffle,
-    cycleRepeat,
-    queue,
-    showQueue,
-    setShowQueue,
-    play,
-    markTrackDownloaded,
-    closePlayer,
-  } = usePlayerStore();
+  const [scrubRatio, setScrubRatio] = useState<number | null>(null);
+  const currentTrack = usePlayerStore((s) => s.currentTrack);
+  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const progress = usePlayerStore((s) => s.progress);
+  const shuffle = usePlayerStore((s) => s.shuffle);
+  const repeat = usePlayerStore((s) => s.repeat);
+  const queue = usePlayerStore((s) => s.queue);
+  const showQueue = usePlayerStore((s) => s.showQueue);
+  const setProgress = usePlayerStore((s) => s.setProgress);
+  const togglePlayback = usePlayerStore((s) => s.togglePlayback);
+  const skipNext = usePlayerStore((s) => s.skipNext);
+  const skipPrevious = usePlayerStore((s) => s.skipPrevious);
+  const toggleShuffle = usePlayerStore((s) => s.toggleShuffle);
+  const cycleRepeat = usePlayerStore((s) => s.cycleRepeat);
+  const setShowQueue = usePlayerStore((s) => s.setShowQueue);
+  const play = usePlayerStore((s) => s.play);
+  const markTrackDownloaded = usePlayerStore((s) => s.markTrackDownloaded);
+  const closePlayer = usePlayerStore((s) => s.closePlayer);
   const accentColor = useDynamicAccent();
   const startSeeking = audio.startSeeking;
   const stopSeeking = audio.stopSeeking;
@@ -46,17 +45,24 @@ export default function PlayerScreen() {
   const totalDurationSec =
     currentTrack?.durationSec ||
     (currentTrack ? parseDuration(currentTrack.duration) : 0);
-  const displayedCurrentTimeSec = progress * (totalDurationSec || 0);
+  const displayedRatio = scrubRatio ?? progress;
+  const displayedCurrentTimeSec = displayedRatio * (totalDurationSec || 0);
 
-  const handleSeek = (value: number) => {
-    setProgress(value);
-  };
+  const handleSeek = useCallback(
+    (value: number) => {
+      setProgress(value);
+    },
+    [setProgress],
+  );
 
-  const handleLyricSeek = (seconds: number) => {
-    if (!totalDurationSec) return;
-    const ratio = Math.max(0, Math.min(1, seconds / totalDurationSec));
-    setProgress(ratio);
-  };
+  const handleLyricSeek = useCallback(
+    (seconds: number) => {
+      if (!totalDurationSec) return;
+      const ratio = Math.max(0, Math.min(1, seconds / totalDurationSec));
+      setProgress(ratio);
+    },
+    [totalDurationSec, setProgress],
+  );
 
   if (!currentTrack) {
     return (
@@ -295,6 +301,7 @@ export default function PlayerScreen() {
             onSeek={handleSeek}
             onSeekStart={startSeeking}
             onSeekEnd={stopSeeking}
+            onScrub={setScrubRatio}
             accentColor={accentColor}
           />
           <View

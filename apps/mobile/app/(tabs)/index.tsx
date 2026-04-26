@@ -1,6 +1,11 @@
-import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Image, Pressable, View } from 'react-native';
+import { memo, useCallback, useEffect, useState } from 'react';
+import {
+  FlatList,
+  Image,
+  type ListRenderItem,
+  Pressable,
+  View,
+} from 'react-native';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { SourceBadge } from '@/components/SourceBadge';
@@ -11,15 +16,29 @@ import { COLORS } from '@/constants/colors';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useI18n } from '@/hooks/useI18n';
 import { getRecentlyPlayed } from '@/services/db/database';
+import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import type { Track } from '@/types/domain';
 
-function RecentCard({ track, onPress, isActive, accentColor }: { track: Track; onPress: () => void; isActive?: boolean; accentColor?: string }) {
+type RecentCardProps = {
+  track: Track;
+  onPress: (track: Track) => void;
+  isActive?: boolean;
+  accentColor?: string;
+};
+
+function RecentCardComponent({
+  track,
+  onPress,
+  isActive,
+  accentColor,
+}: RecentCardProps) {
+  const handlePress = useCallback(() => onPress(track), [onPress, track]);
   const activeColor = accentColor ?? COLORS.accent;
   return (
     <AnimatedPressable
       scaleValue={0.95}
-      onPress={onPress}
+      onPress={handlePress}
       style={{
         width: 160,
         gap: 10,
@@ -56,7 +75,10 @@ function RecentCard({ track, onPress, isActive, accentColor }: { track: Track; o
         <AppText
           variant="body"
           weight="medium"
-          style={{ color: isActive ? activeColor : COLORS.textPrimary, fontSize: 14 }}
+          style={{
+            color: isActive ? activeColor : COLORS.textPrimary,
+            fontSize: 14,
+          }}
           numberOfLines={1}
         >
           {track.title}
@@ -76,9 +98,13 @@ function RecentCard({ track, onPress, isActive, accentColor }: { track: Track; o
   );
 }
 
+const RecentCard = memo(RecentCardComponent);
+
 export default function HomeScreen() {
   const { t } = useI18n();
-  const { play, setQueue, currentTrack } = usePlayerStore();
+  const play = usePlayerStore((s) => s.play);
+  const setQueue = usePlayerStore((s) => s.setQueue);
+  const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const accentColor = useDynamicAccent();
   const [recentTracks, setRecentTracks] = useState<Track[]>([]);
 
@@ -95,10 +121,27 @@ export default function HomeScreen() {
     loadRecent();
   }, [loadRecent]);
 
-  const handlePlay = (track: Track) => {
-    setQueue(recentTracks);
-    play(track);
-  };
+  const handlePlay = useCallback(
+    (track: Track) => {
+      setQueue(recentTracks);
+      play(track);
+    },
+    [setQueue, play, recentTracks],
+  );
+
+  const renderCard = useCallback<ListRenderItem<Track>>(
+    ({ item }) => (
+      <RecentCard
+        track={item}
+        onPress={handlePlay}
+        isActive={currentTrackId === item.id}
+        accentColor={accentColor}
+      />
+    ),
+    [handlePlay, currentTrackId, accentColor],
+  );
+
+  const keyExtractor = useCallback((item: Track) => item.id, []);
 
   return (
     <ScreenContainer>
@@ -113,7 +156,7 @@ export default function HomeScreen() {
           EXØS
         </AppText>
         <Pressable
-          onPress={() => router.push('/settings' as const)}
+          onPress={() => useOverlayStore.getState().openProfile()}
           hitSlop={12}
           style={{
             width: 36,
@@ -154,11 +197,12 @@ export default function HomeScreen() {
             data={recentTracks}
             horizontal
             showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
+            keyExtractor={keyExtractor}
             contentContainerStyle={{ gap: 14 }}
-            renderItem={({ item }) => (
-              <RecentCard track={item} onPress={() => handlePlay(item)} isActive={currentTrack?.id === item.id} accentColor={accentColor} />
-            )}
+            renderItem={renderCard}
+            initialNumToRender={6}
+            maxToRenderPerBatch={6}
+            windowSize={5}
           />
         )}
       </View>

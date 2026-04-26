@@ -1,5 +1,5 @@
-import type { SoundCloudTrack } from '@/types/soundcloud';
 import type { Track } from '@/types/domain';
+import type { SoundCloudTrack } from '@/types/soundcloud';
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);

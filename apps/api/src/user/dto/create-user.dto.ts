@@ -87,3 +87,26 @@ export class UserResponseDto {
   @ApiProperty({ format: 'date-time' })
   updatedAt!: Date;
 }
+
+export class UserPublicDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty()
+  email!: string;
+
+  @ApiProperty()
+  username!: string;
+
+  @ApiProperty({ example: false })
+  isVerified!: boolean;
+
+  @ApiProperty({ format: 'date-time' })
+  createdAt!: Date;
+
+  @ApiProperty({ format: 'date-time' })
+  updatedAt!: Date;
+}

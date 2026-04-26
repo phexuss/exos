@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -13,6 +13,8 @@ import {
   AuthPayloadDto,
   AuthStatusResponseDto,
   AuthTokenResponseDto,
+  ChangePasswordDto,
+  ChangePasswordResponseDto,
   LogoutResponseDto,
   RefreshTokenDto,
 } from 'src/auth/dto/auth.dto';
@@ -36,14 +38,18 @@ export class AuthController {
     private readonly authService: AuthService,
   ) {}
 
-  @ApiOperation({ summary: 'Register new user account' })
+  @ApiOperation({
+    summary: 'Register new user account and send verification code',
+  })
   @ApiCreatedResponse({
-    description: 'User account has been created',
+    description: 'User account has been created and verification email queued',
     type: CreateUserResponseDto,
   })
   @Post('register')
   async register(@Body() dto: CreateUserDto): Promise<CreateUserResponseDto> {
-    return this.userService.createUser(dto);
+    const user = await this.userService.createUser(dto);
+    await this.authService.sendVerificationEmail(user.id, user.email);
+    return user;
   }
 
   @ApiOperation({ summary: 'Login and issue tokens' })
@@ -110,5 +116,29 @@ export class AuthController {
   @Post('verify/resend')
   async resendCode(@Body() dto: ResendCodeDto): Promise<void> {
     await this.authService.sendVerificationEmail(dto.userId, dto.email);
+  }
+
+  @ApiOperation({ summary: 'Change password of the current user' })
+  @ApiBearerAuth()
+  @ApiOkResponse({
+    description: 'Password has been changed',
+    type: ChangePasswordResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing/invalid bearer token or wrong current password',
+  })
+  @UseGuards(JwtAuthGuard)
+  @Patch('password')
+  async changePassword(
+    @Req() req: Request,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<ChangePasswordResponseDto> {
+    const { sub } = req.user as AuthStatusResponseDto;
+    await this.authService.changePassword(
+      sub,
+      dto.currentPassword,
+      dto.newPassword,
+    );
+    return { success: true };
   }
 }

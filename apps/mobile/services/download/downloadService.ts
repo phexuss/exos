@@ -1,7 +1,6 @@
 import { Directory, File, Paths } from 'expo-file-system';
 
 import { apiGet, apiPost } from '@/services/api/client';
-import { useDownloadStore } from '@/store/useDownloadStore';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
 import {
   deleteDownloadedTrack as deleteFromDb,
@@ -9,6 +8,7 @@ import {
   insertDownloadedTrack,
   type LyricsData,
 } from '@/services/db/database';
+import { useDownloadStore } from '@/store/useDownloadStore';
 import type { Track } from '@/types/domain';
 
 const TRACKS_DIR = new Directory(Paths.document, 'tracks');
@@ -58,7 +58,11 @@ async function fetchLyrics(
   try {
     const data = await apiGet<{ syncedLyrics?: string; plainLyrics?: string }>(
       API_ENDPOINTS.lyrics,
-      { artist: primaryArtist(artist), track: title, duration: String(duration) },
+      {
+        artist: primaryArtist(artist),
+        track: title,
+        duration: String(duration),
+      },
     );
     return {
       syncedLyrics: data.syncedLyrics ?? null,
@@ -96,7 +100,8 @@ export async function downloadTrack(track: Track): Promise<string> {
 
   try {
     // For SC tracks, isrc holds the webpage_url — pass it directly as query
-    const isSC = track.source === 'soundcloud' && track.isrc?.startsWith('http');
+    const isSC =
+      track.source === 'soundcloud' && track.isrc?.startsWith('http');
     const { url } = await apiPost<{ url: string }>(API_ENDPOINTS.download, {
       query: isSC ? track.isrc! : `${track.artist.name} ${track.title}`,
       isrc: isSC ? undefined : track.isrc,
@@ -120,7 +125,9 @@ export async function downloadTrack(track: Track): Promise<string> {
       downloadFile(url, destination, (p: number) => {
         state.progress = p;
         emit(state);
-        useDownloadStore.getState().setDownloadProgress(track.id, p, 'downloading');
+        useDownloadStore
+          .getState()
+          .setDownloadProgress(track.id, p, 'downloading');
       }),
     ]);
 
@@ -132,7 +139,8 @@ export async function downloadTrack(track: Track): Promise<string> {
     emit(state);
     // markDownloaded already clears activeDownloads in the store
 
-    if (__DEV__) console.log('[Download] Saved:', filePath, lyrics ? '+ lyrics' : '');
+    if (__DEV__)
+      console.log('[Download] Saved:', filePath, lyrics ? '+ lyrics' : '');
     return filePath;
   } catch (e) {
     state.status = 'error';

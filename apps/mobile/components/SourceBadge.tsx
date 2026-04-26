@@ -10,7 +10,9 @@ type SourceBadgeProps = {
   source: SourceKey;
 };
 
-const SOURCE_ICON: Partial<Record<SourceKey, (color: string) => React.ReactNode>> = {
+const SOURCE_ICON: Partial<
+  Record<SourceKey, (color: string) => React.ReactNode>
+> = {
   soundcloud: (color) => <SoundCloudIcon size={7} color={color} />,
   deezer: (color) => <DeezerIcon size={12} color={color} />,
 };

@@ -15,24 +15,22 @@ type Props = {
 };
 
 export function DownloadButton({ track, size = 20, onDownloaded }: Props) {
-  const isDownloaded = useDownloadStore(
-    (s) => s.downloadedIds.has(track.id),
-  );
+  const isDownloaded = useDownloadStore((s) => s.downloadedIds.has(track.id));
   // Primitive selectors — zustand compares numbers/strings with Object.is reliably
   const dlProgress = useDownloadStore(
     (s) => s.activeDownloads[track.id]?.progress ?? -1,
   );
-  const dlStatus = useDownloadStore(
-    (s) => s.activeDownloads[track.id]?.status,
-  );
+  const dlStatus = useDownloadStore((s) => s.activeDownloads[track.id]?.status);
 
-  const isLoading = dlStatus != null && dlStatus !== 'done' && dlStatus !== 'error';
+  const isLoading =
+    dlStatus != null && dlStatus !== 'done' && dlStatus !== 'error';
   const progress = dlProgress === -1 ? 0 : dlProgress;
-  const status: 'idle' | 'loading' | 'done' = isDownloaded || track.isDownloaded
-    ? 'done'
-    : isLoading
-      ? 'loading'
-      : 'idle';
+  const status: 'idle' | 'loading' | 'done' =
+    isDownloaded || track.isDownloaded
+      ? 'done'
+      : isLoading
+        ? 'loading'
+        : 'idle';
 
   const handlePress = useCallback(async () => {
     if (status !== 'idle') return;

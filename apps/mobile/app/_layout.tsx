@@ -1,6 +1,6 @@
 import { ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { SplashScreen, Stack } from 'expo-router';
+import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-gesture-handler';
@@ -8,11 +8,17 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import '../global.css';
 
-import { COLORS } from '@/constants/colors';
 import { PlayerOverlay } from '@/components/PlayerOverlay';
+import { PlaylistOverlay } from '@/components/PlaylistOverlay';
+import { ProfileOverlay } from '@/components/ProfileOverlay';
+import { SettingsOverlay } from '@/components/SettingsOverlay';
+import { COLORS } from '@/constants/colors';
 import { LanguageProvider } from '@/providers/LanguageProvider';
+import { setUnauthorizedHandler } from '@/services/api/client';
 import { getDownloadedTracks } from '@/services/db/database';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useDownloadStore } from '@/store/useDownloadStore';
+import { useOverlayStore } from '@/store/useOverlayStore';
 
 const EXOS_THEME = {
   dark: true,
@@ -36,6 +42,42 @@ export const unstable_settings = {
   anchor: '(tabs)',
 };
 
+function useAuthRedirect() {
+  const segments = useSegments();
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    const inAuthGroup = (segments[0] as string | undefined) === '(auth)';
+
+    if (!user && !inAuthGroup) {
+      // Close any overlays before kicking the user out
+      useOverlayStore.getState().closeAll();
+      router.replace('/(auth)/welcome' as never);
+    } else if (user && inAuthGroup) {
+      router.replace('/(tabs)' as never);
+    }
+  }, [user, isHydrated, segments, router]);
+}
+
+function RootNavigator() {
+  useAuthRedirect();
+
+  return (
+    <Stack
+      screenOptions={{
+        contentStyle: { backgroundColor: COLORS.background },
+      }}
+    >
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+    </Stack>
+  );
+}
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     'Satoshi-Light': require('@/assets/fonts/Satoshi-Light.otf'),
@@ -44,6 +86,7 @@ export default function RootLayout() {
     'Satoshi-Bold': require('@/assets/fonts/Satoshi-Bold.otf'),
     'Satoshi-Black': require('@/assets/fonts/Satoshi-Black.otf'),
   });
+  const isHydrated = useAuthStore((s) => s.isHydrated);
 
   useEffect(() => {
     SplashScreen.preventAutoHideAsync();
@@ -52,15 +95,25 @@ export default function RootLayout() {
         useDownloadStore.getState().setDownloadedIds(tracks.map((t) => t.id));
       })
       .catch(() => {});
+
+    // Bootstrap auth state from secure storage
+    useAuthStore.getState().checkAuth();
+
+    // Sign user out from local state when refresh chain fails on any request
+    setUnauthorizedHandler(() => {
+      useAuthStore.setState({ user: null });
+    });
+
+    return () => setUnauthorizedHandler(null);
   }, []);
 
   useEffect(() => {
-    if (fontsLoaded) {
+    if (fontsLoaded && isHydrated) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, isHydrated]);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || !isHydrated) {
     return null;
   }
 
@@ -70,39 +123,12 @@ export default function RootLayout() {
     >
       <LanguageProvider>
         <ThemeProvider value={EXOS_THEME}>
-          <Stack
-            screenOptions={{
-              contentStyle: { backgroundColor: COLORS.background },
-            }}
-          >
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="playlist/[id]"
-              options={{
-                headerShown: false,
-                animation: 'slide_from_right',
-                animationDuration: 250,
-              }}
-            />
-            <Stack.Screen
-              name="settings"
-              options={{
-                headerShown: false,
-                animation: 'fade_from_bottom',
-                animationDuration: 250,
-              }}
-            />
-            <Stack.Screen
-              name="profile"
-              options={{
-                headerShown: false,
-                animation: 'fade_from_bottom',
-                animationDuration: 250,
-              }}
-            />
-          </Stack>
+          <RootNavigator />
           <StatusBar style="light" />
+          <PlaylistOverlay />
           <PlayerOverlay />
+          <ProfileOverlay />
+          <SettingsOverlay />
         </ThemeProvider>
       </LanguageProvider>
     </GestureHandlerRootView>

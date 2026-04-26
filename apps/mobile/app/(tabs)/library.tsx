@@ -1,23 +1,106 @@
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { memo, useCallback, useEffect, useState } from 'react';
+import {
+  FlatList,
+  Image,
+  type ListRenderItem,
+  Pressable,
+  ScrollView,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TrackActionsSheet } from '@/components/TrackActionsSheet';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { COLORS } from '@/constants/colors';
+import { SPACING } from '@/constants/spacing';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useI18n } from '@/hooks/useI18n';
-import { getDownloadedTracks, getPlaylists, type PlaylistRow } from '@/services/db/database';
+import {
+  getDownloadedTracks,
+  getPlaylists,
+  type PlaylistRow,
+} from '@/services/db/database';
 import { useDownloadStore } from '@/store/useDownloadStore';
+import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import type { Track } from '@/types/domain';
 
+type PlaylistCardProps = {
+  id: string;
+  name: string;
+  coverUrl: string | null;
+  trackCount: number;
+};
+
+function PlaylistCardComponent({
+  id,
+  name,
+  coverUrl,
+  trackCount,
+}: PlaylistCardProps) {
+  const handlePress = useCallback(() => {
+    useOverlayStore.getState().openPlaylist(id);
+  }, [id]);
+
+  return (
+    <Pressable onPress={handlePress} style={{ width: 120, gap: 8 }}>
+      {coverUrl ? (
+        <Image
+          source={{ uri: coverUrl }}
+          style={{
+            width: 120,
+            height: 120,
+            borderRadius: 12,
+          }}
+        />
+      ) : (
+        <View
+          style={{
+            width: 120,
+            height: 120,
+            borderRadius: 12,
+            backgroundColor: COLORS.surfaceMuted,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 0.5,
+            borderColor: COLORS.border,
+          }}
+        >
+          <AppIcon name="playlist" size={32} color={COLORS.textMuted} />
+        </View>
+      )}
+      <AppText
+        variant="caption"
+        weight="medium"
+        numberOfLines={1}
+        style={{ color: COLORS.textPrimary }}
+      >
+        {name}
+      </AppText>
+      <AppText
+        variant="caption"
+        style={{
+          color: COLORS.textMuted,
+          fontSize: 11,
+          marginTop: -6,
+        }}
+      >
+        {trackCount} tracks
+      </AppText>
+    </Pressable>
+  );
+}
+
+const PlaylistCard = memo(PlaylistCardComponent);
+
 export default function LibraryScreen() {
   const { t } = useI18n();
-  const { play, setQueue, currentTrack } = usePlayerStore();
+  const play = usePlayerStore((s) => s.play);
+  const setQueue = usePlayerStore((s) => s.setQueue);
+  const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const accentColor = useDynamicAccent();
   const revision = useDownloadStore((s) => s.revision);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -44,13 +127,36 @@ export default function LibraryScreen() {
     load();
   }, [revision, load]);
 
-  const handlePlay = (track: Track) => {
-    play(track);
-    setQueue(tracks);
-  };
+  const handlePlay = useCallback(
+    (track: Track) => {
+      play(track);
+      setQueue(tracks);
+    },
+    [play, setQueue, tracks],
+  );
 
-  return (
-    <ScreenContainer>
+  const handleLongPress = useCallback(
+    (track: Track) => setSelectedTrack(track),
+    [],
+  );
+
+  const renderTrack = useCallback<ListRenderItem<Track>>(
+    ({ item }) => (
+      <TrackItem
+        track={item}
+        onPress={handlePlay}
+        onLongPress={handleLongPress}
+        isActive={currentTrackId === item.id}
+        accentColor={accentColor}
+      />
+    ),
+    [handlePlay, handleLongPress, currentTrackId, accentColor],
+  );
+
+  const keyExtractor = useCallback((item: Track) => item.id, []);
+
+  const ListHeader = (
+    <View style={{ gap: SPACING.xxl }}>
       <AppText variant="display" weight="bold">
         {t('library.title')}
       </AppText>
@@ -87,109 +193,73 @@ export default function LibraryScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 12 }}
-            style={{ marginHorizontal: -20, paddingHorizontal: 20 }}
+            style={{
+              marginHorizontal: -SPACING.lg,
+              paddingHorizontal: SPACING.lg,
+            }}
           >
             {playlists.map((pl) => (
-              <Pressable
+              <PlaylistCard
                 key={pl.id}
-                onPress={() => router.push(`/playlist/${pl.id}`)}
-                style={{
-                  width: 120,
-                  gap: 8,
-                }}
-              >
-                {pl.cover_url ? (
-                  <Image
-                    source={{ uri: pl.cover_url }}
-                    style={{
-                      width: 120,
-                      height: 120,
-                      borderRadius: 12,
-                    }}
-                  />
-                ) : (
-                  <View
-                    style={{
-                      width: 120,
-                      height: 120,
-                      borderRadius: 12,
-                      backgroundColor: COLORS.surfaceMuted,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderWidth: 0.5,
-                      borderColor: COLORS.border,
-                    }}
-                  >
-                    <AppIcon name="playlist" size={32} color={COLORS.textMuted} />
-                  </View>
-                )}
-                <AppText
-                  variant="caption"
-                  weight="medium"
-                  numberOfLines={1}
-                  style={{ color: COLORS.textPrimary }}
-                >
-                  {pl.name}
-                </AppText>
-                <AppText
-                  variant="caption"
-                  style={{ color: COLORS.textMuted, fontSize: 11, marginTop: -6 }}
-                >
-                  {pl.track_count} tracks
-                </AppText>
-              </Pressable>
+                id={pl.id}
+                name={pl.name}
+                coverUrl={pl.cover_url}
+                trackCount={pl.track_count}
+              />
             ))}
           </ScrollView>
         )}
       </View>
 
-      <View style={{ gap: 12 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <AppText
-            variant="label"
-            weight="medium"
-            style={{
-              color: COLORS.textSecondary,
-              letterSpacing: 1,
-              fontSize: 11,
-            }}
-          >
-            DOWNLOADED
-          </AppText>
-          <AppText
-            variant="caption"
-            style={{ color: COLORS.textMuted, fontSize: 11 }}
-          >
-            {tracks.length}
-          </AppText>
-        </View>
-        {tracks.length === 0 ? (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <AppText
+          variant="label"
+          weight="medium"
+          style={{
+            color: COLORS.textSecondary,
+            letterSpacing: 1,
+            fontSize: 11,
+          }}
+        >
+          DOWNLOADED
+        </AppText>
+        <AppText
+          variant="caption"
+          style={{ color: COLORS.textMuted, fontSize: 11 }}
+        >
+          {tracks.length}
+        </AppText>
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <FlatList
+        data={tracks}
+        keyExtractor={keyExtractor}
+        renderItem={renderTrack}
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={
           <View style={{ paddingVertical: 40, alignItems: 'center', gap: 8 }}>
             <AppIcon name="download" size={28} color={COLORS.textMuted} />
             <AppText variant="caption" style={{ color: COLORS.textMuted }}>
               No downloads yet
             </AppText>
           </View>
-        ) : (
-          <View
-            style={{
-              borderTopWidth: 0.5,
-              borderTopColor: COLORS.border,
-            }}
-          >
-            {tracks.map((track) => (
-              <TrackItem
-                key={track.id}
-                track={track}
-                onPress={handlePlay}
-                onLongPress={setSelectedTrack}
-                isActive={currentTrack?.id === track.id}
-                accentColor={accentColor}
-              />
-            ))}
-          </View>
-        )}
-      </View>
+        }
+        contentContainerStyle={{
+          paddingHorizontal: SPACING.lg,
+          paddingTop: SPACING.md,
+          paddingBottom: 100,
+          gap: 12,
+        }}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={12}
+        maxToRenderPerBatch={10}
+        windowSize={11}
+        removeClippedSubviews
+      />
 
       <TrackActionsSheet
         track={selectedTrack}
@@ -197,6 +267,6 @@ export default function LibraryScreen() {
         onClose={() => setSelectedTrack(null)}
         onDeleted={load}
       />
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

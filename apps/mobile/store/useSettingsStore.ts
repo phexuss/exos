@@ -20,12 +20,17 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 }));
 
 // Hydrate from storage on init
-AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
-  if (raw !== null) {
-    useSettingsStore.setState({ dynamicAccent: JSON.parse(raw), _hydrated: true });
-  } else {
+AsyncStorage.getItem(STORAGE_KEY)
+  .then((raw) => {
+    if (raw !== null) {
+      useSettingsStore.setState({
+        dynamicAccent: JSON.parse(raw),
+        _hydrated: true,
+      });
+    } else {
+      useSettingsStore.setState({ _hydrated: true });
+    }
+  })
+  .catch(() => {
     useSettingsStore.setState({ _hydrated: true });
-  }
-}).catch(() => {
-  useSettingsStore.setState({ _hydrated: true });
-});
+  });

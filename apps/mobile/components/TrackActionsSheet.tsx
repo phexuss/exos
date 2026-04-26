@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  Modal,
-  Pressable,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, Modal, Pressable, TextInput, View } from 'react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
@@ -35,7 +29,13 @@ type Props = {
   extraAction?: ExtraAction;
 };
 
-export function TrackActionsSheet({ track, visible, onClose, onDeleted, extraAction }: Props) {
+export function TrackActionsSheet({
+  track,
+  visible,
+  onClose,
+  onDeleted,
+  extraAction,
+}: Props) {
   const [playlists, setPlaylists] = useState<PlaylistRow[]>([]);
   const [showPlaylists, setShowPlaylists] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -53,29 +53,28 @@ export function TrackActionsSheet({ track, visible, onClose, onDeleted, extraAct
 
   const handleDelete = useCallback(() => {
     if (!track) return;
-    Alert.alert(
-      'Delete Track',
-      `Remove "${track.title}" from downloads?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteTrack(track.id);
-            onDeleted?.();
-            onClose();
-          },
+    Alert.alert('Delete Track', `Remove "${track.title}" from downloads?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await deleteTrack(track.id);
+          onDeleted?.();
+          onClose();
         },
-      ],
-    );
+      },
+    ]);
   }, [track, onClose, onDeleted]);
 
-  const handleAddToPlaylist = useCallback(async (playlistId: string) => {
-    if (!track) return;
-    await addTrackToPlaylist(playlistId, track.id);
-    onClose();
-  }, [track, onClose]);
+  const handleAddToPlaylist = useCallback(
+    async (playlistId: string) => {
+      if (!track) return;
+      await addTrackToPlaylist(playlistId, track.id);
+      onClose();
+    },
+    [track, onClose],
+  );
 
   const handleCreatePlaylist = useCallback(async () => {
     if (!newName.trim() || !track) return;
@@ -163,7 +162,11 @@ export function TrackActionsSheet({ track, visible, onClose, onDeleted, extraAct
                   alignItems: 'center',
                 }}
               >
-                <AppText variant="body" weight="medium" style={{ color: '#fff' }}>
+                <AppText
+                  variant="body"
+                  weight="medium"
+                  style={{ color: '#fff' }}
+                >
                   Create & Add
                 </AppText>
               </Pressable>
@@ -191,7 +194,11 @@ export function TrackActionsSheet({ track, visible, onClose, onDeleted, extraAct
                     justifyContent: 'center',
                   }}
                 >
-                  <AppText variant="body" weight="bold" style={{ color: '#fff' }}>
+                  <AppText
+                    variant="body"
+                    weight="bold"
+                    style={{ color: '#fff' }}
+                  >
                     +
                   </AppText>
                 </View>
@@ -222,13 +229,20 @@ export function TrackActionsSheet({ track, visible, onClose, onDeleted, extraAct
                       justifyContent: 'center',
                     }}
                   >
-                    <AppIcon name="playlist" size={18} color={COLORS.textMuted} />
+                    <AppIcon
+                      name="playlist"
+                      size={18}
+                      color={COLORS.textMuted}
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
                     <AppText variant="body" weight="medium" numberOfLines={1}>
                       {pl.name}
                     </AppText>
-                    <AppText variant="caption" style={{ color: COLORS.textMuted }}>
+                    <AppText
+                      variant="caption"
+                      style={{ color: COLORS.textMuted }}
+                    >
                       {pl.track_count} tracks
                     </AppText>
                   </View>
@@ -289,7 +303,11 @@ export function TrackActionsSheet({ track, visible, onClose, onDeleted, extraAct
                 }}
               >
                 <AppIcon name="close" size={22} color="#EF4444" />
-                <AppText variant="body" weight="medium" style={{ color: '#EF4444' }}>
+                <AppText
+                  variant="body"
+                  weight="medium"
+                  style={{ color: '#EF4444' }}
+                >
                   Delete from Downloads
                 </AppText>
               </Pressable>

@@ -243,6 +243,34 @@ export class AuthService {
     return tokens.accessToken;
   }
 
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!(await argon2.verify(user.passwordHash, currentPassword))) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const newHash = await argon2.hash(newPassword);
+
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: { passwordHash: newHash },
+    });
+
+    // Invalidate all sessions to force re-login on other devices
+    await this.prismaService.session.deleteMany({ where: { userId } });
+  }
+
   async sendVerificationEmail(userId: string, email: string): Promise<void> {
     const code = this.generateVerifyCode();
     const codeExp = new Date(Date.now() + 30 * 60 * 1000);

@@ -1,8 +1,7 @@
 import { create } from 'zustand';
-
-import * as audio from '@/services/audio/audioService';
 import { apiPost } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
+import * as audio from '@/services/audio/audioService';
 import { addRecentlyPlayed } from '@/services/db/database';
 import type { Track } from '@/types/domain';
 
@@ -38,7 +37,14 @@ type PlayerState = {
  * Smart playback — local file or resolve stream via backend.
  */
 function smartPlay(track: Track, set: Function): boolean {
-  if (__DEV__) console.log('[SmartPlay]', track.id, track.source, 'filePath:', !!track.filePath);
+  if (__DEV__)
+    console.log(
+      '[SmartPlay]',
+      track.id,
+      track.source,
+      'filePath:',
+      !!track.filePath,
+    );
   addRecentlyPlayed(track).catch(() => {});
 
   if (track.filePath) {
@@ -52,9 +58,10 @@ function smartPlay(track: Track, set: Function): boolean {
 
 async function resolveAndPlayStream(track: Track, set: Function) {
   try {
-    const query = track.source === 'soundcloud'
-      ? (track.isrc ?? `${track.artist.name} ${track.title}`)
-      : `${track.artist.name} ${track.title}`;
+    const query =
+      track.source === 'soundcloud'
+        ? (track.isrc ?? `${track.artist.name} ${track.title}`)
+        : `${track.artist.name} ${track.title}`;
     if (__DEV__) console.log('[Stream] Resolving:', query);
     const { url } = await apiPost<{ url: string }>(API_ENDPOINTS.download, {
       query,

@@ -31,12 +31,17 @@ export function resetDb(): void {
   dbPromise = null;
 }
 
-export async function withDb<T>(fn: (database: SQLite.SQLiteDatabase) => Promise<T>): Promise<T> {
+export async function withDb<T>(
+  fn: (database: SQLite.SQLiteDatabase) => Promise<T>,
+): Promise<T> {
   try {
     const database = await getDb();
     return await fn(database);
   } catch (e: any) {
-    if (e?.message?.includes('NullPointerException') || e?.message?.includes('NativeDatabase')) {
+    if (
+      e?.message?.includes('NullPointerException') ||
+      e?.message?.includes('NativeDatabase')
+    ) {
       if (__DEV__) console.warn('[DB] Handle corrupted, resetting…');
       resetDb();
       const database = await getDb();
@@ -147,39 +152,39 @@ export function insertDownloadedTrack(
 
 export async function getDownloadedTracks(): Promise<Track[]> {
   return withDb(async (database) => {
-  const rows = await database.getAllAsync<{
-    id: string;
-    title: string;
-    artist: string;
-    artist_id: string;
-    album: string | null;
-    cover_url: string | null;
-    duration: string;
-    duration_sec: number;
-    file_path: string;
-    isrc: string | null;
-    preview_url: string | null;
-    synced_lyrics: string | null;
-    plain_lyrics: string | null;
-    source: string | null;
-  }>('SELECT * FROM tracks ORDER BY downloaded_at DESC');
+    const rows = await database.getAllAsync<{
+      id: string;
+      title: string;
+      artist: string;
+      artist_id: string;
+      album: string | null;
+      cover_url: string | null;
+      duration: string;
+      duration_sec: number;
+      file_path: string;
+      isrc: string | null;
+      preview_url: string | null;
+      synced_lyrics: string | null;
+      plain_lyrics: string | null;
+      source: string | null;
+    }>('SELECT * FROM tracks ORDER BY downloaded_at DESC');
 
-  return rows.map((r) => ({
-    id: r.id,
-    title: r.title,
-    artist: { id: r.artist_id ?? '', name: r.artist },
-    album: r.album ?? undefined,
-    duration: r.duration,
-    durationSec: r.duration_sec,
-    coverUrl: r.cover_url ?? undefined,
-    previewUrl: r.preview_url ?? undefined,
-    isrc: r.isrc ?? undefined,
-    syncedLyrics: r.synced_lyrics ?? undefined,
-    plainLyrics: r.plain_lyrics ?? undefined,
-    filePath: r.file_path,
-    isDownloaded: true,
-    source: (r.source as Track['source']) ?? 'deezer',
-  }));
+    return rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      artist: { id: r.artist_id ?? '', name: r.artist },
+      album: r.album ?? undefined,
+      duration: r.duration,
+      durationSec: r.duration_sec,
+      coverUrl: r.cover_url ?? undefined,
+      previewUrl: r.preview_url ?? undefined,
+      isrc: r.isrc ?? undefined,
+      syncedLyrics: r.synced_lyrics ?? undefined,
+      plainLyrics: r.plain_lyrics ?? undefined,
+      filePath: r.file_path,
+      isDownloaded: true,
+      source: (r.source as Track['source']) ?? 'deezer',
+    }));
   });
 }
 
@@ -207,7 +212,10 @@ export function getDownloadedTrack(trackId: string): Promise<{
 export function deleteDownloadedTrack(trackId: string): Promise<void> {
   return withDb(async (database) => {
     await database.runAsync('DELETE FROM tracks WHERE id = ?', trackId);
-    await database.runAsync('DELETE FROM playlist_tracks WHERE track_id = ?', trackId);
+    await database.runAsync(
+      'DELETE FROM playlist_tracks WHERE track_id = ?',
+      trackId,
+    );
   });
 }
 
@@ -221,7 +229,10 @@ export type PlaylistRow = {
   track_count: number;
 };
 
-export function createPlaylist(name: string, coverUrl?: string): Promise<string> {
+export function createPlaylist(
+  name: string,
+  coverUrl?: string,
+): Promise<string> {
   return withDb(async (database) => {
     const id = `pl-${Date.now()}`;
     await database.runAsync(
@@ -250,23 +261,43 @@ export function getPlaylists(): Promise<PlaylistRow[]> {
 export function deletePlaylist(playlistId: string): Promise<void> {
   return withDb(async (database) => {
     await database.runAsync('DELETE FROM playlists WHERE id = ?', playlistId);
-    await database.runAsync('DELETE FROM playlist_tracks WHERE playlist_id = ?', playlistId);
+    await database.runAsync(
+      'DELETE FROM playlist_tracks WHERE playlist_id = ?',
+      playlistId,
+    );
   });
 }
 
-export function renamePlaylist(playlistId: string, name: string): Promise<void> {
+export function renamePlaylist(
+  playlistId: string,
+  name: string,
+): Promise<void> {
   return withDb(async (database) => {
-    await database.runAsync('UPDATE playlists SET name = ? WHERE id = ?', name, playlistId);
+    await database.runAsync(
+      'UPDATE playlists SET name = ? WHERE id = ?',
+      name,
+      playlistId,
+    );
   });
 }
 
-export function updatePlaylistCover(playlistId: string, coverUrl: string | null): Promise<void> {
+export function updatePlaylistCover(
+  playlistId: string,
+  coverUrl: string | null,
+): Promise<void> {
   return withDb(async (database) => {
-    await database.runAsync('UPDATE playlists SET cover_url = ? WHERE id = ?', coverUrl, playlistId);
+    await database.runAsync(
+      'UPDATE playlists SET cover_url = ? WHERE id = ?',
+      coverUrl,
+      playlistId,
+    );
   });
 }
 
-export function addTrackToPlaylist(playlistId: string, trackId: string): Promise<void> {
+export function addTrackToPlaylist(
+  playlistId: string,
+  trackId: string,
+): Promise<void> {
   return withDb(async (database) => {
     const maxPos = await database.getFirstAsync<{ max_pos: number | null }>(
       'SELECT MAX(position) as max_pos FROM playlist_tracks WHERE playlist_id = ?',
@@ -282,7 +313,10 @@ export function addTrackToPlaylist(playlistId: string, trackId: string): Promise
   });
 }
 
-export function removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void> {
+export function removeTrackFromPlaylist(
+  playlistId: string,
+  trackId: string,
+): Promise<void> {
   return withDb(async (database) => {
     await database.runAsync(
       'DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?',
@@ -294,44 +328,47 @@ export function removeTrackFromPlaylist(playlistId: string, trackId: string): Pr
 
 export async function getPlaylistTracks(playlistId: string): Promise<Track[]> {
   return withDb(async (database) => {
-  const rows = await database.getAllAsync<{
-    id: string;
-    title: string;
-    artist: string;
-    artist_id: string;
-    album: string | null;
-    cover_url: string | null;
-    duration: string;
-    duration_sec: number;
-    file_path: string;
-    isrc: string | null;
-    preview_url: string | null;
-    synced_lyrics: string | null;
-    plain_lyrics: string | null;
-    source: string | null;
-  }>(`
+    const rows = await database.getAllAsync<{
+      id: string;
+      title: string;
+      artist: string;
+      artist_id: string;
+      album: string | null;
+      cover_url: string | null;
+      duration: string;
+      duration_sec: number;
+      file_path: string;
+      isrc: string | null;
+      preview_url: string | null;
+      synced_lyrics: string | null;
+      plain_lyrics: string | null;
+      source: string | null;
+    }>(
+      `
     SELECT t.* FROM tracks t
     JOIN playlist_tracks pt ON t.id = pt.track_id
     WHERE pt.playlist_id = ?
     ORDER BY pt.position
-  `, playlistId);
+  `,
+      playlistId,
+    );
 
-  return rows.map((r) => ({
-    id: r.id,
-    title: r.title,
-    artist: { id: r.artist_id ?? '', name: r.artist },
-    album: r.album ?? undefined,
-    duration: r.duration,
-    durationSec: r.duration_sec,
-    coverUrl: r.cover_url ?? undefined,
-    previewUrl: r.preview_url ?? undefined,
-    isrc: r.isrc ?? undefined,
-    syncedLyrics: r.synced_lyrics ?? undefined,
-    plainLyrics: r.plain_lyrics ?? undefined,
-    filePath: r.file_path,
-    isDownloaded: true,
-    source: (r.source as Track['source']) ?? 'deezer',
-  }));
+    return rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      artist: { id: r.artist_id ?? '', name: r.artist },
+      album: r.album ?? undefined,
+      duration: r.duration,
+      durationSec: r.duration_sec,
+      coverUrl: r.cover_url ?? undefined,
+      previewUrl: r.preview_url ?? undefined,
+      isrc: r.isrc ?? undefined,
+      syncedLyrics: r.synced_lyrics ?? undefined,
+      plainLyrics: r.plain_lyrics ?? undefined,
+      filePath: r.file_path,
+      isDownloaded: true,
+      source: (r.source as Track['source']) ?? 'deezer',
+    }));
   });
 }
 
@@ -360,44 +397,44 @@ export function addRecentlyPlayed(track: Track): Promise<void> {
 
 export async function getRecentlyPlayed(limit = 20): Promise<Track[]> {
   return withDb(async (database) => {
-  const rows = await database.getAllAsync<{
-    track_id: string;
-    title: string;
-    artist: string;
-    artist_id: string;
-    album: string | null;
-    cover_url: string | null;
-    duration: string;
-    duration_sec: number;
-    preview_url: string | null;
-    isrc: string | null;
-    source: string;
-    file_path: string | null;
-    synced_lyrics: string | null;
-    plain_lyrics: string | null;
-  }>(
-    `SELECT rp.*, t.file_path, t.synced_lyrics, t.plain_lyrics
+    const rows = await database.getAllAsync<{
+      track_id: string;
+      title: string;
+      artist: string;
+      artist_id: string;
+      album: string | null;
+      cover_url: string | null;
+      duration: string;
+      duration_sec: number;
+      preview_url: string | null;
+      isrc: string | null;
+      source: string;
+      file_path: string | null;
+      synced_lyrics: string | null;
+      plain_lyrics: string | null;
+    }>(
+      `SELECT rp.*, t.file_path, t.synced_lyrics, t.plain_lyrics
      FROM recently_played rp
      LEFT JOIN tracks t ON rp.track_id = t.id
      ORDER BY rp.played_at DESC LIMIT ?`,
-    limit,
-  );
+      limit,
+    );
 
-  return rows.map((r) => ({
-    id: r.track_id,
-    title: r.title,
-    artist: { id: r.artist_id ?? '', name: r.artist },
-    album: r.album ?? undefined,
-    duration: r.duration,
-    durationSec: r.duration_sec,
-    coverUrl: r.cover_url ?? undefined,
-    previewUrl: r.preview_url ?? undefined,
-    isrc: r.isrc ?? undefined,
-    source: r.source as Track['source'],
-    filePath: r.file_path ?? undefined,
-    isDownloaded: !!r.file_path,
-    syncedLyrics: r.synced_lyrics ?? undefined,
-    plainLyrics: r.plain_lyrics ?? undefined,
-  }));
+    return rows.map((r) => ({
+      id: r.track_id,
+      title: r.title,
+      artist: { id: r.artist_id ?? '', name: r.artist },
+      album: r.album ?? undefined,
+      duration: r.duration,
+      durationSec: r.duration_sec,
+      coverUrl: r.cover_url ?? undefined,
+      previewUrl: r.preview_url ?? undefined,
+      isrc: r.isrc ?? undefined,
+      source: r.source as Track['source'],
+      filePath: r.file_path ?? undefined,
+      isDownloaded: !!r.file_path,
+      syncedLyrics: r.synced_lyrics ?? undefined,
+      plainLyrics: r.plain_lyrics ?? undefined,
+    }));
   });
 }

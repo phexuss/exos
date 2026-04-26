@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { getColors } from 'react-native-image-colors';
 
 import { COLORS } from '@/constants/colors';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -76,7 +75,6 @@ function parseHex(hex: string): [number, number, number] {
 
 /**
  * Boost saturation and clamp lightness to produce a vibrant accent color
- * (ported 1:1 from backend ColorService.boostSaturation)
  */
 function boostSaturation(hex: string): string {
   const [r, g, b] = parseHex(hex);
@@ -84,6 +82,83 @@ function boostSaturation(hex: string): string {
   s = Math.min(1, s * 1.4 + 0.15);
   l = Math.max(0.35, Math.min(0.65, l));
   return hslToHex(h, s, l);
+}
+
+/**
+ * Extract dominant color by sampling a tiny version of the image.
+ * Pure JS — works in Expo Go, no native modules needed.
+ *
+ * TODO: replace with react-native-image-colors when building natively
+ */
+async function extractColor(url: string): Promise<string | null> {
+  try {
+    // Deezer: request a 1x1 pixel version
+    const tinyUrl = url.includes('dzcdn.net')
+      ? url.replace(/\/\d+x\d+/, '/1x1')
+      : url;
+
+    const res = await fetch(tinyUrl);
+    if (!res.ok) return null;
+
+    const blob = await res.blob();
+    const reader = new FileReader();
+
+    return new Promise<string | null>((resolve) => {
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        // For JPEG/PNG, try to extract color from the raw data
+        // Simple heuristic: sample bytes near the end of the data
+        const data = base64.split(',')[1];
+        if (!data) {
+          resolve(null);
+          return;
+        }
+
+        const raw = atob(data);
+        const bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) {
+          bytes[i] = raw.charCodeAt(i);
+        }
+
+        // For a 1x1 JPEG the last few bytes before EOI (0xFFD9)
+        // contain the pixel data. For larger images, sample center.
+        if (bytes.length < 10) {
+          resolve(null);
+          return;
+        }
+
+        // Fallback: Average of all byte triplets as rough color estimate
+        let rSum = 0,
+          gSum = 0,
+          bSum = 0,
+          count = 0;
+        // Skip header bytes, sample from middle portion
+        const start = Math.floor(bytes.length * 0.3);
+        const end = Math.floor(bytes.length * 0.9);
+        for (let i = start; i + 2 < end; i += 3) {
+          rSum += bytes[i];
+          gSum += bytes[i + 1];
+          bSum += bytes[i + 2];
+          count++;
+        }
+
+        if (count === 0) {
+          resolve(null);
+          return;
+        }
+
+        const r = Math.round(rSum / count);
+        const g = Math.round(gSum / count);
+        const b = Math.round(bSum / count);
+        const toHex = (n: number) => n.toString(16).padStart(2, '0');
+        resolve(`#${toHex(r)}${toHex(g)}${toHex(b)}`);
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
 }
 
 export function useDynamicAccent(): string {
@@ -109,29 +184,12 @@ export function useDynamicAccent(): string {
 
     let cancelled = false;
 
-    getColors(coverUrl, {
-      fallback: COLORS.accent,
-      cache: true,
-      key: coverUrl,
-    })
-      .then((result) => {
-        if (cancelled) return;
-
-        let dominant: string | undefined;
-
-        if (result.platform === 'android') {
-          dominant = result.vibrant ?? result.dominant ?? result.average;
-        } else if (result.platform === 'ios') {
-          dominant = result.primary ?? result.secondary ?? result.background;
-        }
-
-        if (dominant) {
-          const boosted = boostSaturation(dominant);
-          cache.set(coverUrl, boosted);
-          setColor(boosted);
-        } else {
-          setColor(COLORS.accent);
-        }
+    extractColor(coverUrl)
+      .then((hex) => {
+        if (cancelled || !hex) return;
+        const boosted = boostSaturation(hex);
+        cache.set(coverUrl, boosted);
+        setColor(boosted);
       })
       .catch(() => {
         if (!cancelled) setColor(COLORS.accent);

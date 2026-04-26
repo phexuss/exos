@@ -1,15 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, TextInput, View, FlatList } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  type ListRenderItem,
+  Pressable,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { SourcePill } from '@/components/ui/SourcePill';
 import { COLORS } from '@/constants/colors';
-import { useDynamicAccent } from '@/hooks/useDynamicAccent';
+import { SPACING } from '@/constants/spacing';
 import type { SourceKey } from '@/constants/sources';
 import { FONT_FAMILY } from '@/constants/typography';
+import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useI18n } from '@/hooks/useI18n';
 import { searchSoundCloud, searchTracks } from '@/services/api/search';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -17,7 +25,6 @@ import type { Track } from '@/types/domain';
 
 const SOURCE_KEYS: SourceKey[] = ['deezer', 'soundcloud'];
 const DEBOUNCE_MS = 500;
-
 
 export default function SearchScreen() {
   const { t } = useI18n();
@@ -27,30 +34,36 @@ export default function SearchScreen() {
   );
   const [results, setResults] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
-  const { play, setQueue, currentTrack } = usePlayerStore();
+  const play = usePlayerStore((s) => s.play);
+  const setQueue = usePlayerStore((s) => s.setQueue);
+  const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const accentColor = useDynamicAccent();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchResults = useCallback(async (q: string) => {
-    if (!q.trim()) {
-      setResults([]);
-      return;
-    }
-    setLoading(true);
-    try {
-      const effectiveSource = selectedSource === 'all' ? 'deezer' : selectedSource;
-      const data =
-        effectiveSource === 'soundcloud'
-          ? await searchSoundCloud(q)
-          : await searchTracks(q);
-      setResults(data);
-      setQueue(data);
-    } catch (e) {
-      console.warn('Search error:', e);
-    } finally {
-      setLoading(false);
-    }
-  }, [setQueue, selectedSource]);
+  const fetchResults = useCallback(
+    async (q: string) => {
+      if (!q.trim()) {
+        setResults([]);
+        return;
+      }
+      setLoading(true);
+      try {
+        const effectiveSource =
+          selectedSource === 'all' ? 'deezer' : selectedSource;
+        const data =
+          effectiveSource === 'soundcloud'
+            ? await searchSoundCloud(q)
+            : await searchTracks(q);
+        setResults(data);
+        setQueue(data);
+      } catch (e) {
+        console.warn('Search error:', e);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setQueue, selectedSource],
+  );
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -65,12 +78,30 @@ export default function SearchScreen() {
     return results.filter((track) => track.source === selectedSource);
   }, [results, selectedSource]);
 
-  const handlePlay = (track: Track) => {
-    play(track);
-  };
+  const handlePlay = useCallback(
+    (track: Track) => {
+      play(track);
+    },
+    [play],
+  );
 
-  return (
-    <ScreenContainer>
+  const renderTrack = useCallback<ListRenderItem<Track>>(
+    ({ item }) => (
+      <TrackItem
+        track={item}
+        onPress={handlePlay}
+        showDownload
+        isActive={currentTrackId === item.id}
+        accentColor={accentColor}
+      />
+    ),
+    [handlePlay, currentTrackId, accentColor],
+  );
+
+  const keyExtractor = useCallback((item: Track) => item.id, []);
+
+  const ListHeader = (
+    <View style={{ gap: SPACING.xxl }}>
       <View style={{ gap: 16 }}>
         <AppText variant="display" weight="bold">
           {t('common.search')}
@@ -151,52 +182,57 @@ export default function SearchScreen() {
         </View>
       </View>
 
-      <View style={{ gap: 8 }}>
-        {query.trim() ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <AppText
-              variant="label"
-              weight="medium"
-              style={{
-                color: COLORS.textSecondary,
-                letterSpacing: 1,
-                fontSize: 11,
-              }}
-            >
-              {t('search.results').toUpperCase()}
-            </AppText>
-          </View>
-        ) : null}
-        {loading ? (
-          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-            <ActivityIndicator color={COLORS.accent} />
-          </View>
-        ) : filteredResults.length === 0 && query.trim() ? (
-          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-            <AppText variant="body" style={{ color: COLORS.textMuted }}>
-              {t('search.noResults')}
-            </AppText>
-          </View>
-        ) : (
-          <View
+      {query.trim() ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <AppText
+            variant="label"
+            weight="medium"
             style={{
-              borderTopWidth: 0.5,
-              borderTopColor: COLORS.border,
+              color: COLORS.textSecondary,
+              letterSpacing: 1,
+              fontSize: 11,
             }}
           >
-            {filteredResults.map((track) => (
-              <TrackItem
-                key={track.id}
-                track={track}
-                onPress={handlePlay}
-                showDownload
-                isActive={currentTrack?.id === track.id}
-                accentColor={accentColor}
-              />
-            ))}
-          </View>
-        )}
-      </View>
-    </ScreenContainer>
+            {t('search.results').toUpperCase()}
+          </AppText>
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const ListEmpty = loading ? (
+    <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+      <ActivityIndicator color={COLORS.accent} />
+    </View>
+  ) : query.trim() ? (
+    <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+      <AppText variant="body" style={{ color: COLORS.textMuted }}>
+        {t('search.noResults')}
+      </AppText>
+    </View>
+  ) : null;
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <FlatList
+        data={filteredResults}
+        keyExtractor={keyExtractor}
+        renderItem={renderTrack}
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={ListEmpty}
+        contentContainerStyle={{
+          paddingHorizontal: SPACING.lg,
+          paddingTop: SPACING.md,
+          paddingBottom: 100,
+          gap: 12,
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={12}
+        maxToRenderPerBatch={10}
+        windowSize={11}
+        removeClippedSubviews
+      />
+    </SafeAreaView>
   );
 }

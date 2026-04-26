@@ -1,16 +1,18 @@
 import { Image, Pressable, View } from 'react-native';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { SourceBadge } from '@/components/SourceBadge';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
-import { SourceBadge } from '@/components/SourceBadge';
 import { COLORS } from '@/constants/colors';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { usePlayerStore } from '@/store/usePlayerStore';
 
 export function MiniPlayer() {
-  const { currentTrack, isPlaying, progress, togglePlayback } =
-    usePlayerStore();
+  const currentTrack = usePlayerStore((s) => s.currentTrack);
+  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const progress = usePlayerStore((s) => s.progress);
+  const togglePlayback = usePlayerStore((s) => s.togglePlayback);
   const accentColor = useDynamicAccent();
 
   if (!currentTrack) return null;

@@ -63,6 +63,31 @@ export class LogoutResponseDto {
   success!: boolean;
 }
 
+export class ChangePasswordDto {
+  @ApiProperty({
+    description: 'Current password',
+    minLength: 8,
+    example: 'OldPass123',
+  })
+  @IsString()
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  currentPassword!: string;
+
+  @ApiProperty({
+    description: 'New password (min 8 characters)',
+    minLength: 8,
+    example: 'NewPass4567',
+  })
+  @IsString()
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  newPassword!: string;
+}
+
+export class ChangePasswordResponseDto {
+  @ApiProperty({ description: 'Password change result flag', example: true })
+  success!: boolean;
+}
+
 export class AuthStatusResponseDto {
   @ApiProperty({ description: 'User id from token payload', format: 'uuid' })
   sub!: string;

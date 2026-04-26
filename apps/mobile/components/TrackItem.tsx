@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Image, View } from 'react-native';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
@@ -18,7 +19,7 @@ type TrackItemProps = {
   accentColor?: string;
 };
 
-export function TrackItem({
+function TrackItemComponent({
   track,
   onPress,
   onLongPress,
@@ -144,3 +145,5 @@ export function TrackItem({
     </AnimatedPressable>
   );
 }
+
+export const TrackItem = memo(TrackItemComponent);

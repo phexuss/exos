@@ -17,7 +17,11 @@ type DownloadStoreState = {
   /** Bulk-set downloaded IDs (e.g. from DB on init) */
   setDownloadedIds: (ids: string[]) => void;
   /** Update download progress for a track */
-  setDownloadProgress: (trackId: string, progress: number, status: DownloadProgress['status']) => void;
+  setDownloadProgress: (
+    trackId: string,
+    progress: number,
+    status: DownloadProgress['status'],
+  ) => void;
   /** Remove download progress entry (cleanup) */
   clearDownloadProgress: (trackId: string) => void;
   /** Revision counter — bumped on every change to trigger re-renders */
@@ -34,7 +38,11 @@ export const useDownloadStore = create<DownloadStoreState>((set) => ({
       const next = new Set(s.downloadedIds);
       next.add(trackId);
       const { [trackId]: _, ...rest } = s.activeDownloads;
-      return { downloadedIds: next, activeDownloads: rest, revision: s.revision + 1 };
+      return {
+        downloadedIds: next,
+        activeDownloads: rest,
+        revision: s.revision + 1,
+      };
     }),
 
   markRemoved: (trackId) =>

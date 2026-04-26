@@ -1,26 +1,28 @@
 import { useEffect } from 'react';
 import { BackHandler } from 'react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
-import PlayerScreen from '@/components/PlayerScreen';
-import { COLORS } from '@/constants/colors';
-import { usePlayerStore } from '@/store/usePlayerStore';
 
-export function PlayerOverlay() {
-  const currentTrack = usePlayerStore((s) => s.currentTrack);
-  const isPlayerOpen = usePlayerStore((s) => s.isPlayerOpen);
+import { ProfileScreen } from '@/components/screens/ProfileScreen';
+import { COLORS } from '@/constants/colors';
+import { useOverlayStore } from '@/store/useOverlayStore';
+
+export function ProfileOverlay() {
+  const isProfileOpen = useOverlayStore((s) => s.isProfileOpen);
+  const isSettingsOpen = useOverlayStore((s) => s.isSettingsOpen);
+  const closeProfile = useOverlayStore((s) => s.closeProfile);
 
   useEffect(() => {
-    if (!isPlayerOpen) return;
+    if (!isProfileOpen || isSettingsOpen) return;
 
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      usePlayerStore.getState().closePlayer();
+      closeProfile();
       return true;
     });
 
     return () => sub.remove();
-  }, [isPlayerOpen]);
+  }, [isProfileOpen, isSettingsOpen, closeProfile]);
 
-  if (!currentTrack || !isPlayerOpen) return null;
+  if (!isProfileOpen) return null;
 
   return (
     <Animated.View
@@ -32,11 +34,11 @@ export function PlayerOverlay() {
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 999,
+        zIndex: 1000,
         backgroundColor: COLORS.background,
       }}
     >
-      <PlayerScreen />
+      <ProfileScreen />
     </Animated.View>
   );
 }

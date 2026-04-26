@@ -5,20 +5,44 @@ import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { COLORS } from '@/constants/colors';
 import { useI18n } from '@/hooks/useI18n';
+import { useOverlayStore } from '@/store/useOverlayStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
-export default function SettingsScreen() {
+export function SettingsScreen() {
   const { locale, setLocale, t } = useI18n();
   const { dynamicAccent, setDynamicAccent } = useSettingsStore();
+  const closeSettings = useOverlayStore((s) => s.closeSettings);
 
   return (
     <ScreenContainer>
-      <AppText variant="display" weight="bold">
-        {t('settings.title')}
-      </AppText>
+      {/* Header */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Pressable
+          onPress={closeSettings}
+          hitSlop={12}
+          style={{
+            width: 36,
+            height: 36,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <AppIcon name="chevron-right" size={22} color={COLORS.textMuted} />
+        </Pressable>
+        <AppText variant="label" weight="bold">
+          {t('settings.title')}
+        </AppText>
+        <View style={{ width: 36 }} />
+      </View>
 
       {/* Language */}
-      <View style={{ gap: 14 }}>
+      <View style={{ gap: 14, marginTop: 8 }}>
         <View
           style={{
             flexDirection: 'row',

@@ -1,13 +1,13 @@
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Tabs } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { Tabs } from 'expo-router';
 import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { MiniPlayer } from '@/components/MiniPlayer';
-import { AppIcon } from '@/components/ui/AppIcon';
 import type { IconName } from '@/components/ui/AppIcon';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { COLORS } from '@/constants/colors';
 
 const TAB_ICONS: Record<string, IconName> = {

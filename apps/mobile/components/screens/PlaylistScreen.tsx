@@ -1,7 +1,15 @@
 import * as ImagePicker from 'expo-image-picker';
-import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Image, Modal, Pressable, TextInput, View } from 'react-native';
+import {
+  Alert,
+  FlatList,
+  Image,
+  type ListRenderItem,
+  Modal,
+  Pressable,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TrackActionsSheet } from '@/components/TrackActionsSheet';
@@ -12,20 +20,26 @@ import { COLORS } from '@/constants/colors';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import {
-  deletePlaylist,
-  getPlaylists,
   getPlaylistTracks,
+  getPlaylists,
   type PlaylistRow,
   removeTrackFromPlaylist,
   renamePlaylist,
   updatePlaylistCover,
 } from '@/services/db/database';
+import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import type { Track } from '@/types/domain';
 
-export default function PlaylistScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { play, setQueue, currentTrack } = usePlayerStore();
+type PlaylistScreenProps = {
+  id: string;
+};
+
+export function PlaylistScreen({ id }: PlaylistScreenProps) {
+  const play = usePlayerStore((s) => s.play);
+  const setQueue = usePlayerStore((s) => s.setQueue);
+  const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
+  const closePlaylist = useOverlayStore((s) => s.closePlaylist);
   const accentColor = useDynamicAccent();
 
   const [playlist, setPlaylist] = useState<PlaylistRow | null>(null);
@@ -47,10 +61,33 @@ export default function PlaylistScreen() {
     load();
   }, [load]);
 
-  const handlePlay = (track: Track) => {
-    play(track);
-    setQueue(tracks);
-  };
+  const handlePlay = useCallback(
+    (track: Track) => {
+      play(track);
+      setQueue(tracks);
+    },
+    [play, setQueue, tracks],
+  );
+
+  const handleLongPress = useCallback(
+    (track: Track) => setSelectedTrack(track),
+    [],
+  );
+
+  const renderTrack = useCallback<ListRenderItem<Track>>(
+    ({ item }) => (
+      <TrackItem
+        track={item}
+        onPress={handlePlay}
+        onLongPress={handleLongPress}
+        isActive={currentTrackId === item.id}
+        accentColor={accentColor}
+      />
+    ),
+    [handlePlay, handleLongPress, currentTrackId, accentColor],
+  );
+
+  const keyExtractor = useCallback((item: Track) => item.id, []);
 
   const handleRemoveFromPlaylist = useCallback(() => {
     if (!selectedTrack || !id) return;
@@ -104,25 +141,6 @@ export default function PlaylistScreen() {
     }
   }, []);
 
-  const handleDeletePlaylist = useCallback(() => {
-    if (!id || !playlist) return;
-    Alert.alert(
-      'Delete Playlist',
-      `Delete "${playlist.name}"? Tracks won't be removed from downloads.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await deletePlaylist(id);
-            router.back();
-          },
-        },
-      ],
-    );
-  }, [id, playlist]);
-
   if (!playlist) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
@@ -151,8 +169,8 @@ export default function PlaylistScreen() {
           paddingVertical: 12,
         }}
       >
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <AppIcon name="chevron-down" size={24} color={COLORS.textMuted} />
+        <Pressable onPress={closePlaylist} hitSlop={12}>
+          <AppIcon name="chevron-right" size={24} color={COLORS.textMuted} />
         </Pressable>
         <AppText
           variant="body"
@@ -173,34 +191,33 @@ export default function PlaylistScreen() {
         </AppText>
       </View>
 
-      {tracks.length === 0 ? (
-        <View
-          style={{
-            flex: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-          }}
-        >
-          <AppIcon name="music" size={32} color={COLORS.textMuted} />
-          <AppText variant="body" style={{ color: COLORS.textMuted }}>
-            No tracks in this playlist
-          </AppText>
-        </View>
-      ) : (
-        <View style={{ flex: 1, paddingHorizontal: 20 }}>
-          {tracks.map((track) => (
-            <TrackItem
-              key={track.id}
-              track={track}
-              onPress={handlePlay}
-              onLongPress={() => setSelectedTrack(track)}
-              isActive={currentTrack?.id === track.id}
-              accentColor={accentColor}
-            />
-          ))}
-        </View>
-      )}
+      <FlatList
+        data={tracks}
+        keyExtractor={keyExtractor}
+        renderItem={renderTrack}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={12}
+        maxToRenderPerBatch={10}
+        windowSize={11}
+        removeClippedSubviews
+        ListEmptyComponent={
+          <View
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingTop: 80,
+              gap: 8,
+            }}
+          >
+            <AppIcon name="music" size={32} color={COLORS.textMuted} />
+            <AppText variant="body" style={{ color: COLORS.textMuted }}>
+              No tracks in this playlist
+            </AppText>
+          </View>
+        }
+      />
 
       <TrackActionsSheet
         track={selectedTrack}

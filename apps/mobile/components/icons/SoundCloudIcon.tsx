@@ -5,7 +5,11 @@ type Props = { size?: number; color?: string };
 export function SoundCloudIcon({ size = 12, color = '#FFFFFF' }: Props) {
   const aspectRatio = 256 / 111.2;
   return (
-    <Svg viewBox="-271 345.8 256 111.2" width={size * aspectRatio} height={size}>
+    <Svg
+      viewBox="-271 345.8 256 111.2"
+      width={size * aspectRatio}
+      height={size}
+    >
       <G fill={color}>
         <Path d="M-238.4,398.1c-0.8,0-1.4,0.6-1.5,1.5l-2.3,28l2.3,27.1c0.1,0.8,0.7,1.5,1.5,1.5c0.8,0,1.4-0.6,1.5-1.5l2.6-27.1l-2.6-28C-237,398.7-237.7,398.1-238.4,398.1z" />
         <Path d="M-228.2,399.9c-0.9,0-1.7,0.7-1.7,1.7l-2.1,26l2.1,27.3c0.1,1,0.8,1.7,1.7,1.7c0.9,0,1.6-0.7,1.7-1.7l2.4-27.3l-2.4-26C-226.6,400.6-227.3,399.9-228.2,399.9z" />
