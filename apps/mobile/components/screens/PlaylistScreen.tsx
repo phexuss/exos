@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TrackActionsSheet } from '@/components/TrackActionsSheet';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { FONT_FAMILY } from '@/constants/typography';
@@ -144,12 +145,10 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
   if (!playlist) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-        <View
-          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <AppText variant="body" style={{ color: COLORS.textMuted }}>
-            Loading...
-          </AppText>
+        <View style={{ paddingHorizontal: 20, paddingTop: 60, gap: 12 }}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} width="100%" height={56} />
+          ))}
         </View>
       </SafeAreaView>
     );

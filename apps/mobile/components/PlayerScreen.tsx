@@ -10,6 +10,7 @@ import { SeekBar } from '@/components/SeekBar';
 import { SourceBadge } from '@/components/SourceBadge';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
@@ -237,19 +238,7 @@ export default function PlayerScreen() {
                 resizeMode="cover"
               />
             ) : (
-              <View
-                style={{
-                  flex: 1,
-                  borderRadius: 16,
-                  backgroundColor: COLORS.surfaceMuted,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 0.5,
-                  borderColor: COLORS.border,
-                }}
-              >
-                <AppIcon name="music" size={64} color={COLORS.textMuted} />
-              </View>
+              <Skeleton width="100%" height="100%" radius={16} />
             )}
           </Animated.View>
         </View>

@@ -10,6 +10,7 @@ import {
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { SourceBadge } from '@/components/SourceBadge';
 import { AppIcon } from '@/components/ui/AppIcon';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { COLORS } from '@/constants/colors';
@@ -197,20 +198,43 @@ function AlbumCardComponent({
 
 const AlbumCard = memo(AlbumCardComponent);
 
-function SkeletonRow({ count, width, height, radius }: { count: number; width: number; height: number; radius: number }) {
+function TrackSkeletonRow({ count }: { count: number }) {
   return (
     <View style={{ flexDirection: 'row', gap: 14 }}>
       {Array.from({ length: count }).map((_, i) => (
-        <View
-          key={i}
-          style={{
-            width,
-            height,
-            borderRadius: radius,
-            backgroundColor: COLORS.surfaceMuted,
-            opacity: 0.4,
-          }}
-        />
+        <View key={i} style={{ width: 160, gap: 10 }}>
+          <Skeleton width={160} height={160} radius={14} />
+          <View style={{ gap: 4 }}>
+            <Skeleton width={128} height={12} radius={4} />
+            <Skeleton width={80} height={10} radius={4} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function ArtistSkeletonRow({ count }: { count: number }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 14 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <View key={i} style={{ width: 80, alignItems: 'center', gap: 8 }}>
+          <Skeleton width={64} height={64} circle />
+          <Skeleton width={50} height={10} radius={4} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function AlbumSkeletonRow({ count }: { count: number }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 14 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <View key={i} style={{ width: 120, gap: 8 }}>
+          <Skeleton width={120} height={120} radius={12} />
+          <Skeleton width={100} height={12} radius={4} />
+        </View>
       ))}
     </View>
   );
@@ -357,9 +381,11 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      {recentTracks.length > 0 && (
-        <View style={{ gap: 14 }}>
-          <SectionHeader label={t('home.recentlyPlayed')} />
+      <View style={{ gap: 14 }}>
+        <SectionHeader label={t('home.recentlyPlayed')} />
+        {chartLoading ? (
+          <TrackSkeletonRow count={2} />
+        ) : recentTracks.length > 0 ? (
           <FlatList
             data={recentTracks}
             horizontal
@@ -371,13 +397,13 @@ export default function HomeScreen() {
             maxToRenderPerBatch={6}
             windowSize={5}
           />
-        </View>
-      )}
+        ) : null}
+      </View>
 
       <View style={{ gap: 14 }}>
         <SectionHeader label={t('home.chartTracks')} />
         {chartLoading ? (
-          <SkeletonRow count={3} width={160} height={160} radius={14} />
+          <TrackSkeletonRow count={3} />
         ) : (
           <FlatList
             data={chartTracks}
@@ -396,7 +422,7 @@ export default function HomeScreen() {
       <View style={{ gap: 14 }}>
         <SectionHeader label={t('home.topArtists')} />
         {chartLoading ? (
-          <SkeletonRow count={4} width={64} height={64} radius={32} />
+          <ArtistSkeletonRow count={4} />
         ) : (
           <FlatList
             data={chartArtists}
@@ -415,7 +441,7 @@ export default function HomeScreen() {
       <View style={{ gap: 14 }}>
         <SectionHeader label={t('home.topAlbums')} />
         {chartLoading ? (
-          <SkeletonRow count={3} width={120} height={120} radius={12} />
+          <AlbumSkeletonRow count={3} />
         ) : (
           <FlatList
             data={chartAlbums}

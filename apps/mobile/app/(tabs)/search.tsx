@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   type ListRenderItem,
   Pressable,
@@ -11,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { AppText } from '@/components/ui/AppText';
 import { SourcePill } from '@/components/ui/SourcePill';
 import { COLORS } from '@/constants/colors';
@@ -201,8 +201,10 @@ export default function SearchScreen() {
   );
 
   const ListEmpty = loading ? (
-    <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-      <ActivityIndicator color={COLORS.accent} />
+    <View style={{ gap: 12, paddingTop: 8 }}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} width="100%" height={56} />
+      ))}
     </View>
   ) : query.trim() ? (
     <View style={{ paddingVertical: 40, alignItems: 'center' }}>
