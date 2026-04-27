@@ -3,6 +3,7 @@ import { create } from 'zustand';
 type OverlayState = {
   isProfileOpen: boolean;
   isSettingsOpen: boolean;
+  isFaqOpen: boolean;
   playlistId: string | null;
   artistId: string | null;
   albumId: string | null;
@@ -12,6 +13,8 @@ type OverlayState = {
   closeProfile: () => void;
   openSettings: () => void;
   closeSettings: () => void;
+  openFaq: () => void;
+  closeFaq: () => void;
   openPlaylist: (id: string) => void;
   closePlaylist: () => void;
   openArtist: (id: string) => void;
@@ -24,6 +27,7 @@ type OverlayState = {
 export const useOverlayStore = create<OverlayState>((set) => ({
   isProfileOpen: false,
   isSettingsOpen: false,
+  isFaqOpen: false,
   playlistId: null,
   artistId: null,
   albumId: null,
@@ -33,6 +37,8 @@ export const useOverlayStore = create<OverlayState>((set) => ({
   closeProfile: () => set({ isProfileOpen: false, isSettingsOpen: false }),
   openSettings: () => set({ isSettingsOpen: true }),
   closeSettings: () => set({ isSettingsOpen: false }),
+  openFaq: () => set({ isFaqOpen: true }),
+  closeFaq: () => set({ isFaqOpen: false }),
   openPlaylist: (id) => set({ playlistId: id }),
   closePlaylist: () => set({ playlistId: null }),
   openArtist: (id) => set({ artistId: id }),
@@ -43,6 +49,7 @@ export const useOverlayStore = create<OverlayState>((set) => ({
     set({
       isProfileOpen: false,
       isSettingsOpen: false,
+      isFaqOpen: false,
       playlistId: null,
       artistId: null,
       albumId: null,

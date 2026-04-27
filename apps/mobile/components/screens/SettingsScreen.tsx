@@ -12,6 +12,7 @@ export function SettingsScreen() {
   const { locale, setLocale, t } = useI18n();
   const { dynamicAccent, setDynamicAccent } = useSettingsStore();
   const closeSettings = useOverlayStore((s) => s.closeSettings);
+  const openFaq = useOverlayStore((s) => s.openFaq);
 
   return (
     <ScreenContainer>
@@ -170,6 +171,53 @@ export function SettingsScreen() {
               thumbColor={COLORS.textPrimary}
             />
           </View>
+        </View>
+      </View>
+      {/* About */}
+      <View style={{ gap: 14, marginTop: 10 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <AppIcon name="info" size={16} color={COLORS.textMuted} />
+          <AppText
+            variant="label"
+            weight="medium"
+            style={{
+              color: COLORS.textSecondary,
+              letterSpacing: 1,
+              fontSize: 11,
+            }}
+          >
+            {t('settings.aboutSection').toUpperCase()}
+          </AppText>
+        </View>
+
+        <View
+          style={{
+            borderTopWidth: 0.5,
+            borderTopColor: COLORS.border,
+          }}
+        >
+          <Pressable
+            onPress={openFaq}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 14,
+              borderBottomWidth: 0.5,
+              borderBottomColor: COLORS.divider,
+            }}
+          >
+            <AppText variant="label" weight="medium">
+              {t('settings.faq')}
+            </AppText>
+            <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
+          </Pressable>
         </View>
       </View>
     </ScreenContainer>

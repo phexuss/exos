@@ -18,6 +18,7 @@ import { useI18n } from '@/hooks/useI18n';
 import { getRecentlyPlayed } from '@/services/db/database';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 import type { Track } from '@/types/domain';
 
 type RecentCardProps = {
@@ -107,6 +108,14 @@ export default function HomeScreen() {
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const accentColor = useDynamicAccent();
   const [recentTracks, setRecentTracks] = useState<Track[]>([]);
+
+  useEffect(() => {
+    const { hasSeenFaq, setHasSeenFaq } = useSettingsStore.getState();
+    if (!hasSeenFaq) {
+      useOverlayStore.getState().openFaq();
+      setHasSeenFaq(true);
+    }
+  }, []);
 
   const loadRecent = useCallback(async () => {
     try {

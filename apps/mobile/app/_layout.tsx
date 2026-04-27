@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 import '../global.css';
 
 import { ArtistOverlay } from '@/components/ArtistOverlay';
+import { FaqOverlay } from '@/components/FaqOverlay';
 import { PlayerOverlay } from '@/components/PlayerOverlay';
 import { PlaylistOverlay } from '@/components/PlaylistOverlay';
 import { ProfileOverlay } from '@/components/ProfileOverlay';
@@ -131,6 +132,7 @@ export default function RootLayout() {
           <PlayerOverlay />
           <ProfileOverlay />
           <SettingsOverlay />
+          <FaqOverlay />
         </ThemeProvider>
       </LanguageProvider>
     </GestureHandlerRootView>

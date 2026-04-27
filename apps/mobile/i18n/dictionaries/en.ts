@@ -74,6 +74,29 @@ export const en = {
     dynamicAccent: 'Dynamic accent color',
     dynamicAccentDesc:
       'Tint the player with the dominant color from the album cover',
+    aboutSection: 'About',
+    faq: 'How EXØS works',
+  },
+  faq: {
+    title: 'How EXØS works',
+    sourcesTitle: 'Music Sources',
+    deezerName: 'Deezer',
+    deezerPros: 'Huge catalog, artist & album pages',
+    deezerCons: 'Audio lookup takes 2–5 sec',
+    deezerCons2: 'Download can take 1–2 min',
+    deezerBadge: 'Slower',
+    soundcloudName: 'SoundCloud',
+    soundcloudPros: 'Fast, instant streaming',
+    soundcloudPros2: 'Download takes a few sec',
+    soundcloudCons: 'No artist pages',
+    soundcloudBadge: 'Faster',
+    loadingTitle: 'Why does audio take a few seconds?',
+    loadingBody:
+      'We find audio on YouTube by track name — this takes 2–5 seconds. The upside: it works for any track from any source.',
+    downloadTitle: 'Downloading',
+    downloadBody:
+      'Downloaded tracks play instantly, no internet needed. We recommend saving your favorite tracks.',
+    dismiss: 'Got it',
   },
   player: {
     title: 'Now Playing',
