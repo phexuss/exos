@@ -29,6 +29,13 @@ export class SearchController {
     return this.searchService.search(query);
   }
 
+  @ApiOperation({ summary: 'Get Deezer chart (top tracks, albums, artists)' })
+  @ApiOkResponse({ description: 'Deezer chart data' })
+  @Get('chart')
+  async getChart() {
+    return this.searchService.getChart();
+  }
+
   @ApiOperation({ summary: 'Search tracks in SoundCloud' })
   @ApiQuery({
     name: 'q',

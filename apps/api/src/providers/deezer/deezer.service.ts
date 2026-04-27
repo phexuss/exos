@@ -2,6 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import {
+  type DeezerChartResponse,
   type DeezerSearchResponse,
   type DeezerTrackFull,
 } from 'src/providers/deezer/deezer.types';
@@ -59,6 +60,13 @@ export class DeezerService {
   async getAlbumTracks(id: string) {
     const { data } = await firstValueFrom(
       this.httpService.get(`${this.BASE_URL}/album/${id}/tracks`),
+    );
+    return data;
+  }
+
+  async getChart(): Promise<DeezerChartResponse> {
+    const { data } = await firstValueFrom(
+      this.httpService.get<DeezerChartResponse>(`${this.BASE_URL}/chart`),
     );
     return data;
   }

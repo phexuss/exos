@@ -2,7 +2,10 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Cache } from 'cache-manager';
 import { DeezerService } from 'src/providers/deezer/deezer.service';
-import { DeezerSearchResponse } from 'src/providers/deezer/deezer.types';
+import {
+  DeezerChartResponse,
+  DeezerSearchResponse,
+} from 'src/providers/deezer/deezer.types';
 import { SoundCloudService } from 'src/providers/soundcloud/soundcloud.service';
 import { SoundCloudSearchResponse } from 'src/providers/soundcloud/soundcloud.types';
 
@@ -22,6 +25,18 @@ export class SearchService {
 
     const result = await this.deezerService.searchTracks(query);
     await this.cacheManager.set(cacheKey, result);
+
+    return result;
+  }
+
+  async getChart(): Promise<DeezerChartResponse> {
+    const cacheKey = 'chart:global';
+
+    const cached = await this.cacheManager.get<DeezerChartResponse>(cacheKey);
+    if (cached) return cached;
+
+    const result = await this.deezerService.getChart();
+    await this.cacheManager.set(cacheKey, result, 3600);
 
     return result;
   }

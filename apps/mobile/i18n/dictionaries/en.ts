@@ -23,6 +23,9 @@ export const en = {
     greeting: 'Aggregated Intelligence',
     subtitle: 'Your cross-platform audio feed',
     recentlyPlayed: 'Recently Played',
+    chartTracks: 'Chart · Tracks',
+    topArtists: 'Popular Artists',
+    topAlbums: 'Top Albums',
     dailyMix: 'Daily Mix',
   },
   search: {

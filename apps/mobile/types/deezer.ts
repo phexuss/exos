@@ -27,3 +27,9 @@ export interface DeezerSearchResponse {
   data: DeezerTrack[];
   total: number;
 }
+
+export interface DeezerChartResponse {
+  tracks: { data: DeezerTrack[] };
+  albums: { data: DeezerAlbum[] };
+  artists: { data: DeezerArtist[] };
+}

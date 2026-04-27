@@ -84,6 +84,12 @@ export interface DeezerSearchResponse {
   total: number;
 }
 
+export interface DeezerChartResponse {
+  tracks: { data: DeezerTrack[] };
+  albums: { data: DeezerAlbum[] };
+  artists: { data: DeezerArtist[] };
+}
+
 export class DeezerAlbumDto {
   @ApiProperty()
   id!: number;
