@@ -1,4 +1,6 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { Header } from '@/components/sections/Header';
+import Hero from '@/components/sections/Hero';
 import { Link } from '@/i18n/navigation';
 
 type Props = {
@@ -14,6 +16,13 @@ export default async function HomePage({ params }: Props) {
 
   return (
     <div>
+      <div className="bg-black">
+        <Header />
+      </div>
+      <main className="max-w-275 mx-auto">
+        <Hero />
+      </main>
+
       <Link href="/" locale="en">
         EN
       </Link>

@@ -7,5 +7,16 @@
     "title": "About",
     "description": "This is a localized about page.",
     "back": "Back"
+  },
+  "Header": {
+    "features": "Features",
+    "sources": "Sources",
+    "faq": "FAQ",
+    "download": "Download"
+  },
+  "Hero": {
+    "title": "Your music. Your rules.",
+    "description": "A local music player with smart search for Deezer and SoundCloud. Download tracks and listen offline.",
+    "download": "Download APK"
   }
 }

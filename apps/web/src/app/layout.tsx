@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Jost } from 'next/font/google';
 import './globals.css';
+import { cn } from '@/lib/utils';
 
 const jost = Jost({
   subsets: ['latin', 'cyrillic'],
@@ -19,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html className={`${jost.variable} h-full antialiased`}>
+    <html className={cn('h-full', 'antialiased', jost.variable, 'font-sans')}>
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );

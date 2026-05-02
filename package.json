@@ -1,7 +1,11 @@
 {
   "name": "exos",
-  "private": true,
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
+    "turbo": "^2.9.6"
+  },
   "packageManager": "pnpm@10.33.0",
+  "private": true,
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
@@ -9,13 +13,5 @@
     "format": "turbo format",
     "typecheck": "turbo typecheck",
     "test": "turbo test"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.12",
-    "turbo": "^2.9.6"
-  },
-  "dependencies": {
-    "@heroui/react": "^3.0.3",
-    "@heroui/styles": "^3.0.3"
   }
 }

@@ -39,3 +39,4 @@ pnpm-debug.log*
 .vscode/
 .DS_Store
 Thumbs.db
+apps/mobile/README.md
