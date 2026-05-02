@@ -27,6 +27,7 @@ export const en = {
     topArtists: 'Popular Artists',
     topAlbums: 'Top Albums',
     dailyMix: 'Daily Mix',
+    becauseYouListened: 'Because you listened to',
   },
   search: {
     placeholder: 'Search tracks, artists...',

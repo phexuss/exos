@@ -18,6 +18,7 @@ import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useI18n } from '@/hooks/useI18n';
 import { mapDeezerTrackToTrack } from '@/services/adapters/search.adapter';
 import { getChart } from '@/services/api/search';
+import { type SimilarTrack, getSimilarTracks } from '@/services/api/similar';
 import { getRecentlyPlayed } from '@/services/db/database';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -104,6 +105,82 @@ function RecentCardComponent({
 }
 
 const RecentCard = memo(RecentCardComponent);
+
+type SimilarCardProps = {
+  item: SimilarTrack;
+  onPress: (item: SimilarTrack) => void;
+  isActive?: boolean;
+  accentColor?: string;
+};
+
+function SimilarCardComponent({
+  item,
+  onPress,
+  isActive,
+  accentColor,
+}: SimilarCardProps) {
+  const handlePress = useCallback(() => onPress(item), [onPress, item]);
+  const activeColor = accentColor ?? COLORS.accent;
+  return (
+    <AnimatedPressable
+      scaleValue={0.95}
+      onPress={handlePress}
+      style={{ width: 130, gap: 8 }}
+    >
+      <View>
+        {item.coverUrl ? (
+          <Image
+            source={{ uri: item.coverUrl }}
+            style={{
+              width: 130,
+              height: 130,
+              borderRadius: 12,
+              borderWidth: isActive ? 2 : 0,
+              borderColor: isActive ? activeColor : 'transparent',
+            }}
+          />
+        ) : (
+          <View
+            style={{
+              width: 130,
+              height: 130,
+              borderRadius: 12,
+              backgroundColor: COLORS.surfaceMuted,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 0.5,
+              borderColor: COLORS.border,
+            }}
+          >
+            <AppIcon name="music" size={28} color={COLORS.textMuted} />
+          </View>
+        )}
+      </View>
+      <View style={{ gap: 3 }}>
+        <AppText
+          variant="body"
+          weight="medium"
+          style={{
+            color: isActive ? activeColor : COLORS.textPrimary,
+            fontSize: 13,
+          }}
+          numberOfLines={1}
+        >
+          {item.title}
+        </AppText>
+        <AppText
+          variant="caption"
+          style={{ color: COLORS.textMuted, fontSize: 11 }}
+          numberOfLines={1}
+        >
+          {item.artist}
+        </AppText>
+      </View>
+    </AnimatedPressable>
+  );
+}
+
+const SimilarCard = memo(SimilarCardComponent);
 
 function ArtistCardComponent({
   artist,
@@ -198,6 +275,22 @@ function AlbumCardComponent({
 
 const AlbumCard = memo(AlbumCardComponent);
 
+function SimilarSkeletonRow({ count }: { count: number }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 14 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <View key={i} style={{ width: 130, gap: 8 }}>
+          <Skeleton width={130} height={130} radius={12} />
+          <View style={{ gap: 4 }}>
+            <Skeleton width={100} height={12} radius={4} />
+            <Skeleton width={70} height={10} radius={4} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function TrackSkeletonRow({ count }: { count: number }) {
   return (
     <View style={{ flexDirection: 'row', gap: 14 }}>
@@ -263,6 +356,9 @@ export default function HomeScreen() {
   const [chartArtists, setChartArtists] = useState<DeezerArtist[]>([]);
   const [chartAlbums, setChartAlbums] = useState<DeezerAlbum[]>([]);
   const [chartLoading, setChartLoading] = useState(true);
+  const [similarTracks, setSimilarTracks] = useState<SimilarTrack[] | null>(null);
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarArtist, setSimilarArtist] = useState('');
 
   useEffect(() => {
     const { hasSeenFaq, setHasSeenFaq } = useSettingsStore.getState();
@@ -273,18 +369,32 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    Promise.all([
-      getRecentlyPlayed(20).catch(() => [] as Track[]),
-      getChart().catch(() => null),
-    ]).then(([recent, chart]) => {
+    (async () => {
+      const recent = await getRecentlyPlayed(20).catch(() => [] as Track[]);
       setRecentTracks(recent);
+
+      if (recent[0]) {
+        setSimilarLoading(true);
+        setSimilarArtist(recent[0].artist.name);
+      }
+
+      const [chart, similar] = await Promise.all([
+        getChart().catch(() => null),
+        recent[0]
+          ? getSimilarTracks(recent[0].artist.name, recent[0].title).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+
       if (chart) {
         setChartTracks(chart.tracks.data.map(mapDeezerTrackToTrack));
         setChartArtists(chart.artists.data);
         setChartAlbums(chart.albums.data);
       }
       setChartLoading(false);
-    });
+
+      setSimilarTracks(similar);
+      setSimilarLoading(false);
+    })();
   }, []);
 
   const handlePlay = useCallback(
@@ -303,6 +413,25 @@ export default function HomeScreen() {
   const handlePlayChart = useCallback(
     (track: Track) => handlePlay(track, chartTracks),
     [handlePlay, chartTracks],
+  );
+
+  const handlePlaySimilar = useCallback(
+    (item: SimilarTrack) => {
+      const track: Track = {
+        id: String(item.deezerId),
+        title: item.title,
+        artist: { id: '', name: item.artist },
+        coverUrl: item.coverUrl ?? undefined,
+        duration: item.duration
+          ? `${Math.floor(item.duration / 60)}:${(item.duration % 60).toString().padStart(2, '0')}`
+          : '0:00',
+        durationSec: item.duration ?? 0,
+        isrc: item.isrc ?? undefined,
+        source: 'deezer',
+      };
+      play(track);
+    },
+    [play],
   );
 
   const handleArtistPress = useCallback((artist: DeezerArtist) => {
@@ -335,6 +464,23 @@ export default function HomeScreen() {
       />
     ),
     [handlePlayChart, currentTrackId, accentColor],
+  );
+
+  const renderSimilarCard = useCallback<ListRenderItem<SimilarTrack>>(
+    ({ item }) => (
+      <SimilarCard
+        item={item}
+        onPress={handlePlaySimilar}
+        isActive={currentTrackId === String(item.deezerId)}
+        accentColor={accentColor}
+      />
+    ),
+    [handlePlaySimilar, currentTrackId, accentColor],
+  );
+
+  const similarKeyExtractor = useCallback(
+    (item: SimilarTrack) => String(item.deezerId),
+    [],
   );
 
   const renderArtistCard = useCallback<ListRenderItem<DeezerArtist>>(
@@ -399,6 +545,29 @@ export default function HomeScreen() {
           />
         ) : null}
       </View>
+
+      {(similarLoading || (similarTracks && similarTracks.length > 0)) && (
+        <View style={{ gap: 14 }}>
+          <SectionHeader
+            label={`${t('home.becauseYouListened')} · ${similarArtist}`.toUpperCase()}
+          />
+          {similarLoading ? (
+            <SimilarSkeletonRow count={4} />
+          ) : (
+            <FlatList
+              data={similarTracks!}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={similarKeyExtractor}
+              contentContainerStyle={{ gap: 14 }}
+              renderItem={renderSimilarCard}
+              initialNumToRender={5}
+              maxToRenderPerBatch={5}
+              windowSize={5}
+            />
+          )}
+        </View>
+      )}
 
       <View style={{ gap: 14 }}>
         <SectionHeader label={t('home.chartTracks')} />

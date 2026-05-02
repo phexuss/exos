@@ -22,11 +22,12 @@ export const ru = {
   home: {
     greeting: 'Агрегированный поток',
     subtitle: 'Кросс-платформенный аудио фид',
-    recentlyPlayed: '\u041d\u0435\u0434\u0430\u0432\u043d\u043e \u0438\u0433\u0440\u0430\u043b\u0438',
-    chartTracks: '\u0427\u0430\u0440\u0442 \u00b7 \u0422\u0440\u0435\u043a\u0438',
-    topArtists: '\u041f\u043e\u043f\u0443\u043b\u044f\u0440\u043d\u044b\u0435 \u0430\u0440\u0442\u0438\u0441\u0442\u044b',
-    topAlbums: '\u0422\u043e\u043f \u0430\u043b\u044c\u0431\u043e\u043c\u044b',
-    dailyMix: '\u0414\u0435\u0439\u043b\u0438 \u041c\u0438\u043a\u0441',
+    recentlyPlayed: 'Недавно играли',
+    chartTracks: 'Чарт · Треки',
+    topArtists: 'Популярные артисты',
+    topAlbums: 'Топ альбомы',
+    dailyMix: 'Дейли Микс',
+    becauseYouListened: 'Потому что вы слушали',
   },
   search: {
     placeholder: 'Поиск треков, артистов...',

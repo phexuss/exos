@@ -34,6 +34,7 @@ import { UserModule } from './user/user.module';
         JWT_REFRESH_SECRET: Joi.string().required(),
         JWT_ACCESS_EXPIRES: Joi.string().required(),
         JWT_REFRESH_EXPIRES: Joi.string().required(),
+        LASTFM_API_KEY: Joi.string().required()
       }),
     }),
     CacheModule.registerAsync({

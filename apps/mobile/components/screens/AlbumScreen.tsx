@@ -62,12 +62,14 @@ export function AlbumScreen({ id, titleHint }: Props) {
 
   const renderTrack = useCallback<ListRenderItem<Track>>(
     ({ item }) => (
-      <TrackItem
-        track={item}
-        onPress={handlePlay}
-        isActive={currentTrackId === item.id}
-        showDownload
-      />
+      <View style={{ paddingHorizontal: 12 }}>
+        <TrackItem
+          track={item}
+          onPress={handlePlay}
+          isActive={currentTrackId === item.id}
+          showDownload
+        />
+      </View>
     ),
     [handlePlay, currentTrackId],
   );

@@ -2,6 +2,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Cache } from 'cache-manager';
 import { DeezerService } from 'src/providers/deezer/deezer.service';
+import { LastfmService } from 'src/providers/lastfm/lastfm.service';
 import {
   DeezerChartResponse,
   DeezerSearchResponse,
@@ -14,6 +15,7 @@ export class SearchService {
   constructor(
     private readonly deezerService: DeezerService,
     private readonly soundCloudService: SoundCloudService,
+    private readonly lastfmService: LastfmService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -39,6 +41,36 @@ export class SearchService {
     await this.cacheManager.set(cacheKey, result, 3600);
 
     return result;
+  }
+
+  async getSimilar(artist: string, track: string) {
+    const similar = await this.lastfmService.getSimilarTracks(artist, track, 5);
+
+    const enriched = await Promise.all(
+      similar.map(async (t) => {
+        try {
+          const deezerResult = await this.deezerService.searchTracks(
+            `${t.artist.name} ${t.name}`,
+          );
+          const deezerTrack = deezerResult.data[0];
+          if (!deezerTrack) return null;
+
+          return {
+            title: t.name,
+            artist: t.artist.name,
+            match: Math.round(t.match * 100),
+            coverUrl: deezerTrack.album.cover_medium,
+            duration: deezerTrack.duration,
+            isrc: deezerTrack.isrc,
+            deezerId: deezerTrack.id,
+          };
+        } catch {
+          return null;
+        }
+      }),
+    );
+
+    return enriched.filter(Boolean);
   }
 
   async searchSoundCloud(query: string): Promise<SoundCloudSearchResponse> {

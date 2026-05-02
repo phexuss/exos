@@ -36,6 +36,17 @@ export class SearchController {
     return this.searchService.getChart();
   }
 
+  @ApiOperation({ summary: 'Get similar tracks via Last.fm + Deezer enrichment' })
+  @ApiQuery({ name: 'artist', description: 'Artist name', example: 'Tame Impala' })
+  @ApiQuery({ name: 'track', description: 'Track name', example: 'Let It Happen' })
+  @Get('similar')
+  async getSimilar(
+    @Query('artist') artist: string,
+    @Query('track') track: string,
+  ) {
+    return this.searchService.getSimilar(artist, track);
+  }
+
   @ApiOperation({ summary: 'Search tracks in SoundCloud' })
   @ApiQuery({
     name: 'q',

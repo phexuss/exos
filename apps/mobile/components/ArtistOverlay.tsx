@@ -2,10 +2,9 @@ import { useEffect } from 'react';
 import { BackHandler, View } from 'react-native';
 import Animated, { SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { MiniPlayer } from '@/components/MiniPlayer';
 import { AlbumScreen } from '@/components/screens/AlbumScreen';
 import { ArtistScreen } from '@/components/screens/ArtistScreen';
-import { MiniPlayer } from '@/components/MiniPlayer';
 import { COLORS } from '@/constants/colors';
 import { useOverlayStore } from '@/store/useOverlayStore';
 

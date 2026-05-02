@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -8,7 +9,6 @@ import {
   ScrollView,
   View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TrackItem } from '@/components/TrackItem';
@@ -137,12 +137,14 @@ export function ArtistScreen({ id }: Props) {
 
   const renderTrack = useCallback<ListRenderItem<Track>>(
     ({ item }) => (
-      <TrackItem
-        track={item}
-        onPress={handlePlay}
-        isActive={currentTrackId === item.id}
-        showDownload
-      />
+      <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
+        <TrackItem
+          track={item}
+          onPress={handlePlay}
+          isActive={currentTrackId === item.id}
+          showDownload
+        />
+      </View>
     ),
     [handlePlay, currentTrackId],
   );
