@@ -1,4 +1,3 @@
-import * as motion from 'motion/react-client';
 import { notFound } from 'next/navigation';
 
 import { hasLocale, NextIntlClientProvider } from 'next-intl';

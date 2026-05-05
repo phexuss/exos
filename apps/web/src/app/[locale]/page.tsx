@@ -1,7 +1,11 @@
-import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { setRequestLocale } from 'next-intl/server';
+import Footer from '@/components/sections/Footer';
+import Faq from '@/components/sections/faq/Faq';
+import Features from '@/components/sections/features/Features';
 import { Header } from '@/components/sections/Header';
 import Hero from '@/components/sections/Hero';
-import { Link } from '@/i18n/navigation';
+import Sources from '@/components/sections/sources/Sources';
+import { CustomSeparator } from '@/components/shared/CustomSeparator';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -12,28 +16,21 @@ export default async function HomePage({ params }: Props) {
 
   setRequestLocale(locale);
 
-  const t = await getTranslations('HomePage');
-
   return (
     <div>
-      <div className="bg-black">
-        <Header />
-      </div>
-      <main className="max-w-275 mx-auto">
+      <Header />
+      <main>
         <Hero />
+        <CustomSeparator />
+        <Features />
+        <CustomSeparator />
+        <Sources />
+        <CustomSeparator />
+        <Faq />
+        <footer className="border-t">
+          <Footer />
+        </footer>
       </main>
-
-      <Link href="/" locale="en">
-        EN
-      </Link>
-      <Link href="/" locale="ru">
-        RU nothing else
-      </Link>
-      <Link href="/about" className="font-sans">
-        {t('about')}
-      </Link>
-
-      <h1>{t('title')}</h1>
     </div>
   );
 }

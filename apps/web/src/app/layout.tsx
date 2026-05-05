@@ -10,8 +10,8 @@ const jost = Jost({
 });
 
 export const metadata: Metadata = {
-  title: 'Create Next App',
-  description: 'Your new way to listen to music',
+  title: 'EXØS - Your music. Your rules.',
+  description: 'to be implemented',
 };
 
 export default function RootLayout({

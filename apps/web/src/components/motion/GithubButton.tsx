@@ -5,12 +5,12 @@ export default function GithubButton() {
   return (
     <motion.button
       whileHover={{
-        scale: 1.04,
+        scale: 1.02,
         y: -2,
         boxShadow: '0 0 25px rgba(255,255,255,0.45)',
       }}
       whileTap={{
-        scale: 0.97,
+        scale: 0.98,
         y: 0,
       }}
       transition={{
@@ -33,7 +33,13 @@ export default function GithubButton() {
         text-black
       "
     >
-      <Image src="/github.svg" width={21} height={21} alt="GitHub Logo" />
+      <Image
+        src="/github.svg"
+        width={21}
+        height={21}
+        alt="GitHub Logo"
+        loading="eager"
+      />
       <motion.div
         className="
           absolute

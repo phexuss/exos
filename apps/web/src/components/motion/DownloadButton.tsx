@@ -7,12 +7,12 @@ export default function DownloadButton() {
   return (
     <motion.button
       whileHover={{
-        scale: 1.04,
+        scale: 1.02,
         y: -2,
         boxShadow: '0 0 40px rgba(99,102,241,0.45)',
       }}
       whileTap={{
-        scale: 0.97,
+        scale: 0.98,
         y: 0,
       }}
       transition={{
