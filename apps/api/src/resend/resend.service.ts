@@ -26,103 +26,108 @@ export class ResendService {
   <meta name="color-scheme" content="dark">
 </head>
 <body style="margin:0;padding:0;background:#121212;-webkit-font-smoothing:antialiased;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#121212;padding:40px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#121212;padding:60px 16px;">
     <tr>
       <td align="center">
-        <table cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;background:#1A1A1A;border-radius:20px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;">
+        <table cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;background:#1A1A1A;border-radius:24px;border:1px solid rgba(255,255,255,0.08);border-top:2px solid #818cf8;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.5);">
+          
           <tr>
-            <td align="center" style="padding:32px 32px 24px;">
+            <td align="center" style="padding:40px 32px 24px;">
               <span style="
                 font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
                 font-size:24px;
                 font-weight:800;
-                letter-spacing:4px;
+                letter-spacing:6px;
                 color:#FFFFFF;
+                font-style:italic;
               ">EXØS</span>
             </td>
           </tr>
+          
           <tr>
             <td style="padding:0 32px;">
-              <div style="height:1px;background:rgba(255,255,255,0.08);"></div>
+              <div style="height:1px;background:rgba(255,255,255,0.05);"></div>
             </td>
           </tr>
+          
           <tr>
             <td style="padding:32px 32px 0;">
-              <p style="
-                margin:0 0 8px;
+              <h1 style="
+                margin:0 0 12px;
                 font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
                 font-size:22px;
                 font-weight:700;
                 color:#FFFFFF;
-              ">Verification code</p>
+                letter-spacing:-0.5px;
+              ">Verification code</h1>
+              
               <p style="
-                margin:0 0 28px;
+                margin:0 0 32px;
                 font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-                font-size:14px;
-                color:rgba(255,255,255,0.55);
+                font-size:15px;
+                color:rgba(255,255,255,0.6);
                 line-height:1.6;
-              ">Use this code to verify your email address.<br/>Do not share it with anyone.</p>
-              <div style="
+                font-weight:300;
+              ">Use the code below to verify your email address. Do not share it with anyone.</p>
+                            <div style="
                 background:#212121;
-                border:1px solid rgba(255,255,255,0.12);
-                border-radius:14px;
-                padding:24px 16px;
+                border:1px solid rgba(129,140,248,0.2);
+                border-radius:16px;
+                padding:28px 16px;
                 text-align:center;
                 margin-bottom:16px;
               ">
                 <span style="
-                  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-                  font-size:40px;
+                  font-family:'Geist Mono','SF Mono',Menlo,Consolas,monospace;
+                  font-size:42px;
                   font-weight:700;
-                  letter-spacing:12px;
-                  color:#FFFFFF;
+                  letter-spacing:14px;
+                  color:#818cf8;
                   font-variant-numeric:tabular-nums;
                 ">${code}</span>
               </div>
-              <p style="
-                margin:0 0 32px;
+                            <p style="
+                margin:0 0 40px;
                 text-align:center;
                 font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-                font-size:12px;
+                font-size:13px;
+                font-weight:500;
                 color:rgba(255,255,255,0.4);
               ">Expires in 30 minutes</p>
-
             </td>
           </tr>
-          <tr>
-            <td style="padding:0 32px 24px;">
+                    <tr>
+            <td style="padding:0 32px 32px;">
               <div style="
-                background:rgba(255,255,255,0.03);
-                border:1px solid rgba(255,255,255,0.08);
-                border-radius:10px;
-                padding:12px 16px;
+                background:rgba(255,255,255,0.02);
+                border:1px solid rgba(255,255,255,0.06);
+                border-radius:12px;
+                padding:16px;
               ">
                 <p style="
                   margin:0;
                   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-                  font-size:12px;
+                  font-size:13px;
                   color:rgba(255,255,255,0.45);
                   line-height:1.6;
+                  font-weight:300;
                 ">If you didn’t request this code, you can safely ignore this email.</p>
               </div>
             </td>
           </tr>
-          <tr>
-            <td style="padding:0 32px;">
-              <div style="height:1px;background:rgba(255,255,255,0.08);"></div>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding:20px 32px 28px;">
-              <p style="
-                margin:0;
-                font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-                font-size:12px;
-                color:rgba(255,255,255,0.3);
-              ">© ${new Date().getFullYear()} EXØS</p>
-            </td>
-          </tr>
+          
         </table>
+      </td>
+    </tr>
+        <tr>
+      <td align="center" style="padding:32px 16px;">
+        <p style="
+          margin:0;
+          font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+          font-size:12px;
+          color:rgba(255,255,255,0.3);
+          letter-spacing:0.5px;
+        ">© ${new Date().getFullYear()} EXØS. All rights reserved.</p>
       </td>
     </tr>
   </table>

@@ -70,7 +70,6 @@ export default function Hero() {
       <div className="mx-auto flex max-w-7xl flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-20">
         <div className="max-w-2xl">
           <div className="flex flex-col gap-6">
-            {/* EXØS — shimmer gradient + entrance */}
             <motion.h1
               id="hero-heading"
               initial={{ opacity: 0, y: 30, filter: 'blur(14px)', scale: 0.96 }}
@@ -89,7 +88,6 @@ export default function Hero() {
               </span>
             </motion.h1>
 
-            {/* Subtitle — word by word stagger */}
             <motion.p
               className="text-xl sm:text-2xl lg:text-3xl font-semibold leading-tight flex flex-wrap gap-x-[0.35em]"
               variants={containerVariants}
@@ -103,7 +101,6 @@ export default function Hero() {
               ))}
             </motion.p>
 
-            {/* Description */}
             <motion.p
               className="max-w-xl text-sm sm:text-base leading-7 sm:leading-8 text-chart-4"
               custom={0.55}
@@ -114,7 +111,6 @@ export default function Hero() {
               {t('description')}
             </motion.p>
 
-            {/* Buttons */}
             <motion.div
               className="mt-2 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5"
               custom={0.75}
