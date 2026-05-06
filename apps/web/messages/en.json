@@ -36,23 +36,23 @@
     "description": "Choose between the rich database of Deezer and the speed of SoundCloud.",
     "deezer": {
       "title": "Deezer",
-      "speed": "Slower",
+      "tag": "Studio Standards",
       "advantages": {
-        "1": "Big music library",
+        "1": "Massive official library",
         "2": "Artist and album pages",
         "3": "More accurate lyrics"
       },
       "disadvantages": {
-        "1": "Playback may take 2-10 seconds",
-        "2": "Audio downloading may take 1–2 minutes"
+        "1": "Playback may take 2-10 seconds"
       }
     },
     "soundcloud": {
       "title": "SoundCloud",
-      "speed": "Faster",
+      "tag": "Unique Content",
       "advantages": {
-        "1": "Instant playback",
-        "2": "Fast downloading"
+        "1": "Underground tracks & remixes",
+        "2": "Community-driven discoverability",
+        "3": "Instant stream optimization"
       },
       "disadvantages": {
         "1": "No artist or album pages"

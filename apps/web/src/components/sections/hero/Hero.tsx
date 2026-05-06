@@ -1,11 +1,12 @@
 'use client';
 
 import * as motion from 'motion/react-client';
-import Link from 'next/link';
 
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import DownloadButton from '@/components/motion/DownloadButton';
 import GithubButton from '@/components/motion/GithubButton';
+import { HeroScreens } from './HeroScreens';
 
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 
@@ -65,7 +66,7 @@ export default function Hero() {
   return (
     <section
       aria-labelledby="hero-heading"
-      className="pt-12 pb-12 sm:pt-16 sm:pb-14 lg:pt-20 lg:pb-15 max-w-275 mx-auto px-4 sm:px-6"
+      className="pt-12  sm:pt-16  sm:pb-14 lg:pt-20 lg:pb-26.5 max-w-275 mx-auto px-4 sm:px-6 "
     >
       <div className="mx-auto flex max-w-7xl flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-20">
         <div className="max-w-2xl">
@@ -132,10 +133,8 @@ export default function Hero() {
             </motion.div>
           </div>
         </div>
-        <div className="grid w-full grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:w-auto">
-          <div className="aspect-[4/5] w-full max-w-[13rem] rounded-4xl border border-white/10 bg-white/5 backdrop-blur-sm mx-auto" />
-          <div className="aspect-[4/5] w-full max-w-[13rem] rounded-4xl border border-white/10 bg-white/5 backdrop-blur-sm mx-auto" />
-          <div className="aspect-[4/5] w-full max-w-[13rem] rounded-4xl border border-white/10 bg-white/5 backdrop-blur-sm mx-auto" />
+        <div className="flex w-full justify-center mt-12 lg:mt-0 lg:w-auto lg:shrink-0">
+          <HeroScreens />
         </div>
       </div>
     </section>

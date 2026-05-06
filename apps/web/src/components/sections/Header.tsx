@@ -18,8 +18,8 @@ export function Header() {
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{
-        duration: 0.6,
-        delay: 1.4,
+        duration: 0.5,
+        delay: 1.2,
         ease: [0.16, 1, 0.3, 1],
       }}
     >
