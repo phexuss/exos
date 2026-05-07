@@ -6,6 +6,8 @@ let statusSub: { remove: () => void } | null = null;
 let positionInterval: ReturnType<typeof setInterval> | null = null;
 let isSeeking = false;
 let isAdvancing = false;
+let isReplacing = false;
+let replaceWatchdog: ReturnType<typeof setTimeout> | null = null;
 let pendingSeekRatio: number | null = null;
 let pendingSeekTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -22,6 +24,33 @@ export function bindStore(
 function store() {
   if (!_getStore) throw new Error('audioService: store not bound');
   return _getStore();
+}
+
+function clearReplaceWatchdog() {
+  if (replaceWatchdog) {
+    clearTimeout(replaceWatchdog);
+    replaceWatchdog = null;
+  }
+}
+
+/**
+ * `player.replace()` is async; until the new track is loaded the polling
+ * interval would otherwise see the old `currentTime` against the new
+ * `duration` (or vice versa) and emit garbage ratios. We freeze progress
+ * writes during that window and unfreeze once the new track has settled.
+ */
+function beginReplace() {
+  isReplacing = true;
+  clearReplaceWatchdog();
+  // Optimistically zero the UI so backward-skip doesn't briefly show old time.
+  try {
+    store().setState({ progress: 0 });
+  } catch {}
+  // Safety net in case the load-detection branch in the interval never fires.
+  replaceWatchdog = setTimeout(() => {
+    isReplacing = false;
+    replaceWatchdog = null;
+  }, 2000);
 }
 
 function getPlayer(): AudioPlayer {
@@ -61,6 +90,16 @@ function startPositionTracking() {
     if (!store().getState().isPlaying) return;
     const duration = player.duration;
     const currentTime = player.currentTime;
+    if (isReplacing) {
+      // Consider the new track loaded once the player has reset its clock and
+      // started reporting a real duration. Then resume progress writes.
+      if (currentTime < 2 && duration > 0) {
+        isReplacing = false;
+        clearReplaceWatchdog();
+      } else {
+        return;
+      }
+    }
     if (duration <= 0) return;
     const ratio = currentTime / duration;
     if (pendingSeekRatio !== null) {
@@ -104,6 +143,7 @@ function activateLockScreen(p: AudioPlayer): void {
 export function playUrl(url: string): void {
   const p = getPlayer();
   if (__DEV__) console.log('[Audio] Playing URL:', url);
+  beginReplace();
   p.replace({ uri: url });
   p.play();
   isAdvancing = false;
@@ -114,6 +154,7 @@ export function playUrl(url: string): void {
 export function playLocalFile(filePath: string): void {
   const p = getPlayer();
   if (__DEV__) console.log('[Audio] Playing local:', filePath);
+  beginReplace();
   p.replace({ uri: filePath });
   p.play();
   isAdvancing = false;
@@ -164,6 +205,8 @@ export function releaseAudio(): void {
   player = null;
   isSeeking = false;
   isAdvancing = false;
+  isReplacing = false;
+  clearReplaceWatchdog();
   pendingSeekRatio = null;
   if (pendingSeekTimer) {
     clearTimeout(pendingSeekTimer);

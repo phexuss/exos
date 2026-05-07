@@ -25,12 +25,47 @@ export class DownloadService {
 		switch (format) {
 			case AudioFormat.FLAC:
 				return "bestaudio[ext=flac]/bestaudio";
-			case AudioFormat.M4A:
-				return "bestaudio[ext=m4a]/bestaudio";
 			case AudioFormat.WEBM:
 				return "bestaudio[ext=webm]/bestaudio";
+			case AudioFormat.MP3:
+				return "bestaudio[ext=mp3]/bestaudio";
+			case AudioFormat.M4A:
 			default:
-				return "bestaudio[ext=mp3]/bestaudio[ext=m4a]/bestaudio";
+				// Prefer native AAC-in-MP4 streams (YouTube itag=140). When no
+				// such container exists (SoundCloud only exposes mp3 today),
+				// prefer a progressive HTTP variant over HLS — expo-audio's
+				// ExoPlayer/AVPlayer backend reports per-segment `duration` for
+				// SC's m3u8 manifests, which makes the playback `progress`
+				// ratio overshoot by ~6–10x and breaks the seekbar/lyrics
+				// timeline. `[protocol^=http]` matches `http`/`https` but
+				// excludes `m3u8`/`m3u8_native`. Bare `bestaudio` is kept as
+				// the last-ditch fallback so we never error out, and the
+				// post-processing pass (`-x --audio-format m4a`) still coerces
+				// the final downloaded payload regardless of source codec.
+				return "bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio[ext=aac]/bestaudio[protocol^=http]/bestaudio";
+		}
+	}
+
+	/**
+	 * Map the requested {@link AudioFormat} to (a) the HTTP Content-Type we
+	 * advertise and (b) the value passed to yt-dlp's `--audio-format` flag.
+	 * Returning `audioFormat = undefined` skips post-processing entirely
+	 * (used for FLAC where we don't want lossy re-encode).
+	 */
+	private resolveContainer(format: AudioFormat): {
+		contentType: string;
+		audioFormat?: string;
+	} {
+		switch (format) {
+			case AudioFormat.MP3:
+				return { contentType: "audio/mpeg", audioFormat: "mp3" };
+			case AudioFormat.FLAC:
+				return { contentType: "audio/flac" };
+			case AudioFormat.WEBM:
+				return { contentType: "audio/webm" };
+			case AudioFormat.M4A:
+			default:
+				return { contentType: "audio/mp4", audioFormat: "m4a" };
 		}
 	}
 
@@ -66,17 +101,16 @@ export class DownloadService {
 	async streamAudio(dto: DownloadDto, res: Response): Promise<void> {
 		const source = this.resolveSource(dto);
 		const format = this.resolveFormat(dto.format);
-		const contentType =
-			dto.format === AudioFormat.M4A ? "audio/mp4" : "audio/webm";
+		const { contentType, audioFormat } = this.resolveContainer(dto.format);
 
 		this.logger.debug(
-			`Streaming source=${source} format=${format} contentType=${contentType}`,
+			`Streaming source=${source} format=${format} contentType=${contentType} audioFormat=${audioFormat ?? "none"}`,
 		);
 
 		res.setHeader("Content-Type", contentType);
 		res.setHeader("Cache-Control", "no-store");
 
-		const args = [
+		const args: string[] = [
 			source,
 			"-f",
 			format,
@@ -88,6 +122,15 @@ export class DownloadService {
 			"--extractor-retries",
 			"1",
 		];
+
+		if (audioFormat) {
+			// `-x --audio-format <fmt>` makes yt-dlp guarantee the output
+			// container/codec: copy when the source already matches, ffmpeg
+			// re-encode otherwise. This is the single source of truth for the
+			// file format the mobile client receives, so the client can rely on
+			// the file extension matching the actual contents.
+			args.push("-x", "--audio-format", audioFormat);
+		}
 
 		const proc = spawn(YTDLP_BIN, args, {
 			stdio: ["ignore", "pipe", "pipe"],

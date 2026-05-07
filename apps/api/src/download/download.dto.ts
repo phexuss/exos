@@ -27,11 +27,11 @@ export class DownloadDto {
   @ApiPropertyOptional({
     description: 'Preferred audio format',
     enum: AudioFormat,
-    default: AudioFormat.MP3,
+    default: AudioFormat.M4A,
   })
   @IsEnum(AudioFormat)
   @IsOptional()
-  format: AudioFormat = AudioFormat.MP3;
+  format: AudioFormat = AudioFormat.M4A;
 }
 
 export class DownloadResponseDto {

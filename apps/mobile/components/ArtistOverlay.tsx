@@ -17,7 +17,7 @@ export function ArtistOverlay() {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    if (!artistId) return;
+    if (!artistId && !albumId) return;
 
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (albumId) {
@@ -31,7 +31,7 @@ export function ArtistOverlay() {
     return () => sub.remove();
   }, [artistId, albumId, closeArtist, closeAlbum]);
 
-  if (!artistId) return null;
+  if (!artistId && !albumId) return null;
 
   return (
     <Animated.View
@@ -47,12 +47,17 @@ export function ArtistOverlay() {
         backgroundColor: COLORS.background,
       }}
     >
-      <ArtistScreen id={artistId} />
+      {artistId ? <ArtistScreen id={artistId} /> : null}
 
-      {/* Album sub-overlay (slides on top of artist) */}
+      {/* Album sub-overlay (slides on top of artist when artist is open;
+          renders alone when album was opened from outside artist context) */}
       {albumId && (
         <Animated.View
-          entering={SlideInRight.duration(260)}
+          entering={
+            artistId
+              ? SlideInRight.duration(260)
+              : SlideInRight.duration(280)
+          }
           exiting={SlideOutRight.duration(220)}
           style={{
             position: 'absolute',

@@ -60,7 +60,12 @@ export default function PlayerScreen() {
   const handleLyricSeek = useCallback(
     (seconds: number) => {
       if (!totalDurationSec) return;
-      const ratio = Math.max(0, Math.min(1, seconds / totalDurationSec));
+      // Bias slightly past the line start so platform seek (which lands on the
+      // nearest keyframe and may undershoot by a few ms) still reports a time
+      // strictly >= line.time, keeping the highlighted line in sync with the
+      // tap instead of falling back to the previous one.
+      const target = seconds + 0.05;
+      const ratio = Math.max(0, Math.min(1, target / totalDurationSec));
       setProgress(ratio);
     },
     [totalDurationSec, setProgress],

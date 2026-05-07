@@ -13,7 +13,14 @@ import { useDownloadStore } from "@/store/useDownloadStore";
 import type { Track } from "@/types/domain";
 
 const TRACKS_DIR = new Directory(Paths.document, "tracks");
-const DOWNLOAD_FORMAT = "webm";
+/**
+ * Backend `/api/download/stream` always re-muxes to AAC-in-MP4 via yt-dlp
+ * `-x --audio-format m4a`, so the file extension matches the actual
+ * container. M4A has reliable duration metadata and seek tables, which is
+ * what ExoPlayer/AVPlayer rely on for accurate position reporting and
+ * seeking. WebM (cue-less) used to break both.
+ */
+const DOWNLOAD_FORMAT = "m4a";
 /**
  * Server uses Transfer-Encoding: chunked (Content-Length is unknown ahead of time
  * because yt-dlp streams to stdout). When totalBytesExpectedToWrite === -1 we

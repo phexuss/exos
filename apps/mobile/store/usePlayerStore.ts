@@ -65,7 +65,7 @@ async function resolveAndPlayStream(track: Track, set: Function) {
     if (__DEV__) console.log('[Stream] Resolving:', query);
     const { url } = await apiPost<{ url: string }>(API_ENDPOINTS.download, {
       query,
-      format: 'mp3',
+      format: 'm4a',
     });
     audio.playUrl(url);
   } catch (e) {
