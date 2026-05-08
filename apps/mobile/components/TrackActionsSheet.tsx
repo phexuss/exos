@@ -1,7 +1,8 @@
+import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, TextInput, View } from 'react-native';
+import { Modal, Pressable, TextInput, View } from 'react-native';
 
-import { AppIcon } from '@/components/ui/AppIcon';
+import { AppIcon, type IconName } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { FONT_FAMILY } from '@/constants/typography';
@@ -16,7 +17,7 @@ import type { Track } from '@/types/domain';
 
 type ExtraAction = {
   label: string;
-  icon: string;
+  icon: IconName;
   color?: string;
   onPress: () => void;
 };
@@ -39,6 +40,8 @@ export function TrackActionsSheet({
   const [playlists, setPlaylists] = useState<PlaylistRow[]>([]);
   const [showPlaylists, setShowPlaylists] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [newName, setNewName] = useState('');
 
   useEffect(() => {
@@ -47,25 +50,32 @@ export function TrackActionsSheet({
     } else {
       setShowPlaylists(false);
       setShowCreate(false);
+      setShowDeleteConfirm(false);
+      setDeleting(false);
       setNewName('');
     }
   }, [visible]);
 
   const handleDelete = useCallback(() => {
     if (!track) return;
-    Alert.alert('Delete Track', `Remove "${track.title}" from downloads?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteTrack(track.id);
-          onDeleted?.();
-          onClose();
-        },
-      },
-    ]);
-  }, [track, onClose, onDeleted]);
+    setShowDeleteConfirm(true);
+    void Haptics.selectionAsync();
+  }, [track]);
+
+  const confirmDelete = useCallback(async () => {
+    if (!track || deleting) return;
+    setDeleting(true);
+    try {
+      await deleteTrack(track.id);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onDeleted?.();
+      onClose();
+    } catch (error) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (__DEV__) console.warn('[Delete] Track removal failed:', error);
+      setDeleting(false);
+    }
+  }, [track, deleting, onDeleted, onClose]);
 
   const handleAddToPlaylist = useCallback(
     async (playlistId: string) => {
@@ -134,7 +144,62 @@ export function TrackActionsSheet({
             </AppText>
           </View>
 
-          {showCreate ? (
+          {showDeleteConfirm ? (
+            <View style={{ padding: 20, gap: 18 }}>
+              <View style={{ gap: 8 }}>
+                <AppText variant="title" weight="bold">
+                  Delete download?
+                </AppText>
+                <AppText
+                  variant="body"
+                  style={{ color: COLORS.textSecondary, lineHeight: 22 }}
+                >
+                  Remove "{track.title}" from this device.
+                </AppText>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Pressable
+                  disabled={deleting}
+                  onPress={() => setShowDeleteConfirm(false)}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 13,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                    backgroundColor: COLORS.surfaceMuted,
+                    opacity: deleting ? 0.6 : 1,
+                  }}
+                >
+                  <AppText variant="body" weight="medium">
+                    Cancel
+                  </AppText>
+                </Pressable>
+                <Pressable
+                  disabled={deleting}
+                  onPress={confirmDelete}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 13,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(248, 113, 113, 0.16)',
+                    borderWidth: 0.5,
+                    borderColor: 'rgba(248, 113, 113, 0.35)',
+                    opacity: deleting ? 0.6 : 1,
+                  }}
+                >
+                  <AppText
+                    variant="body"
+                    weight="medium"
+                    style={{ color: COLORS.danger }}
+                  >
+                    {deleting ? 'Deleting...' : 'Delete'}
+                  </AppText>
+                </Pressable>
+              </View>
+            </View>
+          ) : showCreate ? (
             <View style={{ padding: 20, gap: 12 }}>
               <TextInput
                 placeholder="Playlist name"
@@ -280,7 +345,7 @@ export function TrackActionsSheet({
                   }}
                 >
                   <AppIcon
-                    name={extraAction.icon as any}
+                    name={extraAction.icon}
                     size={22}
                     color={extraAction.color ?? COLORS.textPrimary}
                   />
@@ -302,11 +367,11 @@ export function TrackActionsSheet({
                   paddingVertical: 16,
                 }}
               >
-                <AppIcon name="close" size={22} color="#EF4444" />
+                <AppIcon name="trash" size={22} color={COLORS.danger} />
                 <AppText
                   variant="body"
                   weight="medium"
-                  style={{ color: '#EF4444' }}
+                  style={{ color: COLORS.danger }}
                 >
                   Delete from Downloads
                 </AppText>

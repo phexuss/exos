@@ -38,7 +38,6 @@ export default function PlayerScreen() {
   const cycleRepeat = usePlayerStore((s) => s.cycleRepeat);
   const setShowQueue = usePlayerStore((s) => s.setShowQueue);
   const play = usePlayerStore((s) => s.play);
-  const markTrackDownloaded = usePlayerStore((s) => s.markTrackDownloaded);
   const closePlayer = usePlayerStore((s) => s.closePlayer);
   const accentColor = useDynamicAccent();
   const startSeeking = audio.startSeeking;
@@ -292,13 +291,7 @@ export default function PlayerScreen() {
               }}
             >
               <SourceBadge source={currentTrack.source} />
-              <DownloadButton
-                track={currentTrack}
-                size={18}
-                onDownloaded={(track, filePath) => {
-                  markTrackDownloaded(track.id, filePath);
-                }}
-              />
+              <DownloadButton track={currentTrack} size={18} />
               <Pressable hitSlop={10} onPress={() => setShowLyrics((v) => !v)}>
                 <AppIcon
                   name="lyrics"

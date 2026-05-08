@@ -4,18 +4,23 @@ import { Pressable, View } from 'react-native';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
-import { downloadTrack } from '@/services/download/downloadService';
+import {
+  type DownloadResult,
+  downloadTrack,
+} from '@/services/download/downloadService';
 import { useDownloadStore } from '@/store/useDownloadStore';
+import { usePlayerStore } from '@/store/usePlayerStore';
 import type { Track } from '@/types/domain';
 
 type Props = {
   track: Track;
   size?: number;
-  onDownloaded?: (track: Track, filePath: string) => void;
+  onDownloaded?: (track: Track, download: DownloadResult) => void;
 };
 
 export function DownloadButton({ track, size = 20, onDownloaded }: Props) {
   const isDownloaded = useDownloadStore((s) => s.downloadedIds.has(track.id));
+  const markTrackDownloaded = usePlayerStore((s) => s.markTrackDownloaded);
 
   const dlProgress = useDownloadStore(
     (s) => s.activeDownloads[track.id]?.progress ?? -1,
@@ -35,12 +40,13 @@ export function DownloadButton({ track, size = 20, onDownloaded }: Props) {
   const handlePress = useCallback(async () => {
     if (status !== 'idle') return;
     try {
-      const filePath = await downloadTrack(track);
-      onDownloaded?.(track, filePath);
+      const download = await downloadTrack(track);
+      markTrackDownloaded(track.id, download);
+      onDownloaded?.(track, download);
     } catch (e) {
       console.warn('[Download]', e);
     }
-  }, [track, status, onDownloaded]);
+  }, [track, status, markTrackDownloaded, onDownloaded]);
 
   const indicatorSize = size + 4;
 

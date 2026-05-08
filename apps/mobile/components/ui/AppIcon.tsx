@@ -13,6 +13,7 @@ import { InfoCircle as InfoCircleBroken } from '@solar-icons/react-native/catego
 import { CheckCircle as CheckCircleLinear } from '@solar-icons/react-native/category/ui/Linear/CheckCircle';
 import { CloseCircle as CloseCircleLinear } from '@solar-icons/react-native/category/ui/Linear/CloseCircle';
 import { Home as HomeLinear } from '@solar-icons/react-native/category/ui/Linear/Home';
+import { TrashBinTrash as TrashLinear } from '@solar-icons/react-native/category/ui/Linear/TrashBinTrash';
 import { User as UserLinear } from '@solar-icons/react-native/category/users/Linear/User';
 import { Pause as PauseBroken } from '@solar-icons/react-native/category/video/Broken/Pause';
 import { Play as PlayBroken } from '@solar-icons/react-native/category/video/Broken/Play';
@@ -40,6 +41,7 @@ export type IconName =
   | 'heart'
   | 'settings'
   | 'close'
+  | 'trash'
   | 'globe'
   | 'check'
   | 'chevron-right'
@@ -68,6 +70,7 @@ const ICON_MAP: Record<IconName, ComponentType<IconProps>> = {
   heart: HeartLinear,
   settings: SettingsLinear,
   close: CloseCircleLinear,
+  trash: TrashLinear,
   globe: GlobeLinear,
   check: CheckCircleLinear,
   'chevron-right': AltArrowRightLinear,

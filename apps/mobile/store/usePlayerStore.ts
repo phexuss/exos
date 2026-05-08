@@ -2,10 +2,16 @@ import { create, type StateCreator } from 'zustand';
 import { apiPost } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
 import * as audio from '@/services/audio/audioService';
-import { addRecentlyPlayed } from '@/services/db/database';
+import { addRecentlyPlayed, getDownloadedTrack } from '@/services/db/database';
 import type { Track } from '@/types/domain';
 
 export type RepeatMode = 'off' | 'all' | 'one';
+
+export type TrackDownloadUpdate = {
+  filePath: string;
+  syncedLyrics?: string | null;
+  plainLyrics?: string | null;
+};
 
 type PlayerState = {
   currentTrack: Track | null;
@@ -25,7 +31,7 @@ type PlayerState = {
   skipNext: () => void;
   skipPrevious: () => void;
   setQueue: (tracks: Track[]) => void;
-  markTrackDownloaded: (trackId: string, filePath: string) => void;
+  markTrackDownloaded: (trackId: string, download: TrackDownloadUpdate) => void;
   toggleShuffle: () => void;
   cycleRepeat: () => void;
   setShowQueue: (show: boolean) => void;
@@ -44,6 +50,57 @@ function isCurrentPlaybackRequest(
   get: PlayerGet,
 ): boolean {
   return requestId === playbackRequestId && get().currentTrack?.id === trackId;
+}
+
+function withDownloadInfo(track: Track, download: TrackDownloadUpdate): Track {
+  return {
+    ...track,
+    filePath: download.filePath,
+    isDownloaded: true,
+    syncedLyrics: download.syncedLyrics ?? track.syncedLyrics,
+    plainLyrics: download.plainLyrics ?? track.plainLyrics,
+  };
+}
+
+function updateDownloadedTrackState(
+  trackId: string,
+  download: TrackDownloadUpdate,
+  set: PlayerSet,
+): void {
+  set((s) => ({
+    currentTrack:
+      s.currentTrack?.id === trackId
+        ? withDownloadInfo(s.currentTrack, download)
+        : s.currentTrack,
+    queue: s.queue.map((t) =>
+      t.id === trackId ? withDownloadInfo(t, download) : t,
+    ),
+  }));
+}
+
+function getDownloadUpdateFromTrack(track: Track): TrackDownloadUpdate | null {
+  if (!track.filePath) return null;
+  return {
+    filePath: track.filePath,
+    syncedLyrics: track.syncedLyrics,
+    plainLyrics: track.plainLyrics,
+  };
+}
+
+async function hydrateCurrentTrackDownload(
+  trackId: string,
+  set: PlayerSet,
+  get: PlayerGet,
+): Promise<void> {
+  try {
+    const downloadedTrack = await getDownloadedTrack(trackId);
+    if (!downloadedTrack?.filePath || get().currentTrack?.id !== trackId) {
+      return;
+    }
+    updateDownloadedTrackState(trackId, downloadedTrack, set);
+  } catch (e) {
+    if (__DEV__) console.warn('[SmartPlay] Local hydrate failed:', e);
+  }
 }
 
 function smartPlay(
@@ -67,7 +124,7 @@ function smartPlay(
     return;
   }
 
-  resolveAndPlayStream(track, set, get, requestId);
+  playDownloadedOrResolveStream(track, set, get, requestId);
 }
 
 function startTrack(track: Track, set: PlayerSet, get: PlayerGet): void {
@@ -79,6 +136,28 @@ function startTrack(track: Track, set: PlayerSet, get: PlayerGet): void {
 function resumeCurrentTrack(set: PlayerSet): void {
   set({ isPlaying: true });
   audio.resumeAudio();
+}
+
+async function playDownloadedOrResolveStream(
+  track: Track,
+  set: PlayerSet,
+  get: PlayerGet,
+  requestId: number,
+): Promise<void> {
+  try {
+    const downloadedTrack = await getDownloadedTrack(track.id);
+    if (downloadedTrack?.filePath) {
+      if (!isCurrentPlaybackRequest(requestId, track.id, get)) return;
+      updateDownloadedTrackState(track.id, downloadedTrack, set);
+      if (!get().isPlaying) return;
+      audio.playLocalFile(downloadedTrack.filePath);
+      return;
+    }
+  } catch (e) {
+    if (__DEV__) console.warn('[SmartPlay] Local lookup failed:', e);
+  }
+
+  resolveAndPlayStream(track, set, get, requestId);
 }
 
 async function resolveAndPlayStream(
@@ -121,6 +200,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   play: (track) => {
     const { currentTrack, isPlaying } = get();
     if (currentTrack?.id === track.id) {
+      const download = getDownloadUpdateFromTrack(track);
+      if (download) {
+        updateDownloadedTrackState(track.id, download, set);
+      } else if (!currentTrack.filePath) {
+        void hydrateCurrentTrackDownload(track.id, set, get);
+      }
+
       if (!isPlaying) resumeCurrentTrack(set);
       return;
     }
@@ -181,16 +267,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   setQueue: (tracks) => set({ queue: tracks }),
 
-  markTrackDownloaded: (trackId, filePath) =>
-    set((s) => ({
-      currentTrack:
-        s.currentTrack?.id === trackId
-          ? { ...s.currentTrack, filePath, isDownloaded: true }
-          : s.currentTrack,
-      queue: s.queue.map((t) =>
-        t.id === trackId ? { ...t, filePath, isDownloaded: true } : t,
-      ),
-    })),
+  markTrackDownloaded: (trackId, download) =>
+    updateDownloadedTrackState(trackId, download, set),
 
   toggleShuffle: () => set((s) => ({ shuffle: !s.shuffle })),
 

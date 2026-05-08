@@ -17,6 +17,12 @@ const DEFAULT_DOWNLOAD_FORMAT = 'm4a';
 type DownloadFormat = typeof DEFAULT_DOWNLOAD_FORMAT | 'mp3';
 const APPROX_TRACK_BYTES = 5 * 1024 * 1024;
 
+export type DownloadResult = {
+  filePath: string;
+  syncedLyrics?: string;
+  plainLyrics?: string;
+};
+
 function ensureDir() {
   if (!TRACKS_DIR.exists) {
     TRACKS_DIR.create();
@@ -132,7 +138,7 @@ async function downloadStream(
   return result.uri;
 }
 
-export async function downloadTrack(track: Track): Promise<string> {
+export async function downloadTrack(track: Track): Promise<DownloadResult> {
   if (activeDownloads.has(track.id)) {
     throw new Error('Already downloading');
   }
@@ -177,7 +183,11 @@ export async function downloadTrack(track: Track): Promise<string> {
 
     if (__DEV__)
       console.log('[Download] Saved:', filePath, lyrics ? '+ lyrics' : '');
-    return filePath;
+    return {
+      filePath,
+      syncedLyrics: lyrics?.syncedLyrics ?? undefined,
+      plainLyrics: lyrics?.plainLyrics ?? undefined,
+    };
   } catch (e) {
     state.status = 'error';
     state.error = e instanceof Error ? e.message : 'Unknown error';
@@ -192,9 +202,9 @@ export async function downloadTrack(track: Track): Promise<string> {
 
 export async function deleteTrack(trackId: string): Promise<void> {
   const track = await getDownloadedTrack(trackId);
-  if (track?.file_path) {
+  if (track?.filePath) {
     try {
-      const file = new File(track.file_path);
+      const file = new File(track.filePath);
       if (file.exists) {
         file.delete();
       }

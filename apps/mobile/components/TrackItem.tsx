@@ -4,8 +4,10 @@ import { Image, Pressable, View } from 'react-native';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { DownloadButton } from '@/components/DownloadButton';
 import { SourceBadge } from '@/components/SourceBadge';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import type { DownloadResult } from '@/services/download/downloadService';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import type { Track } from '@/types/domain';
 
@@ -13,10 +15,12 @@ type TrackItemProps = {
   track: Track;
   onPress?: (track: Track) => void;
   onLongPress?: (track: Track) => void;
-  onDownloaded?: (track: Track, filePath: string) => void;
+  onDownloaded?: (track: Track, download: DownloadResult) => void;
   showBitrate?: boolean;
   showDownload?: boolean;
   isActive?: boolean;
+  isSelected?: boolean;
+  selectionMode?: boolean;
   accentColor?: string;
 };
 
@@ -28,9 +32,12 @@ function TrackItemComponent({
   showBitrate,
   showDownload,
   isActive,
+  isSelected,
+  selectionMode,
   accentColor,
 }: TrackItemProps) {
   const activeColor = accentColor ?? COLORS.accent;
+  const isHighlighted = isSelected || isActive;
 
   return (
     <AnimatedPressable
@@ -40,17 +47,21 @@ function TrackItemComponent({
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 14,
-        paddingLeft: isActive ? 12 : 0,
+        paddingLeft: isHighlighted ? 12 : 0,
         paddingRight: 14,
         gap: 14,
         borderBottomWidth: 0.5,
         borderBottomColor: COLORS.divider,
-        backgroundColor: isActive ? activeColor + '14' : 'transparent',
-        borderRadius: isActive ? 14 : 0,
+        backgroundColor: isSelected
+          ? `${activeColor}22`
+          : isActive
+            ? `${activeColor}14`
+            : 'transparent',
+        borderRadius: isHighlighted ? 14 : 0,
         overflow: 'hidden',
       }}
     >
-      {isActive && (
+      {isHighlighted && (
         <View
           style={{
             position: 'absolute',
@@ -59,10 +70,34 @@ function TrackItemComponent({
             bottom: 4,
             width: 3,
             borderRadius: 2,
-            backgroundColor: activeColor,
+            backgroundColor: isSelected ? COLORS.textPrimary : activeColor,
           }}
         />
       )}
+      {selectionMode ? (
+        <View
+          style={{
+            width: 26,
+            height: 52,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {isSelected ? (
+            <AppIcon name="check" size={22} color={activeColor} />
+          ) : (
+            <View
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 9,
+                borderWidth: 1.5,
+                borderColor: COLORS.textMuted,
+              }}
+            />
+          )}
+        </View>
+      ) : null}
       {track.coverUrl ? (
         <Image
           source={{ uri: track.coverUrl }}

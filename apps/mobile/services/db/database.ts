@@ -37,10 +37,11 @@ export async function withDb<T>(
   try {
     const database = await getDb();
     return await fn(database);
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : '';
     if (
-      e?.message?.includes('NullPointerException') ||
-      e?.message?.includes('NativeDatabase')
+      message.includes('NullPointerException') ||
+      message.includes('NativeDatabase')
     ) {
       if (__DEV__) console.warn('[DB] Handle corrupted, resetting…');
       resetDb();
@@ -118,6 +119,10 @@ async function migrate(database: SQLite.SQLiteDatabase) {
 export type LyricsData = {
   syncedLyrics: string | null;
   plainLyrics: string | null;
+};
+
+export type DownloadedTrackInfo = LyricsData & {
+  filePath: string;
 };
 
 export function insertDownloadedTrack(
@@ -198,12 +203,17 @@ export function isTrackDownloaded(trackId: string): Promise<boolean> {
   });
 }
 
-export function getDownloadedTrack(trackId: string): Promise<{
-  file_path: string;
-} | null> {
+export function getDownloadedTrack(
+  trackId: string,
+): Promise<DownloadedTrackInfo | null> {
   return withDb((database) =>
-    database.getFirstAsync<{ file_path: string }>(
-      'SELECT file_path FROM tracks WHERE id = ?',
+    database.getFirstAsync<DownloadedTrackInfo>(
+      `SELECT
+        file_path as filePath,
+        synced_lyrics as syncedLyrics,
+        plain_lyrics as plainLyrics
+       FROM tracks
+       WHERE id = ?`,
       trackId,
     ),
   );
