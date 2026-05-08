@@ -5,10 +5,15 @@ let player: AudioPlayer | null = null;
 let statusSub: { remove: () => void } | null = null;
 let positionInterval: ReturnType<typeof setInterval> | null = null;
 let isSeeking = false;
+let isReplacing = false;
+let replaceStartedAt = 0;
+let replaceWatchdog: ReturnType<typeof setTimeout> | null = null;
 let didHandleFinish = false;
 let lastSeekTime = 0;
 
 const SEEK_PROGRESS_FREEZE_MS = 1000;
+const MIN_REPLACE_FREEZE_MS = 300;
+const MAX_REPLACE_FREEZE_MS = 2500;
 
 let _getStore:
   | (() => typeof import('@/store/usePlayerStore').usePlayerStore)
@@ -47,6 +52,36 @@ function clampRatio(value: number): number {
 function resetTransientPlaybackState() {
   isSeeking = false;
   lastSeekTime = 0;
+}
+
+function clearReplaceWatchdog() {
+  if (replaceWatchdog) {
+    clearTimeout(replaceWatchdog);
+    replaceWatchdog = null;
+  }
+}
+
+function finishReplace() {
+  isReplacing = false;
+  replaceStartedAt = 0;
+  clearReplaceWatchdog();
+}
+
+function beginReplace() {
+  resetTransientPlaybackState();
+  isReplacing = true;
+  replaceStartedAt = Date.now();
+  clearReplaceWatchdog();
+  store().setState({ progress: 0 });
+  replaceWatchdog = setTimeout(finishReplace, MAX_REPLACE_FREEZE_MS);
+}
+
+function isReplaceSettled(currentTime: number): boolean {
+  const elapsedMs = Date.now() - replaceStartedAt;
+  if (elapsedMs < MIN_REPLACE_FREEZE_MS) return false;
+
+  const elapsedSec = elapsedMs / 1000;
+  return currentTime <= Math.max(2, elapsedSec + 0.75);
 }
 
 function warnAudioError(message: string, error: unknown): void {
@@ -117,12 +152,18 @@ function startPositionTracking() {
       return;
     }
 
-    const duration = getDuration();
-    if (!duration) return;
-
     const currentTime = Number.isFinite(player.currentTime)
       ? player.currentTime
       : 0;
+
+    if (isReplacing) {
+      if (!isReplaceSettled(currentTime)) return;
+      finishReplace();
+    }
+
+    const duration = getDuration();
+    if (!duration) return;
+
     store().setState({ progress: clampRatio(currentTime / duration) });
   }, 250);
 }
@@ -152,8 +193,7 @@ function activateLockScreen(p: AudioPlayer): void {
 export function playUrl(url: string): void {
   const p = getPlayer();
   if (__DEV__) console.log('[Audio] Playing URL:', url);
-  resetTransientPlaybackState();
-  store().setState({ progress: 0 });
+  beginReplace();
   p.replace({ uri: url });
   p.play();
   activateLockScreen(p);
@@ -163,8 +203,7 @@ export function playUrl(url: string): void {
 export function playLocalFile(filePath: string): void {
   const p = getPlayer();
   if (__DEV__) console.log('[Audio] Playing local:', filePath);
-  resetTransientPlaybackState();
-  store().setState({ progress: 0 });
+  beginReplace();
   p.replace({ uri: filePath });
   p.play();
   activateLockScreen(p);
@@ -217,6 +256,7 @@ export function releaseAudio(): void {
   } catch {}
   player = null;
   resetTransientPlaybackState();
+  finishReplace();
   didHandleFinish = false;
   if (_getStore) {
     try {

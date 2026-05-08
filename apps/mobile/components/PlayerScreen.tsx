@@ -223,6 +223,7 @@ export default function PlayerScreen() {
           >
             {showLyrics ? (
               <LyricsView
+                key={currentTrack.id}
                 syncedLyrics={currentTrack.syncedLyrics}
                 plainLyrics={currentTrack.plainLyrics}
                 progress={progress}
