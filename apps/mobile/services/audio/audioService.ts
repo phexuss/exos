@@ -73,6 +73,11 @@ function getPlayer(): AudioPlayer {
     statusSub = player.addListener(
       'playbackStatusUpdate',
       (status: AudioStatus) => {
+        const s = store();
+        if (status.playing && !s.getState().isPlaying) {
+          s.setState({ isPlaying: true });
+        }
+
         if (!status.didJustFinish) {
           didHandleFinish = false;
           return;
@@ -84,7 +89,6 @@ function getPlayer(): AudioPlayer {
         const p = player;
         if (!p) return;
 
-        const s = store();
         const { repeat } = s.getState();
         if (repeat === 'one') {
           s.setState({ progress: 0 });

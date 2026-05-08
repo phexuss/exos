@@ -6,19 +6,51 @@ import youtubedl from "youtube-dl-exec";
 
 const YTDLP_BIN = "/usr/bin/yt-dlp";
 const ytdlp = youtubedl.create(YTDLP_BIN);
+const ALLOWED_DIRECT_URL_HOSTS = ["soundcloud.com", "youtube.com", "youtu.be"];
 
 @Injectable()
 export class DownloadService {
 	private readonly logger = new Logger(DownloadService.name);
 
+	private isHttpUrl(value: string): boolean {
+		return /^https?:\/\//i.test(value);
+	}
+
+	private isAllowedDirectUrl(url: URL): boolean {
+		if (url.protocol !== "http:" && url.protocol !== "https:") {
+			return false;
+		}
+
+		const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
+		return ALLOWED_DIRECT_URL_HOSTS.some(
+			(domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+		);
+	}
+
+	private resolveDirectUrl(query: string): string {
+		let url: URL;
+		try {
+			url = new URL(query);
+		} catch {
+			throw new BadRequestException("Invalid direct audio URL");
+		}
+
+		if (!this.isAllowedDirectUrl(url)) {
+			throw new BadRequestException("Direct audio URL host is not allowed");
+		}
+
+		return url.toString();
+	}
+
 	private resolveSource(dto: DownloadDto): string {
-		if (dto.query.startsWith("http")) {
-			return dto.query;
+		const query = dto.query.trim();
+		if (this.isHttpUrl(query)) {
+			return this.resolveDirectUrl(query);
 		}
 		if (dto.isrc) {
-			return `ytsearch1:${dto.isrc}`;
+			return `ytsearch1:${dto.isrc.trim()}`;
 		}
-		return `ytsearch1:${dto.query}`;
+		return `ytsearch1:${query}`;
 	}
 
 	private resolveFormat(format: AudioFormat): string {

@@ -34,8 +34,24 @@ type PlayerState = {
 };
 
 type PlayerSet = Parameters<StateCreator<PlayerState>>[0];
+type PlayerGet = Parameters<StateCreator<PlayerState>>[1];
 
-function smartPlay(track: Track, set: PlayerSet): void {
+let playbackRequestId = 0;
+
+function isCurrentPlaybackRequest(
+  requestId: number,
+  trackId: string,
+  get: PlayerGet,
+): boolean {
+  return requestId === playbackRequestId && get().currentTrack?.id === trackId;
+}
+
+function smartPlay(
+  track: Track,
+  set: PlayerSet,
+  get: PlayerGet,
+  requestId: number,
+): void {
   if (__DEV__)
     console.log(
       '[SmartPlay]',
@@ -51,17 +67,25 @@ function smartPlay(track: Track, set: PlayerSet): void {
     return;
   }
 
-  resolveAndPlayStream(track, set);
+  resolveAndPlayStream(track, set, get, requestId);
 }
 
-function startTrack(track: Track, set: PlayerSet): void {
+function startTrack(track: Track, set: PlayerSet, get: PlayerGet): void {
+  const requestId = ++playbackRequestId;
   set({ currentTrack: track, isPlaying: true, progress: 0 });
-  smartPlay(track, set);
+  smartPlay(track, set, get, requestId);
+}
+
+function resumeCurrentTrack(set: PlayerSet): void {
+  set({ isPlaying: true });
+  audio.resumeAudio();
 }
 
 async function resolveAndPlayStream(
   track: Track,
   set: PlayerSet,
+  get: PlayerGet,
+  requestId: number,
 ): Promise<void> {
   try {
     const query =
@@ -73,9 +97,13 @@ async function resolveAndPlayStream(
       query,
       format: 'm4a',
     });
+    if (!isCurrentPlaybackRequest(requestId, track.id, get)) return;
+    if (!get().isPlaying) return;
+    set({ isPlaying: true });
     audio.playUrl(url);
   } catch (e) {
     if (__DEV__) console.warn('[Stream] Failed to resolve URL:', e);
+    if (!isCurrentPlaybackRequest(requestId, track.id, get)) return;
     set({ isPlaying: false });
   }
 }
@@ -91,7 +119,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   isPlayerOpen: false,
 
   play: (track) => {
-    startTrack(track, set);
+    const { currentTrack, isPlaying } = get();
+    if (currentTrack?.id === track.id) {
+      if (!isPlaying) resumeCurrentTrack(set);
+      return;
+    }
+
+    startTrack(track, set, get);
   },
 
   pause: () => {
@@ -131,7 +165,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       next = queue[(idx + 1) % queue.length];
     }
     if (next) {
-      startTrack(next, set);
+      startTrack(next, set, get);
     }
   },
 
@@ -141,7 +175,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const idx = queue.findIndex((t) => t.id === currentTrack.id);
     const prev = queue[(idx - 1 + queue.length) % queue.length];
     if (prev) {
-      startTrack(prev, set);
+      startTrack(prev, set, get);
     }
   },
 
