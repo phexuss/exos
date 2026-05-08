@@ -10,8 +10,8 @@ import { SeekBar } from '@/components/SeekBar';
 import { SourceBadge } from '@/components/SourceBadge';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { AppText } from '@/components/ui/AppText';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useI18n } from '@/hooks/useI18n';
@@ -45,6 +45,7 @@ export default function PlayerScreen() {
   const stopSeeking = audio.stopSeeking;
 
   const totalDurationSec =
+    audio.getDuration() ||
     currentTrack?.durationSec ||
     (currentTrack ? parseDuration(currentTrack.duration) : 0);
   const displayedRatio = scrubRatio ?? progress;
@@ -60,10 +61,6 @@ export default function PlayerScreen() {
   const handleLyricSeek = useCallback(
     (seconds: number) => {
       if (!totalDurationSec) return;
-      // Bias slightly past the line start so platform seek (which lands on the
-      // nearest keyframe and may undershoot by a few ms) still reports a time
-      // strictly >= line.time, keeping the highlighted line in sync with the
-      // tap instead of falling back to the previous one.
       const target = seconds + 0.05;
       const ratio = Math.max(0, Math.min(1, target / totalDurationSec));
       setProgress(ratio);

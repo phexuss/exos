@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create, type StateCreator } from 'zustand';
 import { apiPost } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
 import * as audio from '@/services/audio/audioService';
@@ -33,10 +33,9 @@ type PlayerState = {
   closePlayer: () => void;
 };
 
-/**
- * Smart playback — local file or resolve stream via backend.
- */
-function smartPlay(track: Track, set: Function): boolean {
+type PlayerSet = Parameters<StateCreator<PlayerState>>[0];
+
+function smartPlay(track: Track, set: PlayerSet): void {
   if (__DEV__)
     console.log(
       '[SmartPlay]',
@@ -49,14 +48,21 @@ function smartPlay(track: Track, set: Function): boolean {
 
   if (track.filePath) {
     audio.playLocalFile(track.filePath);
-    return true;
+    return;
   }
 
   resolveAndPlayStream(track, set);
-  return true;
 }
 
-async function resolveAndPlayStream(track: Track, set: Function) {
+function startTrack(track: Track, set: PlayerSet): void {
+  set({ currentTrack: track, isPlaying: true, progress: 0 });
+  smartPlay(track, set);
+}
+
+async function resolveAndPlayStream(
+  track: Track,
+  set: PlayerSet,
+): Promise<void> {
   try {
     const query =
       track.source === 'soundcloud'
@@ -85,8 +91,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   isPlayerOpen: false,
 
   play: (track) => {
-    smartPlay(track, set);
-    set({ currentTrack: track, isPlaying: true, progress: 0 });
+    startTrack(track, set);
   },
 
   pause: () => {
@@ -126,11 +131,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       next = queue[(idx + 1) % queue.length];
     }
     if (next) {
-      if (smartPlay(next, set)) {
-        set({ currentTrack: next, progress: 0, isPlaying: true });
-      } else {
-        set({ isPlaying: false });
-      }
+      startTrack(next, set);
     }
   },
 
@@ -140,11 +141,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const idx = queue.findIndex((t) => t.id === currentTrack.id);
     const prev = queue[(idx - 1 + queue.length) % queue.length];
     if (prev) {
-      if (smartPlay(prev, set)) {
-        set({ currentTrack: prev, progress: 0, isPlaying: true });
-      } else {
-        set({ isPlaying: false });
-      }
+      startTrack(prev, set);
     }
   },
 

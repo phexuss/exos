@@ -5,11 +5,10 @@ let player: AudioPlayer | null = null;
 let statusSub: { remove: () => void } | null = null;
 let positionInterval: ReturnType<typeof setInterval> | null = null;
 let isSeeking = false;
-let isAdvancing = false;
-let isReplacing = false;
-let replaceWatchdog: ReturnType<typeof setTimeout> | null = null;
-let pendingSeekRatio: number | null = null;
-let pendingSeekTimer: ReturnType<typeof setTimeout> | null = null;
+let didHandleFinish = false;
+let lastSeekTime = 0;
+
+const SEEK_PROGRESS_FREEZE_MS = 1000;
 
 let _getStore:
   | (() => typeof import('@/store/usePlayerStore').usePlayerStore)
@@ -21,36 +20,45 @@ export function bindStore(
   _getStore = getter;
 }
 
+export function getDuration(): number {
+  const track = _getStore?.()?.getState().currentTrack;
+  return (
+    positiveSeconds(track?.durationSec) || positiveSeconds(player?.duration)
+  );
+}
+
 function store() {
   if (!_getStore) throw new Error('audioService: store not bound');
   return _getStore();
 }
 
-function clearReplaceWatchdog() {
-  if (replaceWatchdog) {
-    clearTimeout(replaceWatchdog);
-    replaceWatchdog = null;
+function positiveSeconds(value: number | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return 0;
   }
+  return value;
 }
 
-/**
- * `player.replace()` is async; until the new track is loaded the polling
- * interval would otherwise see the old `currentTime` against the new
- * `duration` (or vice versa) and emit garbage ratios. We freeze progress
- * writes during that window and unfreeze once the new track has settled.
- */
-function beginReplace() {
-  isReplacing = true;
-  clearReplaceWatchdog();
-  // Optimistically zero the UI so backward-skip doesn't briefly show old time.
+function clampRatio(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+function resetTransientPlaybackState() {
+  isSeeking = false;
+  lastSeekTime = 0;
+}
+
+function warnAudioError(message: string, error: unknown): void {
+  if (__DEV__) console.warn(message, error);
+}
+
+function playAfterSeek(p: AudioPlayer): void {
   try {
-    store().setState({ progress: 0 });
-  } catch {}
-  // Safety net in case the load-detection branch in the interval never fires.
-  replaceWatchdog = setTimeout(() => {
-    isReplacing = false;
-    replaceWatchdog = null;
-  }, 2000);
+    p.play();
+  } catch (error) {
+    warnAudioError('[Audio] replay failed:', error);
+  }
 }
 
 function getPlayer(): AudioPlayer {
@@ -65,15 +73,27 @@ function getPlayer(): AudioPlayer {
     statusSub = player.addListener(
       'playbackStatusUpdate',
       (status: AudioStatus) => {
-        if (!status.didJustFinish || isAdvancing) return;
-        isAdvancing = true;
+        if (!status.didJustFinish) {
+          didHandleFinish = false;
+          return;
+        }
+
+        if (didHandleFinish) return;
+        didHandleFinish = true;
+
+        const p = player;
+        if (!p) return;
+
         const s = store();
         const { repeat } = s.getState();
         if (repeat === 'one') {
-          player?.seekTo(0);
-          player?.play();
           s.setState({ progress: 0 });
-          isAdvancing = false;
+          void p
+            .seekTo(0)
+            .then(() => playAfterSeek(p))
+            .catch((error: unknown) =>
+              warnAudioError('[Audio] repeat seek failed:', error),
+            );
         } else {
           s.getState().skipNext();
         }
@@ -88,33 +108,18 @@ function startPositionTracking() {
   positionInterval = setInterval(() => {
     if (isSeeking || !player) return;
     if (!store().getState().isPlaying) return;
-    const duration = player.duration;
-    const currentTime = player.currentTime;
-    if (isReplacing) {
-      // Consider the new track loaded once the player has reset its clock and
-      // started reporting a real duration. Then resume progress writes.
-      if (currentTime < 2 && duration > 0) {
-        isReplacing = false;
-        clearReplaceWatchdog();
-      } else {
-        return;
-      }
+
+    if (Date.now() - lastSeekTime < SEEK_PROGRESS_FREEZE_MS) {
+      return;
     }
-    if (duration <= 0) return;
-    const ratio = currentTime / duration;
-    if (pendingSeekRatio !== null) {
-      // Wait until expo-audio finishes seeking before resuming progress writes
-      if (Math.abs(ratio - pendingSeekRatio) < 0.02) {
-        pendingSeekRatio = null;
-        if (pendingSeekTimer) {
-          clearTimeout(pendingSeekTimer);
-          pendingSeekTimer = null;
-        }
-      } else {
-        return;
-      }
-    }
-    store().setState({ progress: ratio });
+
+    const duration = getDuration();
+    if (!duration) return;
+
+    const currentTime = Number.isFinite(player.currentTime)
+      ? player.currentTime
+      : 0;
+    store().setState({ progress: clampRatio(currentTime / duration) });
   }, 250);
 }
 
@@ -143,10 +148,10 @@ function activateLockScreen(p: AudioPlayer): void {
 export function playUrl(url: string): void {
   const p = getPlayer();
   if (__DEV__) console.log('[Audio] Playing URL:', url);
-  beginReplace();
+  resetTransientPlaybackState();
+  store().setState({ progress: 0 });
   p.replace({ uri: url });
   p.play();
-  isAdvancing = false;
   activateLockScreen(p);
   startPositionTracking();
 }
@@ -154,10 +159,10 @@ export function playUrl(url: string): void {
 export function playLocalFile(filePath: string): void {
   const p = getPlayer();
   if (__DEV__) console.log('[Audio] Playing local:', filePath);
-  beginReplace();
+  resetTransientPlaybackState();
+  store().setState({ progress: 0 });
   p.replace({ uri: filePath });
   p.play();
-  isAdvancing = false;
   activateLockScreen(p);
   startPositionTracking();
 }
@@ -173,15 +178,19 @@ export function resumeAudio(): void {
 }
 
 export function seekTo(ratio: number): void {
-  if (!player || !player.duration) return;
-  pendingSeekRatio = ratio;
-  if (pendingSeekTimer) clearTimeout(pendingSeekTimer);
-  // Safety net in case expo-audio never reports the new currentTime
-  pendingSeekTimer = setTimeout(() => {
-    pendingSeekRatio = null;
-    pendingSeekTimer = null;
-  }, 1500);
-  player.seekTo(ratio * player.duration);
+  const p = player;
+  if (!p) return;
+
+  const duration = getDuration();
+  if (!duration) return;
+
+  const nextRatio = clampRatio(ratio);
+  lastSeekTime = Date.now();
+  const targetTime = nextRatio * duration;
+
+  void p.seekTo(targetTime).catch((error: unknown) => {
+    warnAudioError('[Audio] seek failed:', error);
+  });
 }
 
 export function startSeeking(): void {
@@ -203,15 +212,8 @@ export function releaseAudio(): void {
     player?.remove();
   } catch {}
   player = null;
-  isSeeking = false;
-  isAdvancing = false;
-  isReplacing = false;
-  clearReplaceWatchdog();
-  pendingSeekRatio = null;
-  if (pendingSeekTimer) {
-    clearTimeout(pendingSeekTimer);
-    pendingSeekTimer = null;
-  }
+  resetTransientPlaybackState();
+  didHandleFinish = false;
   if (_getStore) {
     try {
       store().setState({
