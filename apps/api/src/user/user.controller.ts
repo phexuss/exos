@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Req } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -17,13 +9,13 @@ import {
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { AuthStatusResponseDto } from 'src/auth/dto/auth.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
 import { ResendService } from 'src/resend/resend.service';
 import { UserPublicDto, UserResponseDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserService } from './user.service';
 
 @ApiTags('User')
+@ApiBearerAuth()
 @Controller('user')
 export class UserController {
   constructor(
@@ -35,7 +27,6 @@ export class UserController {
   @ApiBearerAuth()
   @ApiOkResponse({ description: 'Current user profile', type: UserPublicDto })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token' })
-  @UseGuards(JwtAuthGuard)
   @Get('me')
   async getMe(@Req() req: Request): Promise<UserPublicDto> {
     const { sub } = req.user as AuthStatusResponseDto;
@@ -51,7 +42,6 @@ export class UserController {
     type: UserPublicDto,
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token' })
-  @UseGuards(JwtAuthGuard)
   @Patch('me')
   async updateMe(
     @Req() req: Request,

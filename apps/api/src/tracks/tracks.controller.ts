@@ -1,5 +1,6 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
@@ -9,6 +10,7 @@ import { DeezerTrackFullDto } from 'src/providers/deezer/deezer.types';
 import { TracksService } from './tracks.service';
 
 @ApiTags('Tracks')
+@ApiBearerAuth()
 @Controller('tracks')
 export class TracksController {
   constructor(private readonly tracksService: TracksService) {}

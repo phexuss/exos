@@ -41,3 +41,27 @@ export class DownloadResponseDto {
   })
   url!: string;
 }
+
+export class DownloadTicketResponseDto {
+  @ApiProperty({
+    description:
+      'Short-lived signed token for downloading through stream-ticket',
+    example: 'eyJxdWVyeSI6IkRhZnQgUHVuayJ9.signature',
+  })
+  token!: string;
+
+  @ApiProperty({
+    description: 'Unix timestamp in milliseconds when the ticket expires',
+    example: 1713957300000,
+  })
+  expiresAt!: number;
+}
+
+export class DownloadTicketQueryDto {
+  @ApiProperty({
+    description: 'Short-lived signed download ticket',
+    example: 'eyJxdWVyeSI6IkRhZnQgUHVuayJ9.signature',
+  })
+  @IsString()
+  token!: string;
+}

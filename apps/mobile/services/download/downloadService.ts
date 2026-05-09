@@ -1,7 +1,7 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import { createDownloadResumable } from 'expo-file-system/legacy';
 
-import { API_BASE_URL, apiGet } from '@/services/api/client';
+import { API_BASE_URL, ApiError, apiGet, apiPost } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
 import {
   deleteDownloadedTrack as deleteFromDb,
@@ -16,11 +16,23 @@ const TRACKS_DIR = new Directory(Paths.document, 'tracks');
 const DEFAULT_DOWNLOAD_FORMAT = 'm4a';
 type DownloadFormat = typeof DEFAULT_DOWNLOAD_FORMAT | 'mp3';
 const APPROX_TRACK_BYTES = 5 * 1024 * 1024;
+const MIN_AUDIO_BYTES = 1024;
 
 export type DownloadResult = {
   filePath: string;
   syncedLyrics?: string;
   plainLyrics?: string;
+};
+
+type DownloadPayload = {
+  query: string;
+  isrc?: string;
+  format: DownloadFormat;
+};
+
+type DownloadTicketResponse = {
+  token: string;
+  expiresAt: number;
 };
 
 function ensureDir() {
@@ -93,7 +105,10 @@ async function fetchLyrics(
   }
 }
 
-function buildStreamUrl(track: Track, format: DownloadFormat): string {
+function buildDownloadPayload(
+  track: Track,
+  format: DownloadFormat,
+): DownloadPayload {
   const soundCloudUrl =
     track.source === 'soundcloud' && track.isrc?.startsWith('http')
       ? track.isrc
@@ -101,11 +116,23 @@ function buildStreamUrl(track: Track, format: DownloadFormat): string {
   const query = soundCloudUrl
     ? soundCloudUrl
     : `${track.artist.name} ${track.title}`;
-  const params = new URLSearchParams();
-  params.set('query', query);
-  if (!soundCloudUrl && track.isrc) params.set('isrc', track.isrc);
-  params.set('format', format);
-  return `${API_BASE_URL}${API_ENDPOINTS.download}/stream?${params.toString()}`;
+
+  return {
+    query,
+    isrc: !soundCloudUrl ? track.isrc : undefined,
+    format,
+  };
+}
+
+async function createStreamTicketUrl(
+  payload: DownloadPayload,
+): Promise<string> {
+  const ticket = await apiPost<DownloadTicketResponse>(
+    `${API_ENDPOINTS.download}/stream-ticket`,
+    payload,
+  );
+  const params = new URLSearchParams({ token: ticket.token });
+  return `${API_BASE_URL}${API_ENDPOINTS.download}/stream-ticket?${params.toString()}`;
 }
 
 async function downloadStream(
@@ -134,6 +161,15 @@ async function downloadStream(
   if (!result?.uri) {
     throw new Error('Download failed: empty result');
   }
+  if (result.status < 200 || result.status >= 300) {
+    throw new ApiError(result.status, `Download failed: HTTP ${result.status}`);
+  }
+
+  const downloadedFile = new File(result.uri);
+  if (!downloadedFile.exists || downloadedFile.size < MIN_AUDIO_BYTES) {
+    throw new Error('Download failed: empty audio file');
+  }
+
   onProgress(1);
   return result.uri;
 }
@@ -152,16 +188,29 @@ export async function downloadTrack(track: Track): Promise<DownloadResult> {
   emit(state);
   useDownloadStore.getState().setDownloadProgress(track.id, 0, 'downloading');
 
+  let destination: File | null = null;
+
   try {
     ensureDir();
     const downloadFormat = getDownloadFormat(track);
-    const destination = new File(TRACKS_DIR, `${track.id}.${downloadFormat}`);
+    destination = new File(TRACKS_DIR, `${track.id}.${downloadFormat}`);
     if (destination.exists) {
       destination.delete();
     }
 
-    const streamUrl = buildStreamUrl(track, downloadFormat);
+    state.status = 'fetching_url';
+    emit(state);
+    useDownloadStore
+      .getState()
+      .setDownloadProgress(track.id, 0, 'fetching_url');
+
+    const payload = buildDownloadPayload(track, downloadFormat);
+    const streamUrl = await createStreamTicketUrl(payload);
     if (__DEV__) console.log('[Download] Streaming from:', streamUrl);
+
+    state.status = 'downloading';
+    emit(state);
+    useDownloadStore.getState().setDownloadProgress(track.id, 0, 'downloading');
 
     const [lyrics, filePath] = await Promise.all([
       fetchLyrics(track.artist.name, track.title, track.durationSec),
@@ -189,6 +238,9 @@ export async function downloadTrack(track: Track): Promise<DownloadResult> {
       plainLyrics: lyrics?.plainLyrics ?? undefined,
     };
   } catch (e) {
+    if (destination?.exists) {
+      destination.delete();
+    }
     state.status = 'error';
     state.error = e instanceof Error ? e.message : 'Unknown error';
     if (__DEV__) console.warn('[Download] Error:', state.error);

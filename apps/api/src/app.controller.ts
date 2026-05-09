@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Public } from 'src/auth/decorators/public.decorator';
 import { AppService } from './app.service';
 
 @ApiTags('System')
@@ -9,6 +10,7 @@ export class AppController {
 
   @ApiOperation({ summary: 'Basic API health route' })
   @ApiOkResponse({ description: 'Simple health response string', type: String })
+  @Public()
   @Get()
   getHello(): string {
     return this.appService.getHello();

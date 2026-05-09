@@ -42,4 +42,29 @@ export class ResendCodeDto {
 export class VerifyEmailResponseDto {
   @ApiProperty({ description: 'Verification result flag', example: true })
   success!: boolean;
+
+  @ApiProperty({
+    description: 'JWT access token',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.access.payload.signature',
+  })
+  accessToken!: string;
+
+  @ApiProperty({
+    description: 'JWT refresh token',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh.payload.signature',
+  })
+  refreshToken!: string;
+
+  @ApiProperty({
+    description: 'Access token type',
+    enum: ['Bearer'],
+    example: 'Bearer',
+  })
+  tokenType!: 'Bearer';
+
+  @ApiProperty({
+    description: 'Configured access token lifetime expression',
+    example: '15m',
+  })
+  accessExpiresIn!: string;
 }

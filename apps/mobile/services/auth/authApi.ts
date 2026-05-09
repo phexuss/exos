@@ -38,6 +38,14 @@ export type AuthStatusResponse = {
   exp?: number;
 };
 
+export type VerifyEmailResponse = AuthTokenResponse & {
+  success: boolean;
+};
+
+export type PasswordResetCodeResponse = {
+  resetToken: string;
+};
+
 export async function register(
   name: string,
   username: string,
@@ -84,12 +92,14 @@ export async function logout(): Promise<void> {
 export async function verifyEmail(
   userId: string,
   code: string,
-): Promise<{ success: boolean }> {
-  return apiPost<{ success: boolean }>(
+): Promise<VerifyEmailResponse> {
+  const tokens = await apiPost<VerifyEmailResponse>(
     '/auth/verify',
     { userId, code },
     { skipAuth: true },
   );
+  await saveTokens(tokens.accessToken, tokens.refreshToken);
+  return tokens;
 }
 
 export async function resendCode(userId: string, email: string): Promise<void> {
@@ -102,6 +112,38 @@ export async function resendCode(userId: string, email: string): Promise<void> {
 
 export async function checkAuthStatus(): Promise<AuthStatusResponse> {
   return apiRequest<AuthStatusResponse>('/auth/status', { method: 'GET' });
+}
+
+export async function forgotPassword(
+  email: string,
+): Promise<{ success: boolean }> {
+  return apiPost<{ success: boolean }>(
+    '/auth/password/forgot',
+    { email },
+    { skipAuth: true },
+  );
+}
+
+export async function verifyPasswordResetCode(
+  email: string,
+  code: string,
+): Promise<PasswordResetCodeResponse> {
+  return apiPost<PasswordResetCodeResponse>(
+    '/auth/password/verify',
+    { email, code },
+    { skipAuth: true },
+  );
+}
+
+export async function resetPassword(
+  resetToken: string,
+  newPassword: string,
+): Promise<{ success: boolean }> {
+  return apiPost<{ success: boolean }>(
+    '/auth/password/reset',
+    { resetToken, newPassword },
+    { skipAuth: true },
+  );
 }
 
 export async function getMe(): Promise<AuthUser> {

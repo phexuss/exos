@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { router } from 'expo-router';
+import { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -20,43 +20,40 @@ import { useI18n } from '@/hooks/useI18n';
 import { ApiError } from '@/services/api/client';
 import { useAuthStore } from '@/store/useAuthStore';
 
-export default function LoginScreen() {
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export default function ForgotPasswordScreen() {
   const { t } = useI18n();
-  const params = useLocalSearchParams<{ reset?: string }>();
-  const login = useAuthStore((s) => s.login);
+  const forgotPassword = useAuthStore((s) => s.forgotPassword);
   const isLoading = useAuthStore((s) => s.isLoading);
 
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
 
-  const passwordRef = useRef<RNTextInput>(null);
-
-  useEffect(() => {
-    if (params.reset === '1') {
-      setInfo(t('auth.passwordResetDone'));
-    }
-  }, [params.reset, t]);
+  const emailRef = useRef<RNTextInput>(null);
 
   const handleSubmit = async () => {
     setError(null);
-    setInfo(null);
-    if (!username.trim() || !password) {
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail) {
       setError(t('auth.fillAllFields'));
+      return;
+    }
+    if (!EMAIL_RE.test(trimmedEmail)) {
+      setError(t('auth.invalidEmail'));
       return;
     }
 
     try {
-      await login(username.trim(), password);
-      router.replace('/(tabs)' as never);
+      await forgotPassword(trimmedEmail);
+      router.push({
+        pathname: '/(auth)/reset-code' as never,
+        params: { email: trimmedEmail },
+      } as never);
     } catch (e) {
       if (e instanceof ApiError) {
-        if (e.status === 401) {
-          setError(t('auth.invalidCredentials'));
-        } else {
-          setError(e.message || t('auth.networkError'));
-        }
+        setError(e.message || t('auth.networkError'));
       } else {
         setError(t('auth.networkError'));
       }
@@ -96,53 +93,29 @@ export default function LoginScreen() {
 
           <View style={{ marginTop: SPACING.xxl, gap: 6 }}>
             <AppText variant="display" weight="bold">
-              {t('auth.welcomeBack')}
+              {t('auth.forgotPasswordTitle')}
             </AppText>
             <AppText
               variant="body"
               style={{ color: COLORS.textSecondary, fontSize: 14 }}
             >
-              {t('auth.welcomeSubtitle')}
+              {t('auth.forgotPasswordSubtitle')}
             </AppText>
           </View>
 
           <View style={{ marginTop: SPACING.xxxl, gap: SPACING.lg }}>
             <AuthTextField
-              label={t('auth.username')}
-              value={username}
-              onChangeText={setUsername}
-              placeholder={t('auth.usernamePlaceholder')}
-              autoComplete="username"
-              textContentType="username"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
-              maxLength={36}
-            />
-            <AuthTextField
-              ref={passwordRef}
-              label={t('auth.password')}
-              value={password}
-              onChangeText={setPassword}
-              placeholder={t('auth.passwordPlaceholder')}
-              secureTextEntry
-              autoComplete="password"
-              textContentType="password"
+              ref={emailRef}
+              label={t('auth.email')}
+              value={email}
+              onChangeText={setEmail}
+              placeholder={t('auth.emailPlaceholder')}
+              keyboardType="email-address"
+              autoComplete="email"
+              textContentType="emailAddress"
               returnKeyType="go"
               onSubmitEditing={handleSubmit}
             />
-            <Pressable
-              onPress={() => router.push('/(auth)/forgot-password' as never)}
-              hitSlop={8}
-              style={{ alignSelf: 'flex-end', paddingVertical: 2 }}
-            >
-              <AppText
-                variant="caption"
-                weight="medium"
-                style={{ color: COLORS.accent, fontSize: 13 }}
-              >
-                {t('auth.forgotPassword')}
-              </AppText>
-            </Pressable>
             {error ? (
               <AppText
                 variant="caption"
@@ -151,39 +124,25 @@ export default function LoginScreen() {
                 {error}
               </AppText>
             ) : null}
-            {info ? (
-              <AppText
-                variant="caption"
-                style={{ color: COLORS.accent, fontSize: 12 }}
-              >
-                {info}
-              </AppText>
-            ) : null}
           </View>
 
           <View style={{ marginTop: SPACING.xxxl, gap: SPACING.lg }}>
             <PrimaryButton
-              label={t('auth.signIn')}
+              label={t('auth.sendResetCode')}
               onPress={handleSubmit}
               loading={isLoading}
             />
             <Pressable
-              onPress={() => router.replace('/(auth)/register' as never)}
+              onPress={() => router.replace('/(auth)/login' as never)}
               hitSlop={8}
               style={{ alignItems: 'center', paddingVertical: 8 }}
             >
               <AppText
                 variant="caption"
-                style={{ color: COLORS.textSecondary, fontSize: 13 }}
+                weight="medium"
+                style={{ color: COLORS.accent, fontSize: 13 }}
               >
-                {t('auth.dontHaveAccount')}{' '}
-                <AppText
-                  variant="caption"
-                  weight="bold"
-                  style={{ color: COLORS.accent, fontSize: 13 }}
-                >
-                  {t('auth.signUp')}
-                </AppText>
+                {t('auth.backToSignIn')}
               </AppText>
             </Pressable>
           </View>

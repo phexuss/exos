@@ -7,14 +7,15 @@ export interface SimilarTrack {
   coverUrl: string | null;
   duration: number | null;
   isrc: string | null;
-  deezerId: number | null;
+  deezerId: number;
 }
 
 export async function getSimilarTracks(
   artist: string,
   track: string,
 ): Promise<SimilarTrack[]> {
-  return apiGet<SimilarTrack[]>(
-    `/search/similar?artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(track)}`,
-  );
+  return apiGet<SimilarTrack[]>('/search/similar', {
+    artist,
+    track,
+  });
 }

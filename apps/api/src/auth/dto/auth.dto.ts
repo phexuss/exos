@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, Length, MinLength } from 'class-validator';
+import { IsEmail, IsString, Length, MinLength } from 'class-validator';
 
 export class AuthPayloadDto {
   @ApiProperty({
@@ -85,6 +85,71 @@ export class ChangePasswordDto {
 
 export class ChangePasswordResponseDto {
   @ApiProperty({ description: 'Password change result flag', example: true })
+  success!: boolean;
+}
+
+export class ForgotPasswordDto {
+  @ApiProperty({
+    description: 'Account email to receive a password reset code',
+    example: 'user@example.com',
+  })
+  @IsString()
+  @IsEmail()
+  email!: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty({
+    description:
+      'Short-lived token issued after password reset code verification',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.reset.payload.signature',
+  })
+  @IsString()
+  resetToken!: string;
+
+  @ApiProperty({
+    description: 'New password (min 8 characters)',
+    minLength: 8,
+    example: 'NewPass4567',
+  })
+  @IsString()
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  newPassword!: string;
+}
+
+export class VerifyPasswordResetCodeDto {
+  @ApiProperty({
+    description: 'Account email that received the reset code',
+    example: 'user@example.com',
+  })
+  @IsString()
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({
+    description: '6-digit password reset code sent by email',
+    minLength: 6,
+    maxLength: 6,
+    example: '123456',
+  })
+  @IsString()
+  @Length(6, 6)
+  code!: string;
+}
+
+export class VerifyPasswordResetCodeResponseDto {
+  @ApiProperty({
+    description: 'Short-lived token for setting a new password',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.reset.payload.signature',
+  })
+  resetToken!: string;
+}
+
+export class PasswordResetResponseDto {
+  @ApiProperty({
+    description: 'Password reset flow result flag',
+    example: true,
+  })
   success!: boolean;
 }
 

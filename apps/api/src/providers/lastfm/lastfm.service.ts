@@ -25,7 +25,10 @@ export class LastfmService {
     track: string,
     limit = 5,
   ): Promise<LastfmSimilarTrack[]> {
-    const cacheKey = `lastfm:similar:${artist}:${track}`.toLowerCase();
+    const normalizedArtist = artist.trim();
+    const normalizedTrack = track.trim();
+    const cacheKey =
+      `lastfm:similar:${normalizedArtist}:${normalizedTrack}:${limit}`.toLowerCase();
 
     const cached = await this.cacheManager.get<LastfmSimilarTrack[]>(cacheKey);
     if (cached) return cached;
@@ -34,8 +37,8 @@ export class LastfmService {
       this.httpService.get<LastfmSimilarResponse>(this.BASE_URL, {
         params: {
           method: 'track.getSimilar',
-          artist,
-          track,
+          artist: normalizedArtist,
+          track: normalizedTrack,
           api_key: this.apiKey,
           format: 'json',
           limit,

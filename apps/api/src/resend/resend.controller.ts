@@ -1,9 +1,15 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { SendTestEmailDto } from './dto/send-test-email.dto';
 import { ResendService } from './resend.service';
 
 @ApiTags('Resend')
+@ApiBearerAuth()
 @Controller('resend')
 export class ResendController {
   constructor(private readonly resendService: ResendService) {}

@@ -1,5 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
@@ -10,6 +11,7 @@ import { SoundCloudSearchResponseDto } from 'src/providers/soundcloud/soundcloud
 import { SearchService } from 'src/search/search.service';
 
 @ApiTags('Search')
+@ApiBearerAuth()
 @Controller('search')
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
@@ -36,9 +38,19 @@ export class SearchController {
     return this.searchService.getChart();
   }
 
-  @ApiOperation({ summary: 'Get similar tracks via Last.fm + Deezer enrichment' })
-  @ApiQuery({ name: 'artist', description: 'Artist name', example: 'Tame Impala' })
-  @ApiQuery({ name: 'track', description: 'Track name', example: 'Let It Happen' })
+  @ApiOperation({
+    summary: 'Get similar tracks via Last.fm + Deezer enrichment',
+  })
+  @ApiQuery({
+    name: 'artist',
+    description: 'Artist name',
+    example: 'Tame Impala',
+  })
+  @ApiQuery({
+    name: 'track',
+    description: 'Track name',
+    example: 'Let It Happen',
+  })
   @Get('similar')
   async getSimilar(
     @Query('artist') artist: string,

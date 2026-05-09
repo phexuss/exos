@@ -1,5 +1,6 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
@@ -13,6 +14,7 @@ import {
 import { ArtistsService } from './artists.service';
 
 @ApiTags('Artists')
+@ApiBearerAuth()
 @Controller('artists')
 export class ArtistsController {
   constructor(private readonly artistsService: ArtistsService) {}

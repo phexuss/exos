@@ -26,6 +26,8 @@ function resolveBaseUrl(): string {
 
 export const API_BASE_URL = resolveBaseUrl();
 
+const TOKEN_REFRESH_SKEW_MS = 30_000;
+
 export class ApiError extends Error {
   status: number;
   body: unknown;
@@ -53,6 +55,10 @@ type RefreshTokenResponse = {
   accessExpiresIn: string;
 };
 
+type JwtExpiryPayload = {
+  exp?: unknown;
+};
+
 let onUnauthorized: (() => void) | null = null;
 
 export function setUnauthorizedHandler(handler: (() => void) | null): void {
@@ -60,6 +66,32 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
 }
 
 let refreshInFlight: Promise<string | null> | null = null;
+
+function getJwtExpiresAt(token: string): number | null {
+  const payload = token.split('.')[1];
+  if (!payload) return null;
+
+  try {
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+    const decoded = globalThis.atob(`${base64}${padding}`);
+    const parsed = JSON.parse(decoded) as JwtExpiryPayload;
+
+    return typeof parsed.exp === 'number' ? parsed.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function isAccessTokenExpired(token: string): boolean {
+  const expiresAt = getJwtExpiresAt(token);
+  return expiresAt !== null && expiresAt <= Date.now();
+}
+
+function shouldRefreshAccessToken(token: string): boolean {
+  const expiresAt = getJwtExpiresAt(token);
+  return expiresAt !== null && expiresAt <= Date.now() + TOKEN_REFRESH_SKEW_MS;
+}
 
 async function refreshAccessToken(): Promise<string | null> {
   if (refreshInFlight) return refreshInFlight;
@@ -76,7 +108,9 @@ async function refreshAccessToken(): Promise<string | null> {
       });
 
       if (!res.ok) {
-        await clearTokens();
+        if ([400, 401, 403].includes(res.status)) {
+          await clearTokens();
+        }
         return null;
       }
 
@@ -91,6 +125,20 @@ async function refreshAccessToken(): Promise<string | null> {
   })();
 
   return refreshInFlight;
+}
+
+async function getAccessTokenForRequest(): Promise<string | null> {
+  const token = await getAccessToken();
+  if (!token) return refreshAccessToken();
+
+  if (!shouldRefreshAccessToken(token)) {
+    return token;
+  }
+
+  const refreshedToken = await refreshAccessToken();
+  if (refreshedToken) return refreshedToken;
+
+  return isAccessTokenExpired(token) ? null : token;
 }
 
 function buildUrl(path: string, params?: Record<string, string | undefined>) {
@@ -124,6 +172,21 @@ async function parseError(res: Response, path: string): Promise<ApiError> {
   return new ApiError(res.status, message, body);
 }
 
+export async function getAuthorizedHeaders(
+  options: { forceRefresh?: boolean } = {},
+): Promise<Record<string, string>> {
+  const token = options.forceRefresh
+    ? await refreshAccessToken()
+    : await getAccessTokenForRequest();
+
+  if (!token) {
+    onUnauthorized?.();
+    throw new ApiError(401, 'Authentication required');
+  }
+
+  return { Authorization: `Bearer ${token}` };
+}
+
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
@@ -137,7 +200,7 @@ export async function apiRequest<T>(
   }
 
   if (!skipAuth) {
-    const token = await getAccessToken();
+    const token = await getAccessTokenForRequest();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 

@@ -4,12 +4,15 @@ import { releaseAudio } from '@/services/audio/audioService';
 import {
   type AuthUser,
   changePassword as apiChangePassword,
+  forgotPassword as apiForgotPassword,
   login as apiLogin,
   logout as apiLogout,
   register as apiRegister,
   resendCode as apiResendCode,
+  resetPassword as apiResetPassword,
   updateProfile as apiUpdateProfile,
   verifyEmail as apiVerifyEmail,
+  verifyPasswordResetCode as apiVerifyPasswordResetCode,
   getMe,
   type UpdateProfilePayload,
 } from '@/services/auth/authApi';
@@ -31,6 +34,9 @@ type AuthState = {
   logout: () => Promise<void>;
   verifyEmail: (userId: string, code: string) => Promise<void>;
   resendCode: (userId: string, email: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  verifyPasswordResetCode: (email: string, code: string) => Promise<string>;
+  resetPassword: (resetToken: string, newPassword: string) => Promise<void>;
   updateProfile: (payload: UpdateProfilePayload) => Promise<AuthUser>;
   changePassword: (
     currentPassword: string,
@@ -39,7 +45,7 @@ type AuthState = {
   setUser: (user: AuthUser | null) => void;
 };
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isHydrated: false,
   isLoading: false,
@@ -96,11 +102,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
     try {
       await apiVerifyEmail(userId, code);
-      // If user is currently signed in (rare for first verification), refresh profile
-      if (get().user) {
-        const me = await getMe();
-        set({ user: me });
-      }
+      const me = await getMe();
+      set({ user: me });
     } finally {
       set({ isLoading: false });
     }
@@ -108,6 +111,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   resendCode: async (userId, email) => {
     await apiResendCode(userId, email);
+  },
+
+  forgotPassword: async (email) => {
+    set({ isLoading: true });
+    try {
+      await apiForgotPassword(email);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  verifyPasswordResetCode: async (email, code) => {
+    set({ isLoading: true });
+    try {
+      const { resetToken } = await apiVerifyPasswordResetCode(email, code);
+      return resetToken;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  resetPassword: async (resetToken, newPassword) => {
+    set({ isLoading: true });
+    try {
+      await apiResetPassword(resetToken, newPassword);
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
   updateProfile: async (payload) => {

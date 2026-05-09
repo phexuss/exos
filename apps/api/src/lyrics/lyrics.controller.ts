@@ -1,5 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
@@ -9,6 +10,7 @@ import { LyricsService } from './lyrics.service';
 import { LyricsResponseDto } from './lyrics.types';
 
 @ApiTags('Lyrics')
+@ApiBearerAuth()
 @Controller('lyrics')
 export class LyricsController {
   constructor(private readonly lyricsService: LyricsService) {}
