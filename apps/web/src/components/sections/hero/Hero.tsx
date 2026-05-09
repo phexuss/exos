@@ -119,15 +119,11 @@ export default function Hero() {
               initial="hidden"
               animate="visible"
             >
-              <Link href="#" target="_blank" className="w-full sm:w-auto">
+              <Link href="#" target="_blank">
                 <DownloadButton />
               </Link>
 
-              <Link
-                href="https://github.com/phexuss/exos"
-                target="_blank"
-                className="w-full sm:w-auto"
-              >
+              <Link href="https://github.com/phexuss/exos" target="_blank">
                 <GithubButton />
               </Link>
             </motion.div>
