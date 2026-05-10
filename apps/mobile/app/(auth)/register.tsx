@@ -69,7 +69,11 @@ export default function RegisterScreen() {
       } as never);
     } catch (e) {
       if (e instanceof ApiError) {
-        setError(e.message || t('auth.networkError'));
+        setError(
+          e.status === 429
+            ? t('auth.tooManyRequests')
+            : e.message || t('auth.networkError'),
+        );
       } else {
         setError(t('auth.networkError'));
       }

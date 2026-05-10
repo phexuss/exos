@@ -6,6 +6,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { DeezerIdParamDto } from 'src/common/dto/deezer-id-param.dto';
 import { DeezerTrackFullDto } from 'src/providers/deezer/deezer.types';
 import { TracksService } from './tracks.service';
 
@@ -19,7 +20,9 @@ export class TracksController {
   @ApiParam({ name: 'id', description: 'Track id' })
   @ApiOkResponse({ description: 'Track details', type: DeezerTrackFullDto })
   @Get(':id')
-  async getTrack(@Param('id') id: string): Promise<DeezerTrackFullDto> {
+  async getTrack(
+    @Param() { id }: DeezerIdParamDto,
+  ): Promise<DeezerTrackFullDto> {
     return this.tracksService.getTrack(id);
   }
 }

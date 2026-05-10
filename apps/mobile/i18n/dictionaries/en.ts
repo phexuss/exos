@@ -18,6 +18,8 @@ export const en = {
     loading: 'Loading...',
     retry: 'Retry',
     error: 'Something went wrong',
+    tooManyRequests: 'Too many attempts. Please wait a bit and try again.',
+    downloadBusy: 'Downloads are busy right now. Please try again in a moment.',
   },
   home: {
     greeting: 'Aggregated Intelligence',
@@ -183,6 +185,7 @@ export const en = {
     invalidCode: 'Invalid or expired code',
     invalidCredentials: 'Wrong username or password',
     networkError: 'Network error. Please try again.',
+    tooManyRequests: 'Too many attempts. Please wait a bit and try again.',
     fillAllFields: 'Please fill in all fields',
     passwordTooShort: 'Password must be at least 8 characters',
     invalidEmail: 'Please enter a valid email',

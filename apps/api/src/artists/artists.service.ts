@@ -10,7 +10,7 @@ export class ArtistsService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  async getArtist(id: string) {
+  async getArtist(id: number) {
     const cacheKey = `artist:${id}`;
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) return cached;
@@ -20,7 +20,7 @@ export class ArtistsService {
     return result;
   }
 
-  async getArtistTracks(id: string) {
+  async getArtistTracks(id: number) {
     const cacheKey = `artist:${id}:tracks`;
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) return cached;
@@ -30,7 +30,7 @@ export class ArtistsService {
     return result;
   }
 
-  async getArtistAlbums(id: string) {
+  async getArtistAlbums(id: number) {
     const cacheKey = `artist:${id}:albums`;
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) return cached;

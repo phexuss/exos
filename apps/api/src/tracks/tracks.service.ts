@@ -11,7 +11,7 @@ export class TracksService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  async getTrack(id: string): Promise<DeezerTrackFull> {
+  async getTrack(id: number): Promise<DeezerTrackFull> {
     const cacheKey = `track:${id}`;
 
     const cached = await this.cacheManager.get<DeezerTrackFull>(cacheKey);

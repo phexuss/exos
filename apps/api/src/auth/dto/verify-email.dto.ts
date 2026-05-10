@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, Length } from 'class-validator';
+import { IsNotEmpty, IsString, IsUUID, Length, Matches } from 'class-validator';
 
 export class VerifyEmailDto {
   @ApiProperty({
@@ -8,6 +8,8 @@ export class VerifyEmailDto {
     example: 'e5d8ae50-6dd9-47f7-831f-1544d5cb42bd',
   })
   @IsString()
+  @IsNotEmpty()
+  @IsUUID()
   userId!: string;
 
   @ApiProperty({
@@ -17,7 +19,9 @@ export class VerifyEmailDto {
     example: '123456',
   })
   @IsString()
+  @IsNotEmpty()
   @Length(6, 6)
+  @Matches(/^\d{6}$/, { message: 'Code must contain 6 digits' })
   code!: string;
 }
 
@@ -28,15 +32,9 @@ export class ResendCodeDto {
     example: 'e5d8ae50-6dd9-47f7-831f-1544d5cb42bd',
   })
   @IsString()
+  @IsNotEmpty()
+  @IsUUID()
   userId!: string;
-
-  @ApiProperty({
-    description: 'Destination email for verification code',
-    example: 'user@example.com',
-  })
-  @IsString()
-  @IsEmail()
-  email!: string;
 }
 
 export class VerifyEmailResponseDto {

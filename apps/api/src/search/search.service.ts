@@ -126,12 +126,17 @@ export class SearchService {
   }
 
   async search(query: string): Promise<DeezerSearchResponse> {
-    const cacheKey = `search:deezer:${query.toLowerCase().trim()}`;
+    const normalizedQuery = this.normalizeInput(query);
+    if (!normalizedQuery) {
+      throw new BadRequestException('Search query is required');
+    }
+
+    const cacheKey = `search:deezer:${normalizedQuery.toLowerCase()}`;
 
     const cached = await this.cacheManager.get<DeezerSearchResponse>(cacheKey);
     if (cached) return cached;
 
-    const result = await this.deezerService.searchTracks(query);
+    const result = await this.deezerService.searchTracks(normalizedQuery);
     await this.cacheManager.set(cacheKey, result);
 
     return result;
@@ -207,13 +212,18 @@ export class SearchService {
   }
 
   async searchSoundCloud(query: string): Promise<SoundCloudSearchResponse> {
-    const cacheKey = `search:sc:${query.toLowerCase().trim()}`;
+    const normalizedQuery = this.normalizeInput(query);
+    if (!normalizedQuery) {
+      throw new BadRequestException('Search query is required');
+    }
+
+    const cacheKey = `search:sc:${normalizedQuery.toLowerCase()}`;
 
     const cached =
       await this.cacheManager.get<SoundCloudSearchResponse>(cacheKey);
     if (cached) return cached;
 
-    const result = await this.soundCloudService.searchTracks(query);
+    const result = await this.soundCloudService.searchTracks(normalizedQuery);
     await this.cacheManager.set(cacheKey, result);
 
     return result;

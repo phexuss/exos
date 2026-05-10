@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import {
   ConflictException,
   Injectable,
@@ -69,11 +70,20 @@ export class UserService {
     };
   }
 
-  async findById(id: string) {
+  async findById(id: string): Promise<UserPublicDto | null> {
     const user = await this.prismaService.user.findUnique({
       where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        username: true,
+        isVerified: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
-    return user;
+    return user ? this.toPublic(user) : null;
   }
 
   async findByUsername(username: string) {
@@ -90,8 +100,17 @@ export class UserService {
   ): Promise<void> {
     await this.prismaService.user.update({
       where: { id },
-      data: { verifyToken: code, verifyTokenExp: expiresAt },
+      data: { verifyToken: await argon2.hash(code), verifyTokenExp: expiresAt },
     });
+  }
+
+  async setNewVerificationCode(id: string): Promise<string> {
+    const code = randomInt(100000, 1000000).toString();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+    await this.setVerificationCode(id, code, expiresAt);
+
+    return code;
   }
 
   async getMe(id: string): Promise<UserPublicDto> {

@@ -67,6 +67,7 @@ export function ProfileScreen() {
   const changePassword = useAuthStore((s) => s.changePassword);
   const logout = useAuthStore((s) => s.logout);
   const closeProfile = useOverlayStore((s) => s.closeProfile);
+  const closeAllOverlays = useOverlayStore((s) => s.closeAll);
   const openSettings = useOverlayStore((s) => s.openSettings);
 
   const [editing, setEditing] = useState<EditableField | null>(null);
@@ -125,8 +126,8 @@ export function ProfileScreen() {
   };
 
   const handleOpenLibrary = () => {
-    closeProfile();
-    router.push('/library' as const);
+    closeAllOverlays();
+    router.navigate('/library' as never);
   };
 
   if (!user) {

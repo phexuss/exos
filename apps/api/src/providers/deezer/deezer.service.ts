@@ -22,42 +22,42 @@ export class DeezerService {
     return data;
   }
 
-  async getTrack(id: string): Promise<DeezerTrackFull> {
+  async getTrack(id: number): Promise<DeezerTrackFull> {
     const { data } = await firstValueFrom(
       this.httpService.get<DeezerTrackFull>(`${this.BASE_URL}/track/${id}`),
     );
     return data;
   }
 
-  async getArtist(id: string) {
+  async getArtist(id: number) {
     const { data } = await firstValueFrom(
       this.httpService.get(`${this.BASE_URL}/artist/${id}`),
     );
     return data;
   }
 
-  async getArtistTracks(id: string) {
+  async getArtistTracks(id: number) {
     const { data } = await firstValueFrom(
       this.httpService.get(`${this.BASE_URL}/artist/${id}/top?limit=50`),
     );
     return data;
   }
 
-  async getArtistAlbums(id: string) {
+  async getArtistAlbums(id: number) {
     const { data } = await firstValueFrom(
       this.httpService.get(`${this.BASE_URL}/artist/${id}/albums`),
     );
     return data;
   }
 
-  async getAlbum(id: string) {
+  async getAlbum(id: number) {
     const { data } = await firstValueFrom(
       this.httpService.get(`${this.BASE_URL}/album/${id}`),
     );
     return data;
   }
 
-  async getAlbumTracks(id: string) {
+  async getAlbumTracks(id: number) {
     const { data } = await firstValueFrom(
       this.httpService.get(`${this.BASE_URL}/album/${id}/tracks`),
     );

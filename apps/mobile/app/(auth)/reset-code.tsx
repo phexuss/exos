@@ -54,6 +54,8 @@ export default function ResetCodeScreen() {
       if (e instanceof ApiError) {
         if (e.status === 401) {
           setError(t('auth.invalidCode'));
+        } else if (e.status === 429) {
+          setError(t('auth.tooManyRequests'));
         } else {
           setError(e.message || t('auth.networkError'));
         }

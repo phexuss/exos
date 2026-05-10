@@ -9,6 +9,7 @@ import { ResendModule } from 'src/resend/resend.module';
 import { UserModule } from 'src/user/user.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AuthRateLimitService } from './auth-rate-limit.service';
 
 type TokenExpiry =
   | `${number}`
@@ -34,6 +35,7 @@ type TokenExpiry =
   controllers: [AuthController],
   providers: [
     AuthService,
+    AuthRateLimitService,
     JwtStrategy,
     {
       provide: APP_GUARD,

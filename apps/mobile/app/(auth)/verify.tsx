@@ -104,7 +104,11 @@ export default function VerifyScreen() {
       router.replace('/(tabs)' as never);
     } catch (e) {
       if (e instanceof ApiError) {
-        setError(e.message || t('auth.invalidCode'));
+        setError(
+          e.status === 429
+            ? t('auth.tooManyRequests')
+            : e.message || t('auth.invalidCode'),
+        );
       } else {
         setError(t('auth.networkError'));
       }
@@ -116,12 +120,16 @@ export default function VerifyScreen() {
     setError(null);
     setInfo(null);
     try {
-      await resendCode(userId, email);
+      await resendCode(userId);
       setSecondsLeft(RESEND_COOLDOWN);
       setInfo(t('auth.codeResent'));
     } catch (e) {
       if (e instanceof ApiError) {
-        setError(e.message || t('auth.networkError'));
+        setError(
+          e.status === 429
+            ? t('auth.tooManyRequests')
+            : e.message || t('auth.networkError'),
+        );
       } else {
         setError(t('auth.networkError'));
       }

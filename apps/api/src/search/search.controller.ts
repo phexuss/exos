@@ -8,6 +8,10 @@ import {
 } from '@nestjs/swagger';
 import { DeezerSearchResponseDto } from 'src/providers/deezer/deezer.types';
 import { SoundCloudSearchResponseDto } from 'src/providers/soundcloud/soundcloud.types';
+import {
+  SearchQueryDto,
+  SimilarTracksQueryDto,
+} from 'src/search/dto/search-query.dto';
 import { SearchService } from 'src/search/search.service';
 
 @ApiTags('Search')
@@ -27,8 +31,10 @@ export class SearchController {
     type: DeezerSearchResponseDto,
   })
   @Get()
-  async search(@Query('q') query: string): Promise<DeezerSearchResponseDto> {
-    return this.searchService.search(query);
+  async search(
+    @Query() query: SearchQueryDto,
+  ): Promise<DeezerSearchResponseDto> {
+    return this.searchService.search(query.q);
   }
 
   @ApiOperation({ summary: 'Get Deezer chart (top tracks, albums, artists)' })
@@ -52,11 +58,8 @@ export class SearchController {
     example: 'Let It Happen',
   })
   @Get('similar')
-  async getSimilar(
-    @Query('artist') artist: string,
-    @Query('track') track: string,
-  ) {
-    return this.searchService.getSimilar(artist, track);
+  async getSimilar(@Query() query: SimilarTracksQueryDto) {
+    return this.searchService.getSimilar(query.artist, query.track);
   }
 
   @ApiOperation({ summary: 'Search tracks in SoundCloud' })
@@ -71,8 +74,8 @@ export class SearchController {
   })
   @Get('soundcloud')
   async searchSoundCloud(
-    @Query('q') query: string,
+    @Query() query: SearchQueryDto,
   ): Promise<SoundCloudSearchResponseDto> {
-    return this.searchService.searchSoundCloud(query);
+    return this.searchService.searchSoundCloud(query.q);
   }
 }

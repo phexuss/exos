@@ -10,7 +10,7 @@ export class AlbumsService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  async getAlbum(id: string) {
+  async getAlbum(id: number) {
     const cacheKey = `album:${id}`;
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) return cached;
@@ -20,7 +20,7 @@ export class AlbumsService {
     return result;
   }
 
-  async getAlbumTracks(id: string) {
+  async getAlbumTracks(id: number) {
     const cacheKey = `album:${id}:tracks`;
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) return cached;

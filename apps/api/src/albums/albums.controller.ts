@@ -6,6 +6,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { DeezerIdParamDto } from 'src/common/dto/deezer-id-param.dto';
 import {
   DeezerAlbumDetailsDto,
   DeezerTrackListResponseDto,
@@ -22,7 +23,9 @@ export class AlbumsController {
   @ApiParam({ name: 'id', description: 'Album id' })
   @ApiOkResponse({ description: 'Album details', type: DeezerAlbumDetailsDto })
   @Get(':id')
-  async getAlbum(@Param('id') id: string): Promise<DeezerAlbumDetailsDto> {
+  async getAlbum(
+    @Param() { id }: DeezerIdParamDto,
+  ): Promise<DeezerAlbumDetailsDto> {
     return this.albumsService.getAlbum(id);
   }
 
@@ -34,7 +37,7 @@ export class AlbumsController {
   })
   @Get(':id/tracks')
   async getAlbumTracks(
-    @Param('id') id: string,
+    @Param() { id }: DeezerIdParamDto,
   ): Promise<DeezerTrackListResponseDto> {
     return this.albumsService.getAlbumTracks(id);
   }

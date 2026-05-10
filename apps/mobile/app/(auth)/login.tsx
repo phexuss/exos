@@ -54,6 +54,8 @@ export default function LoginScreen() {
       if (e instanceof ApiError) {
         if (e.status === 401) {
           setError(t('auth.invalidCredentials'));
+        } else if (e.status === 429) {
+          setError(t('auth.tooManyRequests'));
         } else {
           setError(e.message || t('auth.networkError'));
         }

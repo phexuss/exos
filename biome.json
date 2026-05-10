@@ -14,7 +14,8 @@
       "!**/dist",
       "!**/build",
       "!**/.expo",
-      "!**/coverage"
+      "!**/coverage",
+      "!**/prisma/generated/**"
     ]
   },
   "formatter": {

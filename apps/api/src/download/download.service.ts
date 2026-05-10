@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Injectable,
   Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -12,7 +13,6 @@ import { AudioFormat, DownloadDto } from 'src/download/download.dto';
 import youtubedl from 'youtube-dl-exec';
 
 const YTDLP_BIN = '/usr/bin/yt-dlp';
-const ytdlp = youtubedl.create(YTDLP_BIN);
 const ALLOWED_DIRECT_URL_HOSTS = ['soundcloud.com', 'youtube.com', 'youtu.be'];
 const DOWNLOAD_TICKET_TTL_MS = 2 * 60 * 1000;
 
@@ -25,11 +25,45 @@ type DownloadTicketPayload = DownloadDto & {
 @Injectable()
 export class DownloadService {
   private readonly logger = new Logger(DownloadService.name);
+  private activeYtdlpProcesses = 0;
 
   constructor(private readonly configService: ConfigService) {}
 
   private get ticketSecret(): string {
     return this.configService.getOrThrow<string>('JWT_ACCESS_SECRET');
+  }
+
+  private get ytdlpPath(): string {
+    return this.configService.get<string>('YTDLP_PATH')?.trim() || YTDLP_BIN;
+  }
+
+  private get ytdlpTimeoutMs(): number {
+    return Math.max(
+      1000,
+      this.configService.get<number>('YTDLP_TIMEOUT_MS') ?? 10000,
+    );
+  }
+
+  private get maxConcurrentYtdlpProcesses(): number {
+    return Math.max(
+      1,
+      this.configService.get<number>('YTDLP_MAX_CONCURRENT') ?? 3,
+    );
+  }
+
+  private reserveYtdlpProcess(): () => void {
+    if (this.activeYtdlpProcesses >= this.maxConcurrentYtdlpProcesses) {
+      throw new ServiceUnavailableException('Too many concurrent downloads');
+    }
+
+    this.activeYtdlpProcesses += 1;
+    let released = false;
+
+    return () => {
+      if (released) return;
+      released = true;
+      this.activeYtdlpProcesses = Math.max(0, this.activeYtdlpProcesses - 1);
+    };
   }
 
   private base64UrlEncode(value: string): string {
@@ -201,19 +235,28 @@ export class DownloadService {
   }
 
   async getDownloadUrl(dto: DownloadDto) {
+    const release = this.reserveYtdlpProcess();
+
     try {
       const source = this.resolveSource(dto);
       const format = this.resolveFormat(dto.format);
+      const ytdlp = youtubedl.create(this.ytdlpPath);
 
       this.logger.debug(`Resolving source: ${source}`);
 
-      const result = (await ytdlp(source, {
-        getUrl: true,
-        format,
-        noPlaylist: true,
-        noCheckCertificates: true,
-        ...({ extractorRetries: 1 } as Record<string, unknown>),
-      })) as unknown as string;
+      const result = (await ytdlp(
+        source,
+        {
+          getUrl: true,
+          format,
+          noPlaylist: true,
+          ...({ extractorRetries: 1 } as Record<string, unknown>),
+        },
+        {
+          timeout: this.ytdlpTimeoutMs,
+          killSignal: 'SIGKILL',
+        },
+      )) as unknown as string;
 
       this.logger.debug(`Result URL resolved (${result.trim().length} chars)`);
       return { url: result.trim() };
@@ -226,6 +269,8 @@ export class DownloadService {
             ? e
             : JSON.stringify(e);
       throw new BadRequestException(`Something went wrong: ${message}`);
+    } finally {
+      release();
     }
   }
 
@@ -238,9 +283,6 @@ export class DownloadService {
       `Streaming source=${source} format=${format} contentType=${contentType} audioFormat=${audioFormat ?? 'none'}`,
     );
 
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'no-store');
-
     const args: string[] = [
       source,
       '-f',
@@ -249,7 +291,6 @@ export class DownloadService {
       '-',
       '-q',
       '--no-playlist',
-      '--no-check-certificates',
       '--extractor-retries',
       '1',
     ];
@@ -263,20 +304,41 @@ export class DownloadService {
       args.push('-x', '--audio-format', audioFormat);
     }
 
-    const proc = spawn(YTDLP_BIN, args, {
+    const release = this.reserveYtdlpProcess();
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'no-store');
+
+    const proc = spawn(this.ytdlpPath, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
     let wroteOutput = false;
     let stderrBuf = '';
+    const startupTimer = setTimeout(() => {
+      if (!wroteOutput && !proc.killed) {
+        this.logger.warn(
+          `yt-dlp produced no output within ${this.ytdlpTimeoutMs}ms, killing process`,
+        );
+        proc.kill('SIGKILL');
+      }
+    }, this.ytdlpTimeoutMs);
+    startupTimer.unref();
+
+    const finalizeProcess = () => {
+      clearTimeout(startupTimer);
+      release();
+    };
+
     proc.stdout.on('data', () => {
       wroteOutput = true;
+      clearTimeout(startupTimer);
     });
     proc.stderr.on('data', (chunk: Buffer) => {
       stderrBuf += chunk.toString();
     });
 
     proc.on('error', (err) => {
+      finalizeProcess();
       this.logger.error(`yt-dlp spawn error: ${err.message}`);
       if (!res.headersSent) {
         res.status(500);
@@ -287,6 +349,7 @@ export class DownloadService {
     });
 
     proc.on('close', (code) => {
+      finalizeProcess();
       if (code !== 0) {
         this.logger.error(
           `yt-dlp exited with code ${code}: ${stderrBuf.trim()}`,

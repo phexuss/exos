@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, Length, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  Length,
+  Matches,
+  MinLength,
+} from 'class-validator';
 
 export class AuthPayloadDto {
   @ApiProperty({
@@ -9,6 +16,7 @@ export class AuthPayloadDto {
     example: 'phexuss',
   })
   @IsString()
+  @IsNotEmpty()
   @Length(2, 36)
   username!: string;
 
@@ -18,6 +26,7 @@ export class AuthPayloadDto {
     example: 'S3curePass123',
   })
   @IsString()
+  @IsNotEmpty()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   password!: string;
 }
@@ -28,6 +37,7 @@ export class RefreshTokenDto {
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh.payload.signature',
   })
   @IsString()
+  @IsNotEmpty()
   refreshToken!: string;
 }
 
@@ -70,6 +80,7 @@ export class ChangePasswordDto {
     example: 'OldPass123',
   })
   @IsString()
+  @IsNotEmpty()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   currentPassword!: string;
 
@@ -79,6 +90,7 @@ export class ChangePasswordDto {
     example: 'NewPass4567',
   })
   @IsString()
+  @IsNotEmpty()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   newPassword!: string;
 }
@@ -94,6 +106,7 @@ export class ForgotPasswordDto {
     example: 'user@example.com',
   })
   @IsString()
+  @IsNotEmpty()
   @IsEmail()
   email!: string;
 }
@@ -105,6 +118,7 @@ export class ResetPasswordDto {
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.reset.payload.signature',
   })
   @IsString()
+  @IsNotEmpty()
   resetToken!: string;
 
   @ApiProperty({
@@ -113,6 +127,7 @@ export class ResetPasswordDto {
     example: 'NewPass4567',
   })
   @IsString()
+  @IsNotEmpty()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   newPassword!: string;
 }
@@ -123,6 +138,7 @@ export class VerifyPasswordResetCodeDto {
     example: 'user@example.com',
   })
   @IsString()
+  @IsNotEmpty()
   @IsEmail()
   email!: string;
 
@@ -133,7 +149,9 @@ export class VerifyPasswordResetCodeDto {
     example: '123456',
   })
   @IsString()
+  @IsNotEmpty()
   @Length(6, 6)
+  @Matches(/^\d{6}$/, { message: 'Code must contain 6 digits' })
   code!: string;
 }
 

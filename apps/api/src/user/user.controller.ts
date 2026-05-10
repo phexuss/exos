@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Req,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -10,7 +18,7 @@ import {
 import type { Request } from 'express';
 import { AuthStatusResponseDto } from 'src/auth/dto/auth.dto';
 import { ResendService } from 'src/resend/resend.service';
-import { UserPublicDto, UserResponseDto } from './dto/create-user.dto';
+import { UserPublicDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserService } from './user.service';
 
@@ -54,10 +62,7 @@ export class UserController {
     );
 
     if (emailChanged) {
-      // Generate a new code on email change so user can re-verify the new address
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      const expires = new Date(Date.now() + 30 * 60 * 1000);
-      await this.userService.setVerificationCode(user.id, code, expires);
+      const code = await this.userService.setNewVerificationCode(user.id);
       await this.resendService.sendVerificationEmail(user.email, code);
     }
 
@@ -68,10 +73,12 @@ export class UserController {
   @ApiParam({ name: 'id', description: 'User id (UUID)' })
   @ApiOkResponse({
     description: 'User object. Can be null when user is not found.',
-    type: UserResponseDto,
+    type: UserPublicDto,
   })
   @Get(':id')
-  async findById(@Param('id') id: string): Promise<UserResponseDto | null> {
+  async findById(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<UserPublicDto | null> {
     return this.userService.findById(id);
   }
 }

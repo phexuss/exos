@@ -102,12 +102,8 @@ export async function verifyEmail(
   return tokens;
 }
 
-export async function resendCode(userId: string, email: string): Promise<void> {
-  await apiPost<void>(
-    '/auth/verify/resend',
-    { userId, email },
-    { skipAuth: true },
-  );
+export async function resendCode(userId: string): Promise<void> {
+  await apiPost<void>('/auth/verify/resend', { userId }, { skipAuth: true });
 }
 
 export async function checkAuthStatus(): Promise<AuthStatusResponse> {

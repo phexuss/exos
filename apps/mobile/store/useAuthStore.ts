@@ -33,7 +33,7 @@ type AuthState = {
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   verifyEmail: (userId: string, code: string) => Promise<void>;
-  resendCode: (userId: string, email: string) => Promise<void>;
+  resendCode: (userId: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   verifyPasswordResetCode: (email: string, code: string) => Promise<string>;
   resetPassword: (resetToken: string, newPassword: string) => Promise<void>;
@@ -109,8 +109,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  resendCode: async (userId, email) => {
-    await apiResendCode(userId, email);
+  resendCode: async (userId) => {
+    await apiResendCode(userId);
   },
 
   forgotPassword: async (email) => {

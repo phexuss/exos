@@ -9,6 +9,7 @@ import {
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { AuthService } from 'src/auth/auth.service';
+import { AuthRateLimitService } from 'src/auth/auth-rate-limit.service';
 import { Public } from 'src/auth/decorators/public.decorator';
 import {
   AuthPayloadDto,
@@ -35,13 +36,35 @@ import {
 } from 'src/user/dto/create-user.dto';
 import { UserService } from 'src/user/user.service';
 
+const AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const EMAIL_RATE_LIMIT_WINDOW_MS = 30 * 60 * 1000;
+
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly userService: UserService,
     private readonly authService: AuthService,
+    private readonly authRateLimitService: AuthRateLimitService,
   ) {}
+
+  private getClientIp(req: Request): string {
+    return req.ip ?? req.socket.remoteAddress ?? 'unknown';
+  }
+
+  private limitByRequest(
+    req: Request,
+    action: string,
+    subject: string,
+    limit: number,
+    windowMs = AUTH_RATE_LIMIT_WINDOW_MS,
+  ): void {
+    this.authRateLimitService.consume({
+      key: `${action}:${this.getClientIp(req)}:${subject.trim().toLowerCase()}`,
+      limit,
+      windowMs,
+    });
+  }
 
   @ApiOperation({
     summary: 'Register new user account and send verification code',
@@ -52,7 +75,11 @@ export class AuthController {
   })
   @Public()
   @Post('register')
-  async register(@Body() dto: CreateUserDto): Promise<CreateUserResponseDto> {
+  async register(
+    @Body() dto: CreateUserDto,
+    @Req() req: Request,
+  ): Promise<CreateUserResponseDto> {
+    this.limitByRequest(req, 'register', dto.email, 5);
     const user = await this.userService.createUser(dto);
     await this.authService.sendVerificationEmail(user.id, user.email);
     return user;
@@ -66,7 +93,11 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
   @Public()
   @Post('login')
-  async login(@Body() dto: AuthPayloadDto): Promise<AuthTokenResponseDto> {
+  async login(
+    @Body() dto: AuthPayloadDto,
+    @Req() req: Request,
+  ): Promise<AuthTokenResponseDto> {
+    this.limitByRequest(req, 'login', dto.username, 10);
     return this.authService.login(dto);
   }
 
@@ -116,7 +147,11 @@ export class AuthController {
   })
   @Public()
   @Post('verify')
-  async verify(@Body() dto: VerifyEmailDto): Promise<VerifyEmailResponseDto> {
+  async verify(
+    @Body() dto: VerifyEmailDto,
+    @Req() req: Request,
+  ): Promise<VerifyEmailResponseDto> {
+    this.limitByRequest(req, 'verify-email', dto.userId, 5);
     return this.authService.verifyEmail(dto.userId, dto.code);
   }
 
@@ -124,8 +159,18 @@ export class AuthController {
   @ApiCreatedResponse({ description: 'Verification email has been queued' })
   @Public()
   @Post('verify/resend')
-  async resendCode(@Body() dto: ResendCodeDto): Promise<void> {
-    await this.authService.sendVerificationEmail(dto.userId, dto.email);
+  async resendCode(
+    @Body() dto: ResendCodeDto,
+    @Req() req: Request,
+  ): Promise<void> {
+    this.limitByRequest(
+      req,
+      'verify-resend',
+      dto.userId,
+      3,
+      EMAIL_RATE_LIMIT_WINDOW_MS,
+    );
+    await this.authService.resendVerificationEmail(dto.userId);
   }
 
   @ApiOperation({ summary: 'Send password reset code email' })
@@ -137,7 +182,15 @@ export class AuthController {
   @Post('password/forgot')
   async forgotPassword(
     @Body() dto: ForgotPasswordDto,
+    @Req() req: Request,
   ): Promise<PasswordResetResponseDto> {
+    this.limitByRequest(
+      req,
+      'password-forgot',
+      dto.email,
+      3,
+      EMAIL_RATE_LIMIT_WINDOW_MS,
+    );
     await this.authService.requestPasswordReset(dto.email);
     return { success: true };
   }
@@ -154,7 +207,9 @@ export class AuthController {
   @Post('password/verify')
   async verifyPasswordResetCode(
     @Body() dto: VerifyPasswordResetCodeDto,
+    @Req() req: Request,
   ): Promise<VerifyPasswordResetCodeResponseDto> {
+    this.limitByRequest(req, 'password-verify', dto.email, 5);
     return this.authService.verifyPasswordResetCode(dto.email, dto.code);
   }
 
@@ -170,7 +225,9 @@ export class AuthController {
   @Post('password/reset')
   async resetPassword(
     @Body() dto: ResetPasswordDto,
+    @Req() req: Request,
   ): Promise<PasswordResetResponseDto> {
+    this.limitByRequest(req, 'password-reset', this.getClientIp(req), 10);
     await this.authService.resetPassword(dto.resetToken, dto.newPassword);
     return { success: true };
   }

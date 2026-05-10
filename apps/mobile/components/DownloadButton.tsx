@@ -1,9 +1,11 @@
 import { useCallback } from 'react';
-import { Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { useI18n } from '@/hooks/useI18n';
+import { ApiError } from '@/services/api/client';
 import {
   type DownloadResult,
   downloadTrack,
@@ -19,6 +21,7 @@ type Props = {
 };
 
 export function DownloadButton({ track, size = 20, onDownloaded }: Props) {
+  const { t } = useI18n();
   const isDownloaded = useDownloadStore((s) => s.downloadedIds.has(track.id));
   const markTrackDownloaded = usePlayerStore((s) => s.markTrackDownloaded);
 
@@ -44,9 +47,18 @@ export function DownloadButton({ track, size = 20, onDownloaded }: Props) {
       markTrackDownloaded(track.id, download);
       onDownloaded?.(track, download);
     } catch (e) {
+      const message =
+        e instanceof ApiError && e.status === 503
+          ? t('common.downloadBusy')
+          : e instanceof ApiError && e.status === 429
+            ? t('common.tooManyRequests')
+            : e instanceof Error
+              ? e.message
+              : t('common.error');
       console.warn('[Download]', e);
+      Alert.alert(t('common.error'), message);
     }
-  }, [track, status, markTrackDownloaded, onDownloaded]);
+  }, [track, status, markTrackDownloaded, onDownloaded, t]);
 
   const indicatorSize = size + 4;
 

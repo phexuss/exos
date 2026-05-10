@@ -16,7 +16,10 @@ export class LyricsService {
   ) {}
 
   async getLyrics(artist: string, track: string, duration?: number) {
-    const cacheKey = `lyrics:${artist}:${track}`.toLowerCase();
+    const normalizedArtist = artist.trim().replace(/\s+/g, ' ');
+    const normalizedTrack = track.trim().replace(/\s+/g, ' ');
+    const cacheKey =
+      `lyrics:${normalizedArtist}:${normalizedTrack}:${duration ?? 'none'}`.toLowerCase();
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) return cached;
 
@@ -25,8 +28,8 @@ export class LyricsService {
       const { data } = await firstValueFrom(
         this.httpService.get<LRCLibResponse>(`${this.BASE_URL}/get`, {
           params: {
-            artist_name: artist,
-            track_name: track,
+            artist_name: normalizedArtist,
+            track_name: normalizedTrack,
             ...(duration && { duration }),
           },
         }),
@@ -37,7 +40,10 @@ export class LyricsService {
       const status =
         (e as { response?: { status?: number } })?.response?.status ?? 0;
       if (status !== 404) {
-        this.logger.warn(`Lyrics /get error (${status}):`, (e as Error).message);
+        this.logger.warn(
+          `Lyrics /get error (${status}):`,
+          (e as Error).message,
+        );
       }
     }
 
@@ -45,17 +51,25 @@ export class LyricsService {
     try {
       const { data: results } = await firstValueFrom(
         this.httpService.get<LRCLibResponse[]>(`${this.BASE_URL}/search`, {
-          params: { artist_name: artist, track_name: track },
+          params: {
+            artist_name: normalizedArtist,
+            track_name: normalizedTrack,
+          },
         }),
       );
 
       if (results && results.length > 0) {
         const best = duration
           ? results.reduce((prev, cur) =>
-              Math.abs(cur.duration - duration) < Math.abs(prev.duration - duration) ? cur : prev,
+              Math.abs(cur.duration - duration) <
+              Math.abs(prev.duration - duration)
+                ? cur
+                : prev,
             )
           : results[0];
-        this.logger.debug(`Lyrics via /search for "${artist} - ${track}"`);
+        this.logger.debug(
+          `Lyrics via /search for "${normalizedArtist} - ${normalizedTrack}"`,
+        );
         await this.cacheManager.set(cacheKey, best);
         return best;
       }
@@ -63,7 +77,9 @@ export class LyricsService {
       this.logger.warn(`Lyrics /search error:`, (e as Error).message);
     }
 
-    this.logger.debug(`No lyrics found for "${artist} - ${track}"`);
+    this.logger.debug(
+      `No lyrics found for "${normalizedArtist} - ${normalizedTrack}"`,
+    );
     const empty = { syncedLyrics: null, plainLyrics: null };
     await this.cacheManager.set(cacheKey, empty);
     return empty;

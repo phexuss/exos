@@ -1,4 +1,9 @@
-import { createHash, randomUUID } from 'node:crypto';
+import {
+  createHash,
+  randomInt,
+  randomUUID,
+  timingSafeEqual,
+} from 'node:crypto';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -65,11 +70,35 @@ export class AuthService {
   }
 
   private generateVerifyCode(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return randomInt(100000, 1000000).toString();
   }
 
   private getPasswordHashFingerprint(passwordHash: string): string {
     return createHash('sha256').update(passwordHash).digest('hex');
+  }
+
+  private async hashCode(code: string): Promise<string> {
+    return argon2.hash(code);
+  }
+
+  private legacyPlainCodeMatches(storedCode: string, code: string): boolean {
+    const stored = Buffer.from(storedCode);
+    const received = Buffer.from(code);
+
+    return (
+      stored.length === received.length && timingSafeEqual(stored, received)
+    );
+  }
+
+  private async verifyStoredCode(
+    storedCode: string,
+    code: string,
+  ): Promise<boolean> {
+    try {
+      return await argon2.verify(storedCode, code);
+    } catch {
+      return this.legacyPlainCodeMatches(storedCode, code);
+    }
   }
 
   private async validateCredentials(dto: AuthPayloadDto) {
@@ -335,6 +364,7 @@ export class AuthService {
 
     const code = this.generateVerifyCode();
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    const codeHash = await this.hashCode(code);
 
     await this.prismaService.$transaction([
       this.prismaService.verificationCode.deleteMany({
@@ -343,7 +373,7 @@ export class AuthService {
       this.prismaService.verificationCode.create({
         data: {
           userId: user.id,
-          code,
+          code: codeHash,
           expiresAt,
         },
       }),
@@ -367,7 +397,6 @@ export class AuthService {
     const resetCode = await this.prismaService.verificationCode.findFirst({
       where: {
         userId: user.id,
-        code,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -381,6 +410,10 @@ export class AuthService {
         where: { userId: user.id },
       });
       throw new UnauthorizedException('Code expired');
+    }
+
+    if (!(await this.verifyStoredCode(resetCode.code, code))) {
+      throw new UnauthorizedException('Invalid code');
     }
 
     await this.prismaService.verificationCode.deleteMany({
@@ -429,13 +462,31 @@ export class AuthService {
   async sendVerificationEmail(userId: string, email: string): Promise<void> {
     const code = this.generateVerifyCode();
     const codeExp = new Date(Date.now() + 30 * 60 * 1000);
+    const codeHash = await this.hashCode(code);
 
     await this.prismaService.user.update({
       where: { id: userId },
-      data: { verifyToken: code, verifyTokenExp: codeExp },
+      data: { verifyToken: codeHash, verifyTokenExp: codeExp },
     });
 
     await this.resendService.sendVerificationEmail(email, code);
+  }
+
+  async resendVerificationEmail(userId: string): Promise<void> {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        isVerified: true,
+      },
+    });
+
+    if (!user || user.isVerified) {
+      return;
+    }
+
+    await this.sendVerificationEmail(user.id, user.email);
   }
 
   async verifyEmail(
@@ -446,7 +497,10 @@ export class AuthService {
       where: { id: userId },
     });
 
-    if (!user || user.verifyToken !== code) {
+    if (
+      !user?.verifyToken ||
+      !(await this.verifyStoredCode(user.verifyToken, code))
+    ) {
       throw new UnauthorizedException('Invalid code');
     }
 

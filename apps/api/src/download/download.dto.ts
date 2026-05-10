@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 export enum AudioFormat {
   MP3 = 'mp3',
@@ -12,8 +20,12 @@ export class DownloadDto {
   @ApiProperty({
     description: 'Search query or direct URL used to resolve stream URL',
     example: 'Daft Punk - Harder Better Faster Stronger',
+    minLength: 1,
+    maxLength: 2048,
   })
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(2048)
   query!: string;
 
   @ApiPropertyOptional({
@@ -22,6 +34,10 @@ export class DownloadDto {
   })
   @IsString()
   @IsOptional()
+  @Length(12, 12)
+  @Matches(/^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$/i, {
+    message: 'ISRC must be a valid 12-character code',
+  })
   isrc?: string;
 
   @ApiPropertyOptional({
@@ -63,5 +79,7 @@ export class DownloadTicketQueryDto {
     example: 'eyJxdWVyeSI6IkRhZnQgUHVuayJ9.signature',
   })
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(4096)
   token!: string;
 }
