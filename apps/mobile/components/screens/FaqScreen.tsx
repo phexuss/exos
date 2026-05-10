@@ -13,15 +13,20 @@ import { useI18n } from '@/hooks/useI18n';
 type SourceCardProps = {
   icon: ReactNode;
   name: string;
-  pros: string;
-  pros2?: string;
-  cons: string;
-  cons2?: string;
+  pros: string[];
+  cons: string[];
   badge: string;
   badgeColor: string;
 };
 
-function SourceCard({ icon, name, pros, pros2, cons, cons2, badge, badgeColor }: SourceCardProps) {
+function SourceCard({
+  icon,
+  name,
+  pros,
+  cons,
+  badge,
+  badgeColor,
+}: SourceCardProps) {
   return (
     <View
       style={{
@@ -37,68 +42,74 @@ function SourceCard({ icon, name, pros, pros2, cons, cons2, badge, badgeColor }:
       }}
     >
       <View style={{ gap: 10 }}>
-        <View style={{ height: 30, justifyContent: 'center' }}>
-          {icon}
-        </View>
+        <View style={{ height: 30, justifyContent: 'center' }}>{icon}</View>
         <AppText variant="label" weight="bold" style={{ fontSize: 15 }}>
           {name}
         </AppText>
 
         <View style={{ gap: 6 }}>
-          <AppText
-            variant="caption"
-            style={{ color: COLORS.textSecondary, fontSize: 12, lineHeight: 18 }}
-          >
-            <AppText style={{ color: '#4ADE80', fontSize: 12 }}>+  </AppText>
-            {pros}
-          </AppText>
-          {pros2 ? (
+          {pros.map((item) => (
             <AppText
+              key={item}
               variant="caption"
-              style={{ color: COLORS.textSecondary, fontSize: 12, lineHeight: 18 }}
+              style={{
+                color: COLORS.textSecondary,
+                fontSize: 12,
+                lineHeight: 18,
+              }}
             >
-              <AppText style={{ color: '#4ADE80', fontSize: 12 }}>+  </AppText>
-              {pros2}
+              <AppText style={{ color: '#4ADE80', fontSize: 12 }}>✦ </AppText>
+              {item}
             </AppText>
-          ) : null}
-          <AppText
-            variant="caption"
-            style={{ color: COLORS.textMuted, fontSize: 12, lineHeight: 18 }}
-          >
-            <AppText style={{ color: COLORS.danger, fontSize: 12 }}>−  </AppText>
-            {cons}
-          </AppText>
-          {cons2 ? (
+          ))}
+          {cons.map((item) => (
             <AppText
+              key={item}
               variant="caption"
               style={{ color: COLORS.textMuted, fontSize: 12, lineHeight: 18 }}
             >
-              <AppText style={{ color: COLORS.danger, fontSize: 12 }}>−  </AppText>
-              {cons2}
+              <AppText style={{ color: COLORS.danger, fontSize: 12 }}>
+                —{' '}
+              </AppText>
+              {item}
             </AppText>
-          ) : null}
+          ))}
         </View>
       </View>
 
       <View
         style={{
           alignSelf: 'flex-start',
-          backgroundColor: badgeColor + '20',
-          paddingHorizontal: 8,
-          paddingVertical: 3,
-          borderRadius: 6,
+          maxWidth: '100%',
+          backgroundColor: `${badgeColor}20`,
+          borderWidth: 1,
+          borderColor: `${badgeColor}55`,
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          borderRadius: 999,
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
         <AppText
+          adjustsFontSizeToFit
+          numberOfLines={1}
           variant="caption"
-          weight="medium"
-          style={{ color: badgeColor, fontSize: 10, letterSpacing: 0.5 }}
+          weight="bold"
+          style={{
+            color: badgeColor,
+            fontSize: 9,
+            letterSpacing: 1.1,
+            lineHeight: 14,
+            textAlign: 'center',
+            textTransform: 'uppercase',
+          }}
         >
           {badge}
         </AppText>
       </View>
     </View>
-  )
+  );
 }
 
 type InfoCardProps = {
@@ -121,7 +132,11 @@ function InfoCard({ icon, title, body }: InfoCardProps) {
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <AppText style={{ fontSize: 20 }}>{icon}</AppText>
-        <AppText variant="label" weight="bold" style={{ fontSize: 15, flex: 1 }}>
+        <AppText
+          variant="label"
+          weight="bold"
+          style={{ fontSize: 15, flex: 1 }}
+        >
           {title}
         </AppText>
       </View>
@@ -186,20 +201,28 @@ export function FaqScreen({ onDismiss }: FaqScreenProps) {
             <SourceCard
               icon={<DeezerIcon size={28} color={SOURCES.deezer.color} />}
               name={t('faq.deezerName')}
-              pros={t('faq.deezerPros')}
-              cons={t('faq.deezerCons')}
-              cons2={t('faq.deezerCons2')}
+              pros={[
+                t('faq.deezerPros'),
+                t('faq.deezerPros2'),
+                t('faq.deezerPros3'),
+              ]}
+              cons={[t('faq.deezerCons')]}
               badge={t('faq.deezerBadge')}
-              badgeColor={COLORS.warning}
+              badgeColor="#A5B4FC"
             />
             <SourceCard
-              icon={<SoundCloudIcon size={20} color={SOURCES.soundcloud.color} />}
+              icon={
+                <SoundCloudIcon size={20} color={SOURCES.soundcloud.color} />
+              }
               name={t('faq.soundcloudName')}
-              pros={t('faq.soundcloudPros')}
-              pros2={t('faq.soundcloudPros2')}
-              cons={t('faq.soundcloudCons')}
+              pros={[
+                t('faq.soundcloudPros'),
+                t('faq.soundcloudPros2'),
+                t('faq.soundcloudPros3'),
+              ]}
+              cons={[t('faq.soundcloudCons')]}
               badge={t('faq.soundcloudBadge')}
-              badgeColor="#4ADE80"
+              badgeColor="#FDBA74"
             />
           </View>
         </View>
