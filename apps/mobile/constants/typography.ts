@@ -1,11 +1,11 @@
 import type { TextStyle } from 'react-native';
 
 export const FONT_FAMILY = {
-  light: 'Satoshi-Light',
-  regular: 'Satoshi-Regular',
-  medium: 'Satoshi-Medium',
-  bold: 'Satoshi-Bold',
-  black: 'Satoshi-Black',
+  light: 'Jost-Light',
+  regular: 'Jost-Regular',
+  medium: 'Jost-Medium',
+  bold: 'Jost-Bold',
+  black: 'Jost-Black',
 } as const;
 
 export type TextVariant = 'display' | 'title' | 'body' | 'caption' | 'label';

@@ -33,10 +33,10 @@ const EXOS_THEME = {
     notification: COLORS.accent,
   },
   fonts: {
-    regular: { fontFamily: 'Satoshi-Regular', fontWeight: '400' as const },
-    medium: { fontFamily: 'Satoshi-Medium', fontWeight: '500' as const },
-    bold: { fontFamily: 'Satoshi-Bold', fontWeight: '700' as const },
-    heavy: { fontFamily: 'Satoshi-Black', fontWeight: '900' as const },
+    regular: { fontFamily: 'Jost-Regular', fontWeight: '400' as const },
+    medium: { fontFamily: 'Jost-Medium', fontWeight: '500' as const },
+    bold: { fontFamily: 'Jost-Bold', fontWeight: '700' as const },
+    heavy: { fontFamily: 'Jost-Black', fontWeight: '900' as const },
   },
 };
 
@@ -82,11 +82,11 @@ function RootNavigator() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    'Satoshi-Light': require('@/assets/fonts/Satoshi-Light.otf'),
-    'Satoshi-Regular': require('@/assets/fonts/Satoshi-Regular.otf'),
-    'Satoshi-Medium': require('@/assets/fonts/Satoshi-Medium.otf'),
-    'Satoshi-Bold': require('@/assets/fonts/Satoshi-Bold.otf'),
-    'Satoshi-Black': require('@/assets/fonts/Satoshi-Black.otf'),
+    'Jost-Light': require('@/assets/fonts/Jost-Light.ttf'),
+    'Jost-Regular': require('@/assets/fonts/Jost-Regular.ttf'),
+    'Jost-Medium': require('@/assets/fonts/Jost-Medium.ttf'),
+    'Jost-Bold': require('@/assets/fonts/Jost-Bold.ttf'),
+    'Jost-Black': require('@/assets/fonts/Jost-Black.ttf'),
   });
   const isHydrated = useAuthStore((s) => s.isHydrated);
 
