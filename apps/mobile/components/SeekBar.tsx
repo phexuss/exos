@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   cancelAnimation,
-  Easing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
@@ -15,22 +14,10 @@ import { COLORS } from '@/constants/colors';
 type SeekBarProps = {
   progress: number;
   isPlaying?: boolean;
-  durationSec?: number;
   onSeek: (value: number) => void;
   onSeekStart?: () => void;
   onSeekEnd?: () => void;
-  /**
-   * Live drag value (0..1). Fired during dragging so callers can show
-   * a local preview (e.g. timecode) without writing to global state.
-   * Receives null when drag ends.
-   */
   onScrub?: (value: number | null) => void;
-  /**
-   * Optional boundary marker (0..1) drawn on the track,
-   * e.g. 30s preview limit against the full duration.
-   */
-  boundaryRatio?: number;
-  boundaryColor?: string;
   accentColor?: string;
 };
 
@@ -41,59 +28,29 @@ const HIT_SLOP = 16;
 export function SeekBar({
   progress,
   isPlaying,
-  durationSec,
   onSeek,
   onSeekStart,
   onSeekEnd,
   onScrub,
-  boundaryRatio,
-  boundaryColor,
   accentColor,
 }: SeekBarProps) {
   const width = useSharedValue(0);
-  const draggingRef = useRef(false);
-  const isDragging = useSharedValue(false);
-  const dragX = useSharedValue(0);
+  const position = useSharedValue(0);
+  const isScrubbing = useSharedValue(false);
   const thumbScale = useSharedValue(1);
-  const scrubBucket = useSharedValue(-1);
-
-  const syncPlaybackProgress = useCallback(
-    (trackWidth: number) => {
-      if (trackWidth <= 0 || draggingRef.current || isDragging.value) return;
-
-      const targetX = progress * trackWidth;
-      const drift = Math.abs(dragX.value - targetX);
-      const shouldAnimate = isPlaying && durationSec && progress < 0.999;
-
-      if (!shouldAnimate) {
-        cancelAnimation(dragX);
-        dragX.value = targetX;
-        return;
-      }
-
-      if (drift > 4) {
-        cancelAnimation(dragX);
-        dragX.value = targetX;
-      }
-
-      dragX.value = withTiming(trackWidth, {
-        duration: Math.max(0, (1 - progress) * durationSec * 1000),
-        easing: Easing.linear,
-      });
-    },
-    [dragX, durationSec, isDragging, isPlaying, progress],
-  );
 
   useEffect(() => {
-    syncPlaybackProgress(width.value);
-  }, [syncPlaybackProgress, width]);
+    const target = progress * width.value;
+    if (width.value <= 0 || isScrubbing.value) return;
 
-  const jsSeek = useCallback(
-    (ratio: number) => {
-      onSeek(ratio);
-    },
-    [onSeek],
-  );
+    if (!isPlaying || Math.abs(position.value - target) > width.value * 0.08) {
+      cancelAnimation(position);
+      position.value = target;
+      return;
+    }
+
+    position.value = withTiming(target, { duration: 220 });
+  }, [isPlaying, isScrubbing, position, progress, width]);
 
   const jsScrub = useCallback(
     (ratio: number | null) => {
@@ -102,66 +59,43 @@ export function SeekBar({
     [onScrub],
   );
 
-  const jsSeekStart = useCallback(() => {
-    draggingRef.current = true;
-    onSeekStart?.();
-  }, [onSeekStart]);
-
-  const jsSeekEnd = useCallback(() => {
-    draggingRef.current = false;
-    onSeekEnd?.();
-  }, [onSeekEnd]);
-
   const pan = Gesture.Pan()
     .hitSlop({ top: HIT_SLOP, bottom: HIT_SLOP })
     .onStart((e) => {
       'worklet';
       const w = width.value;
       const x = Math.max(0, Math.min(e.x, w));
-      isDragging.value = true;
-      cancelAnimation(dragX);
-      dragX.value = x;
+      isScrubbing.value = true;
+      cancelAnimation(position);
+      position.value = x;
       thumbScale.value = withTiming(1.6, { duration: 120 });
-      runOnJS(jsSeekStart)();
-      if (w > 0) {
-        const ratio = x / w;
-        scrubBucket.value = Math.round(ratio * 50);
-        runOnJS(jsScrub)(ratio);
-      }
+      if (onSeekStart) runOnJS(onSeekStart)();
+      if (w > 0) runOnJS(jsScrub)(x / w);
     })
     .onUpdate((e) => {
       'worklet';
       const w = width.value;
       const x = Math.max(0, Math.min(e.x, w));
-      dragX.value = x;
-      if (w > 0) {
-        const ratio = x / w;
-        const bucket = Math.round(ratio * 50);
-        if (bucket !== scrubBucket.value) {
-          scrubBucket.value = bucket;
-          runOnJS(jsScrub)(ratio);
-        }
-      }
+      position.value = x;
+      if (w > 0) runOnJS(jsScrub)(x / w);
     })
     .onEnd(() => {
       'worklet';
       thumbScale.value = withTiming(1, { duration: 200 });
       const w = width.value;
-      if (w > 0) runOnJS(jsSeek)(dragX.value / w);
+      if (w > 0) runOnJS(onSeek)(position.value / w);
       runOnJS(jsScrub)(null);
-      runOnJS(jsSeekEnd)();
-      isDragging.value = false;
-      scrubBucket.value = -1;
+      if (onSeekEnd) runOnJS(onSeekEnd)();
+      isScrubbing.value = false;
     })
     .onFinalize((_e, success) => {
       'worklet';
       if (success) return;
 
       thumbScale.value = withTiming(1, { duration: 200 });
-      isDragging.value = false;
-      scrubBucket.value = -1;
+      isScrubbing.value = false;
       runOnJS(jsScrub)(null);
-      runOnJS(jsSeekEnd)();
+      if (onSeekEnd) runOnJS(onSeekEnd)();
     });
 
   const tap = Gesture.Tap()
@@ -170,16 +104,16 @@ export function SeekBar({
       'worklet';
       const w = width.value;
       const x = Math.max(0, Math.min(e.x, w));
-      cancelAnimation(dragX);
-      dragX.value = x;
-      if (w > 0) runOnJS(jsSeek)(x / w);
+      cancelAnimation(position);
+      position.value = x;
+      if (w > 0) runOnJS(onSeek)(x / w);
     });
 
   const gesture = Gesture.Race(pan, tap);
 
   const fillStyle = useAnimatedStyle(() => {
     const w = width.value;
-    const ratio = w > 0 ? Math.max(0, Math.min(1, dragX.value / w)) : 0;
+    const ratio = w > 0 ? Math.max(0, Math.min(1, position.value / w)) : 0;
 
     return {
       transform: [{ translateX: (-w * (1 - ratio)) / 2 }, { scaleX: ratio }],
@@ -188,22 +122,10 @@ export function SeekBar({
 
   const thumbStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: dragX.value - THUMB_SIZE / 2 },
+      { translateX: position.value - THUMB_SIZE / 2 },
       { scale: thumbScale.value },
     ],
   }));
-
-  const boundaryStyle = useAnimatedStyle(() => {
-    const r = boundaryRatio ?? -1;
-    const w = width.value;
-    if (r <= 0 || r >= 1 || w <= 0) {
-      return { opacity: 0, transform: [{ translateX: 0 }] };
-    }
-    return {
-      opacity: 1,
-      transform: [{ translateX: r * w - 1 }],
-    };
-  });
 
   return (
     <GestureDetector gesture={gesture}>
@@ -214,8 +136,8 @@ export function SeekBar({
         }}
         onLayout={(e) => {
           width.value = e.nativeEvent.layout.width;
-          if (!draggingRef.current && !isDragging.value) {
-            syncPlaybackProgress(e.nativeEvent.layout.width);
+          if (!isScrubbing.value) {
+            position.value = progress * e.nativeEvent.layout.width;
           }
         }}
       >
@@ -241,20 +163,6 @@ export function SeekBar({
             ]}
           />
         </View>
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            {
-              position: 'absolute',
-              left: 0,
-              width: 2,
-              height: TRACK_HEIGHT + 6,
-              borderRadius: 1,
-              backgroundColor: boundaryColor ?? 'rgba(251, 191, 36, 0.9)',
-            },
-            boundaryStyle,
-          ]}
-        />
         <Animated.View
           style={[
             {

@@ -11,7 +11,7 @@ let replaceWatchdog: ReturnType<typeof setTimeout> | null = null;
 let didHandleFinish = false;
 let lastSeekTime = 0;
 
-const SEEK_PROGRESS_FREEZE_MS = 1000;
+const SEEK_PROGRESS_FREEZE_MS = 250;
 const MIN_REPLACE_FREEZE_MS = 300;
 const MAX_REPLACE_FREEZE_MS = 2500;
 
@@ -231,9 +231,14 @@ export function seekTo(ratio: number): void {
   lastSeekTime = Date.now();
   const targetTime = nextRatio * duration;
 
-  void p.seekTo(targetTime).catch((error: unknown) => {
-    warnAudioError('[Audio] seek failed:', error);
-  });
+  void p
+    .seekTo(targetTime)
+    .then(() => {
+      lastSeekTime = 0;
+    })
+    .catch((error: unknown) => {
+      warnAudioError('[Audio] seek failed:', error);
+    });
 }
 
 export function startSeeking(): void {

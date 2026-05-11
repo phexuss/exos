@@ -172,6 +172,7 @@ export async function getDownloadedTracks(): Promise<Track[]> {
       synced_lyrics: string | null;
       plain_lyrics: string | null;
       source: string | null;
+      downloaded_at: number;
     }>('SELECT * FROM tracks ORDER BY downloaded_at DESC');
 
     return rows.map((r) => ({
@@ -188,6 +189,7 @@ export async function getDownloadedTracks(): Promise<Track[]> {
       plainLyrics: r.plain_lyrics ?? undefined,
       filePath: r.file_path,
       isDownloaded: true,
+      downloadedAt: r.downloaded_at,
       source: (r.source as Track['source']) ?? 'deezer',
     }));
   });
@@ -384,7 +386,10 @@ export async function getPlaylistTracks(playlistId: string): Promise<Track[]> {
 
 // ── Recently played ──────────────────────────────────────────
 
-export function addRecentlyPlayed(track: Track): Promise<void> {
+export function insertRecentlyPlayed(
+  track: Track,
+  playedAt = Date.now(),
+): Promise<void> {
   return withDb(async (database) => {
     await database.runAsync(
       `INSERT OR REPLACE INTO recently_played (track_id, title, artist, artist_id, album, cover_url, duration, duration_sec, preview_url, isrc, source, played_at)
@@ -400,9 +405,13 @@ export function addRecentlyPlayed(track: Track): Promise<void> {
       track.previewUrl ?? null,
       track.isrc ?? null,
       track.source,
-      Date.now(),
+      playedAt,
     );
   });
+}
+
+export function addRecentlyPlayed(track: Track): Promise<void> {
+  return insertRecentlyPlayed(track);
 }
 
 export async function getRecentlyPlayed(limit = 20): Promise<Track[]> {
@@ -422,6 +431,7 @@ export async function getRecentlyPlayed(limit = 20): Promise<Track[]> {
       file_path: string | null;
       synced_lyrics: string | null;
       plain_lyrics: string | null;
+      played_at: number;
     }>(
       `SELECT rp.*, t.file_path, t.synced_lyrics, t.plain_lyrics
      FROM recently_played rp
@@ -443,6 +453,7 @@ export async function getRecentlyPlayed(limit = 20): Promise<Track[]> {
       source: r.source as Track['source'],
       filePath: r.file_path ?? undefined,
       isDownloaded: !!r.file_path,
+      playedAt: r.played_at,
       syncedLyrics: r.synced_lyrics ?? undefined,
       plainLyrics: r.plain_lyrics ?? undefined,
     }));

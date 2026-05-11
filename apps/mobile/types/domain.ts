@@ -22,6 +22,8 @@ export type Track = {
   plainLyrics?: string;
   filePath?: string;
   isDownloaded?: boolean;
+  downloadedAt?: number;
+  playedAt?: number;
 };
 
 export type Playlist = {

@@ -29,6 +29,11 @@ export type VerificationCode = $Result.DefaultSelection<Prisma.$VerificationCode
  */
 export type UserLibrary = $Result.DefaultSelection<Prisma.$UserLibraryPayload>
 /**
+ * Model UserRecentlyPlayed
+ * 
+ */
+export type UserRecentlyPlayed = $Result.DefaultSelection<Prisma.$UserRecentlyPlayedPayload>
+/**
  * Model Session
  * 
  */
@@ -184,6 +189,16 @@ export class PrismaClient<
     * ```
     */
   get userLibrary(): Prisma.UserLibraryDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.userRecentlyPlayed`: Exposes CRUD operations for the **UserRecentlyPlayed** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more UserRecentlyPlayeds
+    * const userRecentlyPlayeds = await prisma.userRecentlyPlayed.findMany()
+    * ```
+    */
+  get userRecentlyPlayed(): Prisma.UserRecentlyPlayedDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.session`: Exposes CRUD operations for the **Session** model.
@@ -631,6 +646,7 @@ export namespace Prisma {
     User: 'User',
     VerificationCode: 'VerificationCode',
     UserLibrary: 'UserLibrary',
+    UserRecentlyPlayed: 'UserRecentlyPlayed',
     Session: 'Session'
   };
 
@@ -647,7 +663,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "verificationCode" | "userLibrary" | "session"
+      modelProps: "user" | "verificationCode" | "userLibrary" | "userRecentlyPlayed" | "session"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -873,6 +889,80 @@ export namespace Prisma {
           }
         }
       }
+      UserRecentlyPlayed: {
+        payload: Prisma.$UserRecentlyPlayedPayload<ExtArgs>
+        fields: Prisma.UserRecentlyPlayedFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.UserRecentlyPlayedFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserRecentlyPlayedPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.UserRecentlyPlayedFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserRecentlyPlayedPayload>
+          }
+          findFirst: {
+            args: Prisma.UserRecentlyPlayedFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserRecentlyPlayedPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.UserRecentlyPlayedFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserRecentlyPlayedPayload>
+          }
+          findMany: {
+            args: Prisma.UserRecentlyPlayedFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserRecentlyPlayedPayload>[]
+          }
+          create: {
+            args: Prisma.UserRecentlyPlayedCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserRecentlyPlayedPayload>
+          }
+          createMany: {
+            args: Prisma.UserRecentlyPlayedCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.UserRecentlyPlayedCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserRecentlyPlayedPayload>[]
+          }
+          delete: {
+            args: Prisma.UserRecentlyPlayedDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserRecentlyPlayedPayload>
+          }
+          update: {
+            args: Prisma.UserRecentlyPlayedUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserRecentlyPlayedPayload>
+          }
+          deleteMany: {
+            args: Prisma.UserRecentlyPlayedDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.UserRecentlyPlayedUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.UserRecentlyPlayedUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserRecentlyPlayedPayload>[]
+          }
+          upsert: {
+            args: Prisma.UserRecentlyPlayedUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserRecentlyPlayedPayload>
+          }
+          aggregate: {
+            args: Prisma.UserRecentlyPlayedAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateUserRecentlyPlayed>
+          }
+          groupBy: {
+            args: Prisma.UserRecentlyPlayedGroupByArgs<ExtArgs>
+            result: $Utils.Optional<UserRecentlyPlayedGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.UserRecentlyPlayedCountArgs<ExtArgs>
+            result: $Utils.Optional<UserRecentlyPlayedCountAggregateOutputType> | number
+          }
+        }
+      }
       Session: {
         payload: Prisma.$SessionPayload<ExtArgs>
         fields: Prisma.SessionFieldRefs
@@ -1058,6 +1148,7 @@ export namespace Prisma {
     user?: UserOmit
     verificationCode?: VerificationCodeOmit
     userLibrary?: UserLibraryOmit
+    userRecentlyPlayed?: UserRecentlyPlayedOmit
     session?: SessionOmit
   }
 
@@ -1140,12 +1231,14 @@ export namespace Prisma {
 
   export type UserCountOutputType = {
     userLibraries: number
+    recentlyPlayed: number
     sessions: number
     codes: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     userLibraries?: boolean | UserCountOutputTypeCountUserLibrariesArgs
+    recentlyPlayed?: boolean | UserCountOutputTypeCountRecentlyPlayedArgs
     sessions?: boolean | UserCountOutputTypeCountSessionsArgs
     codes?: boolean | UserCountOutputTypeCountCodesArgs
   }
@@ -1166,6 +1259,13 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountUserLibrariesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: UserLibraryWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountRecentlyPlayedArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: UserRecentlyPlayedWhereInput
   }
 
   /**
@@ -1392,6 +1492,7 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     userLibraries?: boolean | User$userLibrariesArgs<ExtArgs>
+    recentlyPlayed?: boolean | User$recentlyPlayedArgs<ExtArgs>
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     codes?: boolean | User$codesArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -1439,6 +1540,7 @@ export namespace Prisma {
   export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "email" | "username" | "passwordHash" | "isVerified" | "verifyToken" | "verifyTokenExp" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     userLibraries?: boolean | User$userLibrariesArgs<ExtArgs>
+    recentlyPlayed?: boolean | User$recentlyPlayedArgs<ExtArgs>
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     codes?: boolean | User$codesArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -1450,6 +1552,7 @@ export namespace Prisma {
     name: "User"
     objects: {
       userLibraries: Prisma.$UserLibraryPayload<ExtArgs>[]
+      recentlyPlayed: Prisma.$UserRecentlyPlayedPayload<ExtArgs>[]
       sessions: Prisma.$SessionPayload<ExtArgs>[]
       codes: Prisma.$VerificationCodePayload<ExtArgs>[]
     }
@@ -1859,6 +1962,7 @@ export namespace Prisma {
   export interface Prisma__UserClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     userLibraries<T extends User$userLibrariesArgs<ExtArgs> = {}>(args?: Subset<T, User$userLibrariesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserLibraryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    recentlyPlayed<T extends User$recentlyPlayedArgs<ExtArgs> = {}>(args?: Subset<T, User$recentlyPlayedArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserRecentlyPlayedPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     sessions<T extends User$sessionsArgs<ExtArgs> = {}>(args?: Subset<T, User$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     codes<T extends User$codesArgs<ExtArgs> = {}>(args?: Subset<T, User$codesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$VerificationCodePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
@@ -2314,6 +2418,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: UserLibraryScalarFieldEnum | UserLibraryScalarFieldEnum[]
+  }
+
+  /**
+   * User.recentlyPlayed
+   */
+  export type User$recentlyPlayedArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserRecentlyPlayed
+     */
+    select?: UserRecentlyPlayedSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserRecentlyPlayed
+     */
+    omit?: UserRecentlyPlayedOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserRecentlyPlayedInclude<ExtArgs> | null
+    where?: UserRecentlyPlayedWhereInput
+    orderBy?: UserRecentlyPlayedOrderByWithRelationInput | UserRecentlyPlayedOrderByWithRelationInput[]
+    cursor?: UserRecentlyPlayedWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: UserRecentlyPlayedScalarFieldEnum | UserRecentlyPlayedScalarFieldEnum[]
   }
 
   /**
@@ -3452,52 +3580,148 @@ export namespace Prisma {
 
   export type AggregateUserLibrary = {
     _count: UserLibraryCountAggregateOutputType | null
+    _avg: UserLibraryAvgAggregateOutputType | null
+    _sum: UserLibrarySumAggregateOutputType | null
     _min: UserLibraryMinAggregateOutputType | null
     _max: UserLibraryMaxAggregateOutputType | null
+  }
+
+  export type UserLibraryAvgAggregateOutputType = {
+    durationSec: number | null
+  }
+
+  export type UserLibrarySumAggregateOutputType = {
+    durationSec: number | null
   }
 
   export type UserLibraryMinAggregateOutputType = {
     id: string | null
     userId: string | null
+    trackId: string | null
     deezerId: string | null
+    scUrl: string | null
+    source: string | null
+    title: string | null
+    artistName: string | null
+    artistId: string | null
+    album: string | null
+    coverUrl: string | null
+    duration: string | null
+    durationSec: number | null
+    previewUrl: string | null
+    isrc: string | null
     addedAt: Date | null
+    updatedAt: Date | null
   }
 
   export type UserLibraryMaxAggregateOutputType = {
     id: string | null
     userId: string | null
+    trackId: string | null
     deezerId: string | null
+    scUrl: string | null
+    source: string | null
+    title: string | null
+    artistName: string | null
+    artistId: string | null
+    album: string | null
+    coverUrl: string | null
+    duration: string | null
+    durationSec: number | null
+    previewUrl: string | null
+    isrc: string | null
     addedAt: Date | null
+    updatedAt: Date | null
   }
 
   export type UserLibraryCountAggregateOutputType = {
     id: number
     userId: number
+    trackId: number
     deezerId: number
+    scUrl: number
+    source: number
+    title: number
+    artistName: number
+    artistId: number
+    album: number
+    coverUrl: number
+    duration: number
+    durationSec: number
+    previewUrl: number
+    isrc: number
     addedAt: number
+    updatedAt: number
     _all: number
   }
 
 
+  export type UserLibraryAvgAggregateInputType = {
+    durationSec?: true
+  }
+
+  export type UserLibrarySumAggregateInputType = {
+    durationSec?: true
+  }
+
   export type UserLibraryMinAggregateInputType = {
     id?: true
     userId?: true
+    trackId?: true
     deezerId?: true
+    scUrl?: true
+    source?: true
+    title?: true
+    artistName?: true
+    artistId?: true
+    album?: true
+    coverUrl?: true
+    duration?: true
+    durationSec?: true
+    previewUrl?: true
+    isrc?: true
     addedAt?: true
+    updatedAt?: true
   }
 
   export type UserLibraryMaxAggregateInputType = {
     id?: true
     userId?: true
+    trackId?: true
     deezerId?: true
+    scUrl?: true
+    source?: true
+    title?: true
+    artistName?: true
+    artistId?: true
+    album?: true
+    coverUrl?: true
+    duration?: true
+    durationSec?: true
+    previewUrl?: true
+    isrc?: true
     addedAt?: true
+    updatedAt?: true
   }
 
   export type UserLibraryCountAggregateInputType = {
     id?: true
     userId?: true
+    trackId?: true
     deezerId?: true
+    scUrl?: true
+    source?: true
+    title?: true
+    artistName?: true
+    artistId?: true
+    album?: true
+    coverUrl?: true
+    duration?: true
+    durationSec?: true
+    previewUrl?: true
+    isrc?: true
     addedAt?: true
+    updatedAt?: true
     _all?: true
   }
 
@@ -3539,6 +3763,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: UserLibraryAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: UserLibrarySumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: UserLibraryMinAggregateInputType
@@ -3569,6 +3805,8 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: UserLibraryCountAggregateInputType | true
+    _avg?: UserLibraryAvgAggregateInputType
+    _sum?: UserLibrarySumAggregateInputType
     _min?: UserLibraryMinAggregateInputType
     _max?: UserLibraryMaxAggregateInputType
   }
@@ -3576,9 +3814,24 @@ export namespace Prisma {
   export type UserLibraryGroupByOutputType = {
     id: string
     userId: string
-    deezerId: string
+    trackId: string | null
+    deezerId: string | null
+    scUrl: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId: string | null
+    album: string | null
+    coverUrl: string | null
+    duration: string
+    durationSec: number
+    previewUrl: string | null
+    isrc: string | null
     addedAt: Date
+    updatedAt: Date
     _count: UserLibraryCountAggregateOutputType | null
+    _avg: UserLibraryAvgAggregateOutputType | null
+    _sum: UserLibrarySumAggregateOutputType | null
     _min: UserLibraryMinAggregateOutputType | null
     _max: UserLibraryMaxAggregateOutputType | null
   }
@@ -3600,35 +3853,87 @@ export namespace Prisma {
   export type UserLibrarySelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     userId?: boolean
+    trackId?: boolean
     deezerId?: boolean
+    scUrl?: boolean
+    source?: boolean
+    title?: boolean
+    artistName?: boolean
+    artistId?: boolean
+    album?: boolean
+    coverUrl?: boolean
+    duration?: boolean
+    durationSec?: boolean
+    previewUrl?: boolean
+    isrc?: boolean
     addedAt?: boolean
+    updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["userLibrary"]>
 
   export type UserLibrarySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     userId?: boolean
+    trackId?: boolean
     deezerId?: boolean
+    scUrl?: boolean
+    source?: boolean
+    title?: boolean
+    artistName?: boolean
+    artistId?: boolean
+    album?: boolean
+    coverUrl?: boolean
+    duration?: boolean
+    durationSec?: boolean
+    previewUrl?: boolean
+    isrc?: boolean
     addedAt?: boolean
+    updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["userLibrary"]>
 
   export type UserLibrarySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     userId?: boolean
+    trackId?: boolean
     deezerId?: boolean
+    scUrl?: boolean
+    source?: boolean
+    title?: boolean
+    artistName?: boolean
+    artistId?: boolean
+    album?: boolean
+    coverUrl?: boolean
+    duration?: boolean
+    durationSec?: boolean
+    previewUrl?: boolean
+    isrc?: boolean
     addedAt?: boolean
+    updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["userLibrary"]>
 
   export type UserLibrarySelectScalar = {
     id?: boolean
     userId?: boolean
+    trackId?: boolean
     deezerId?: boolean
+    scUrl?: boolean
+    source?: boolean
+    title?: boolean
+    artistName?: boolean
+    artistId?: boolean
+    album?: boolean
+    coverUrl?: boolean
+    duration?: boolean
+    durationSec?: boolean
+    previewUrl?: boolean
+    isrc?: boolean
     addedAt?: boolean
+    updatedAt?: boolean
   }
 
-  export type UserLibraryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "deezerId" | "addedAt", ExtArgs["result"]["userLibrary"]>
+  export type UserLibraryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "trackId" | "deezerId" | "scUrl" | "source" | "title" | "artistName" | "artistId" | "album" | "coverUrl" | "duration" | "durationSec" | "previewUrl" | "isrc" | "addedAt" | "updatedAt", ExtArgs["result"]["userLibrary"]>
   export type UserLibraryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
   }
@@ -3647,8 +3952,21 @@ export namespace Prisma {
     scalars: $Extensions.GetPayloadResult<{
       id: string
       userId: string
-      deezerId: string
+      trackId: string | null
+      deezerId: string | null
+      scUrl: string | null
+      source: string
+      title: string
+      artistName: string
+      artistId: string | null
+      album: string | null
+      coverUrl: string | null
+      duration: string
+      durationSec: number
+      previewUrl: string | null
+      isrc: string | null
       addedAt: Date
+      updatedAt: Date
     }, ExtArgs["result"]["userLibrary"]>
     composites: {}
   }
@@ -4075,8 +4393,21 @@ export namespace Prisma {
   interface UserLibraryFieldRefs {
     readonly id: FieldRef<"UserLibrary", 'String'>
     readonly userId: FieldRef<"UserLibrary", 'String'>
+    readonly trackId: FieldRef<"UserLibrary", 'String'>
     readonly deezerId: FieldRef<"UserLibrary", 'String'>
+    readonly scUrl: FieldRef<"UserLibrary", 'String'>
+    readonly source: FieldRef<"UserLibrary", 'String'>
+    readonly title: FieldRef<"UserLibrary", 'String'>
+    readonly artistName: FieldRef<"UserLibrary", 'String'>
+    readonly artistId: FieldRef<"UserLibrary", 'String'>
+    readonly album: FieldRef<"UserLibrary", 'String'>
+    readonly coverUrl: FieldRef<"UserLibrary", 'String'>
+    readonly duration: FieldRef<"UserLibrary", 'String'>
+    readonly durationSec: FieldRef<"UserLibrary", 'Int'>
+    readonly previewUrl: FieldRef<"UserLibrary", 'String'>
+    readonly isrc: FieldRef<"UserLibrary", 'String'>
     readonly addedAt: FieldRef<"UserLibrary", 'DateTime'>
+    readonly updatedAt: FieldRef<"UserLibrary", 'DateTime'>
   }
     
 
@@ -4493,6 +4824,1259 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: UserLibraryInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model UserRecentlyPlayed
+   */
+
+  export type AggregateUserRecentlyPlayed = {
+    _count: UserRecentlyPlayedCountAggregateOutputType | null
+    _avg: UserRecentlyPlayedAvgAggregateOutputType | null
+    _sum: UserRecentlyPlayedSumAggregateOutputType | null
+    _min: UserRecentlyPlayedMinAggregateOutputType | null
+    _max: UserRecentlyPlayedMaxAggregateOutputType | null
+  }
+
+  export type UserRecentlyPlayedAvgAggregateOutputType = {
+    durationSec: number | null
+  }
+
+  export type UserRecentlyPlayedSumAggregateOutputType = {
+    durationSec: number | null
+  }
+
+  export type UserRecentlyPlayedMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    trackId: string | null
+    deezerId: string | null
+    scUrl: string | null
+    source: string | null
+    title: string | null
+    artistName: string | null
+    artistId: string | null
+    album: string | null
+    coverUrl: string | null
+    duration: string | null
+    durationSec: number | null
+    previewUrl: string | null
+    isrc: string | null
+    playedAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type UserRecentlyPlayedMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    trackId: string | null
+    deezerId: string | null
+    scUrl: string | null
+    source: string | null
+    title: string | null
+    artistName: string | null
+    artistId: string | null
+    album: string | null
+    coverUrl: string | null
+    duration: string | null
+    durationSec: number | null
+    previewUrl: string | null
+    isrc: string | null
+    playedAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type UserRecentlyPlayedCountAggregateOutputType = {
+    id: number
+    userId: number
+    trackId: number
+    deezerId: number
+    scUrl: number
+    source: number
+    title: number
+    artistName: number
+    artistId: number
+    album: number
+    coverUrl: number
+    duration: number
+    durationSec: number
+    previewUrl: number
+    isrc: number
+    playedAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type UserRecentlyPlayedAvgAggregateInputType = {
+    durationSec?: true
+  }
+
+  export type UserRecentlyPlayedSumAggregateInputType = {
+    durationSec?: true
+  }
+
+  export type UserRecentlyPlayedMinAggregateInputType = {
+    id?: true
+    userId?: true
+    trackId?: true
+    deezerId?: true
+    scUrl?: true
+    source?: true
+    title?: true
+    artistName?: true
+    artistId?: true
+    album?: true
+    coverUrl?: true
+    duration?: true
+    durationSec?: true
+    previewUrl?: true
+    isrc?: true
+    playedAt?: true
+    updatedAt?: true
+  }
+
+  export type UserRecentlyPlayedMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    trackId?: true
+    deezerId?: true
+    scUrl?: true
+    source?: true
+    title?: true
+    artistName?: true
+    artistId?: true
+    album?: true
+    coverUrl?: true
+    duration?: true
+    durationSec?: true
+    previewUrl?: true
+    isrc?: true
+    playedAt?: true
+    updatedAt?: true
+  }
+
+  export type UserRecentlyPlayedCountAggregateInputType = {
+    id?: true
+    userId?: true
+    trackId?: true
+    deezerId?: true
+    scUrl?: true
+    source?: true
+    title?: true
+    artistName?: true
+    artistId?: true
+    album?: true
+    coverUrl?: true
+    duration?: true
+    durationSec?: true
+    previewUrl?: true
+    isrc?: true
+    playedAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type UserRecentlyPlayedAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which UserRecentlyPlayed to aggregate.
+     */
+    where?: UserRecentlyPlayedWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of UserRecentlyPlayeds to fetch.
+     */
+    orderBy?: UserRecentlyPlayedOrderByWithRelationInput | UserRecentlyPlayedOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: UserRecentlyPlayedWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` UserRecentlyPlayeds from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` UserRecentlyPlayeds.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned UserRecentlyPlayeds
+    **/
+    _count?: true | UserRecentlyPlayedCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: UserRecentlyPlayedAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: UserRecentlyPlayedSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: UserRecentlyPlayedMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: UserRecentlyPlayedMaxAggregateInputType
+  }
+
+  export type GetUserRecentlyPlayedAggregateType<T extends UserRecentlyPlayedAggregateArgs> = {
+        [P in keyof T & keyof AggregateUserRecentlyPlayed]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateUserRecentlyPlayed[P]>
+      : GetScalarType<T[P], AggregateUserRecentlyPlayed[P]>
+  }
+
+
+
+
+  export type UserRecentlyPlayedGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: UserRecentlyPlayedWhereInput
+    orderBy?: UserRecentlyPlayedOrderByWithAggregationInput | UserRecentlyPlayedOrderByWithAggregationInput[]
+    by: UserRecentlyPlayedScalarFieldEnum[] | UserRecentlyPlayedScalarFieldEnum
+    having?: UserRecentlyPlayedScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: UserRecentlyPlayedCountAggregateInputType | true
+    _avg?: UserRecentlyPlayedAvgAggregateInputType
+    _sum?: UserRecentlyPlayedSumAggregateInputType
+    _min?: UserRecentlyPlayedMinAggregateInputType
+    _max?: UserRecentlyPlayedMaxAggregateInputType
+  }
+
+  export type UserRecentlyPlayedGroupByOutputType = {
+    id: string
+    userId: string
+    trackId: string | null
+    deezerId: string | null
+    scUrl: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId: string | null
+    album: string | null
+    coverUrl: string | null
+    duration: string
+    durationSec: number
+    previewUrl: string | null
+    isrc: string | null
+    playedAt: Date
+    updatedAt: Date
+    _count: UserRecentlyPlayedCountAggregateOutputType | null
+    _avg: UserRecentlyPlayedAvgAggregateOutputType | null
+    _sum: UserRecentlyPlayedSumAggregateOutputType | null
+    _min: UserRecentlyPlayedMinAggregateOutputType | null
+    _max: UserRecentlyPlayedMaxAggregateOutputType | null
+  }
+
+  type GetUserRecentlyPlayedGroupByPayload<T extends UserRecentlyPlayedGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<UserRecentlyPlayedGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof UserRecentlyPlayedGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], UserRecentlyPlayedGroupByOutputType[P]>
+            : GetScalarType<T[P], UserRecentlyPlayedGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type UserRecentlyPlayedSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    trackId?: boolean
+    deezerId?: boolean
+    scUrl?: boolean
+    source?: boolean
+    title?: boolean
+    artistName?: boolean
+    artistId?: boolean
+    album?: boolean
+    coverUrl?: boolean
+    duration?: boolean
+    durationSec?: boolean
+    previewUrl?: boolean
+    isrc?: boolean
+    playedAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["userRecentlyPlayed"]>
+
+  export type UserRecentlyPlayedSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    trackId?: boolean
+    deezerId?: boolean
+    scUrl?: boolean
+    source?: boolean
+    title?: boolean
+    artistName?: boolean
+    artistId?: boolean
+    album?: boolean
+    coverUrl?: boolean
+    duration?: boolean
+    durationSec?: boolean
+    previewUrl?: boolean
+    isrc?: boolean
+    playedAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["userRecentlyPlayed"]>
+
+  export type UserRecentlyPlayedSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    trackId?: boolean
+    deezerId?: boolean
+    scUrl?: boolean
+    source?: boolean
+    title?: boolean
+    artistName?: boolean
+    artistId?: boolean
+    album?: boolean
+    coverUrl?: boolean
+    duration?: boolean
+    durationSec?: boolean
+    previewUrl?: boolean
+    isrc?: boolean
+    playedAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["userRecentlyPlayed"]>
+
+  export type UserRecentlyPlayedSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    trackId?: boolean
+    deezerId?: boolean
+    scUrl?: boolean
+    source?: boolean
+    title?: boolean
+    artistName?: boolean
+    artistId?: boolean
+    album?: boolean
+    coverUrl?: boolean
+    duration?: boolean
+    durationSec?: boolean
+    previewUrl?: boolean
+    isrc?: boolean
+    playedAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type UserRecentlyPlayedOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "trackId" | "deezerId" | "scUrl" | "source" | "title" | "artistName" | "artistId" | "album" | "coverUrl" | "duration" | "durationSec" | "previewUrl" | "isrc" | "playedAt" | "updatedAt", ExtArgs["result"]["userRecentlyPlayed"]>
+  export type UserRecentlyPlayedInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type UserRecentlyPlayedIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type UserRecentlyPlayedIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+
+  export type $UserRecentlyPlayedPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "UserRecentlyPlayed"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      trackId: string | null
+      deezerId: string | null
+      scUrl: string | null
+      source: string
+      title: string
+      artistName: string
+      artistId: string | null
+      album: string | null
+      coverUrl: string | null
+      duration: string
+      durationSec: number
+      previewUrl: string | null
+      isrc: string | null
+      playedAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["userRecentlyPlayed"]>
+    composites: {}
+  }
+
+  type UserRecentlyPlayedGetPayload<S extends boolean | null | undefined | UserRecentlyPlayedDefaultArgs> = $Result.GetResult<Prisma.$UserRecentlyPlayedPayload, S>
+
+  type UserRecentlyPlayedCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<UserRecentlyPlayedFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: UserRecentlyPlayedCountAggregateInputType | true
+    }
+
+  export interface UserRecentlyPlayedDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['UserRecentlyPlayed'], meta: { name: 'UserRecentlyPlayed' } }
+    /**
+     * Find zero or one UserRecentlyPlayed that matches the filter.
+     * @param {UserRecentlyPlayedFindUniqueArgs} args - Arguments to find a UserRecentlyPlayed
+     * @example
+     * // Get one UserRecentlyPlayed
+     * const userRecentlyPlayed = await prisma.userRecentlyPlayed.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends UserRecentlyPlayedFindUniqueArgs>(args: SelectSubset<T, UserRecentlyPlayedFindUniqueArgs<ExtArgs>>): Prisma__UserRecentlyPlayedClient<$Result.GetResult<Prisma.$UserRecentlyPlayedPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one UserRecentlyPlayed that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {UserRecentlyPlayedFindUniqueOrThrowArgs} args - Arguments to find a UserRecentlyPlayed
+     * @example
+     * // Get one UserRecentlyPlayed
+     * const userRecentlyPlayed = await prisma.userRecentlyPlayed.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends UserRecentlyPlayedFindUniqueOrThrowArgs>(args: SelectSubset<T, UserRecentlyPlayedFindUniqueOrThrowArgs<ExtArgs>>): Prisma__UserRecentlyPlayedClient<$Result.GetResult<Prisma.$UserRecentlyPlayedPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first UserRecentlyPlayed that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserRecentlyPlayedFindFirstArgs} args - Arguments to find a UserRecentlyPlayed
+     * @example
+     * // Get one UserRecentlyPlayed
+     * const userRecentlyPlayed = await prisma.userRecentlyPlayed.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends UserRecentlyPlayedFindFirstArgs>(args?: SelectSubset<T, UserRecentlyPlayedFindFirstArgs<ExtArgs>>): Prisma__UserRecentlyPlayedClient<$Result.GetResult<Prisma.$UserRecentlyPlayedPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first UserRecentlyPlayed that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserRecentlyPlayedFindFirstOrThrowArgs} args - Arguments to find a UserRecentlyPlayed
+     * @example
+     * // Get one UserRecentlyPlayed
+     * const userRecentlyPlayed = await prisma.userRecentlyPlayed.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends UserRecentlyPlayedFindFirstOrThrowArgs>(args?: SelectSubset<T, UserRecentlyPlayedFindFirstOrThrowArgs<ExtArgs>>): Prisma__UserRecentlyPlayedClient<$Result.GetResult<Prisma.$UserRecentlyPlayedPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more UserRecentlyPlayeds that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserRecentlyPlayedFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all UserRecentlyPlayeds
+     * const userRecentlyPlayeds = await prisma.userRecentlyPlayed.findMany()
+     * 
+     * // Get first 10 UserRecentlyPlayeds
+     * const userRecentlyPlayeds = await prisma.userRecentlyPlayed.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const userRecentlyPlayedWithIdOnly = await prisma.userRecentlyPlayed.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends UserRecentlyPlayedFindManyArgs>(args?: SelectSubset<T, UserRecentlyPlayedFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserRecentlyPlayedPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a UserRecentlyPlayed.
+     * @param {UserRecentlyPlayedCreateArgs} args - Arguments to create a UserRecentlyPlayed.
+     * @example
+     * // Create one UserRecentlyPlayed
+     * const UserRecentlyPlayed = await prisma.userRecentlyPlayed.create({
+     *   data: {
+     *     // ... data to create a UserRecentlyPlayed
+     *   }
+     * })
+     * 
+     */
+    create<T extends UserRecentlyPlayedCreateArgs>(args: SelectSubset<T, UserRecentlyPlayedCreateArgs<ExtArgs>>): Prisma__UserRecentlyPlayedClient<$Result.GetResult<Prisma.$UserRecentlyPlayedPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many UserRecentlyPlayeds.
+     * @param {UserRecentlyPlayedCreateManyArgs} args - Arguments to create many UserRecentlyPlayeds.
+     * @example
+     * // Create many UserRecentlyPlayeds
+     * const userRecentlyPlayed = await prisma.userRecentlyPlayed.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends UserRecentlyPlayedCreateManyArgs>(args?: SelectSubset<T, UserRecentlyPlayedCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many UserRecentlyPlayeds and returns the data saved in the database.
+     * @param {UserRecentlyPlayedCreateManyAndReturnArgs} args - Arguments to create many UserRecentlyPlayeds.
+     * @example
+     * // Create many UserRecentlyPlayeds
+     * const userRecentlyPlayed = await prisma.userRecentlyPlayed.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many UserRecentlyPlayeds and only return the `id`
+     * const userRecentlyPlayedWithIdOnly = await prisma.userRecentlyPlayed.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends UserRecentlyPlayedCreateManyAndReturnArgs>(args?: SelectSubset<T, UserRecentlyPlayedCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserRecentlyPlayedPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a UserRecentlyPlayed.
+     * @param {UserRecentlyPlayedDeleteArgs} args - Arguments to delete one UserRecentlyPlayed.
+     * @example
+     * // Delete one UserRecentlyPlayed
+     * const UserRecentlyPlayed = await prisma.userRecentlyPlayed.delete({
+     *   where: {
+     *     // ... filter to delete one UserRecentlyPlayed
+     *   }
+     * })
+     * 
+     */
+    delete<T extends UserRecentlyPlayedDeleteArgs>(args: SelectSubset<T, UserRecentlyPlayedDeleteArgs<ExtArgs>>): Prisma__UserRecentlyPlayedClient<$Result.GetResult<Prisma.$UserRecentlyPlayedPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one UserRecentlyPlayed.
+     * @param {UserRecentlyPlayedUpdateArgs} args - Arguments to update one UserRecentlyPlayed.
+     * @example
+     * // Update one UserRecentlyPlayed
+     * const userRecentlyPlayed = await prisma.userRecentlyPlayed.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends UserRecentlyPlayedUpdateArgs>(args: SelectSubset<T, UserRecentlyPlayedUpdateArgs<ExtArgs>>): Prisma__UserRecentlyPlayedClient<$Result.GetResult<Prisma.$UserRecentlyPlayedPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more UserRecentlyPlayeds.
+     * @param {UserRecentlyPlayedDeleteManyArgs} args - Arguments to filter UserRecentlyPlayeds to delete.
+     * @example
+     * // Delete a few UserRecentlyPlayeds
+     * const { count } = await prisma.userRecentlyPlayed.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends UserRecentlyPlayedDeleteManyArgs>(args?: SelectSubset<T, UserRecentlyPlayedDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more UserRecentlyPlayeds.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserRecentlyPlayedUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many UserRecentlyPlayeds
+     * const userRecentlyPlayed = await prisma.userRecentlyPlayed.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends UserRecentlyPlayedUpdateManyArgs>(args: SelectSubset<T, UserRecentlyPlayedUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more UserRecentlyPlayeds and returns the data updated in the database.
+     * @param {UserRecentlyPlayedUpdateManyAndReturnArgs} args - Arguments to update many UserRecentlyPlayeds.
+     * @example
+     * // Update many UserRecentlyPlayeds
+     * const userRecentlyPlayed = await prisma.userRecentlyPlayed.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more UserRecentlyPlayeds and only return the `id`
+     * const userRecentlyPlayedWithIdOnly = await prisma.userRecentlyPlayed.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends UserRecentlyPlayedUpdateManyAndReturnArgs>(args: SelectSubset<T, UserRecentlyPlayedUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserRecentlyPlayedPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one UserRecentlyPlayed.
+     * @param {UserRecentlyPlayedUpsertArgs} args - Arguments to update or create a UserRecentlyPlayed.
+     * @example
+     * // Update or create a UserRecentlyPlayed
+     * const userRecentlyPlayed = await prisma.userRecentlyPlayed.upsert({
+     *   create: {
+     *     // ... data to create a UserRecentlyPlayed
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the UserRecentlyPlayed we want to update
+     *   }
+     * })
+     */
+    upsert<T extends UserRecentlyPlayedUpsertArgs>(args: SelectSubset<T, UserRecentlyPlayedUpsertArgs<ExtArgs>>): Prisma__UserRecentlyPlayedClient<$Result.GetResult<Prisma.$UserRecentlyPlayedPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of UserRecentlyPlayeds.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserRecentlyPlayedCountArgs} args - Arguments to filter UserRecentlyPlayeds to count.
+     * @example
+     * // Count the number of UserRecentlyPlayeds
+     * const count = await prisma.userRecentlyPlayed.count({
+     *   where: {
+     *     // ... the filter for the UserRecentlyPlayeds we want to count
+     *   }
+     * })
+    **/
+    count<T extends UserRecentlyPlayedCountArgs>(
+      args?: Subset<T, UserRecentlyPlayedCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], UserRecentlyPlayedCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a UserRecentlyPlayed.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserRecentlyPlayedAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends UserRecentlyPlayedAggregateArgs>(args: Subset<T, UserRecentlyPlayedAggregateArgs>): Prisma.PrismaPromise<GetUserRecentlyPlayedAggregateType<T>>
+
+    /**
+     * Group by UserRecentlyPlayed.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserRecentlyPlayedGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends UserRecentlyPlayedGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: UserRecentlyPlayedGroupByArgs['orderBy'] }
+        : { orderBy?: UserRecentlyPlayedGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, UserRecentlyPlayedGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetUserRecentlyPlayedGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the UserRecentlyPlayed model
+   */
+  readonly fields: UserRecentlyPlayedFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for UserRecentlyPlayed.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__UserRecentlyPlayedClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the UserRecentlyPlayed model
+   */
+  interface UserRecentlyPlayedFieldRefs {
+    readonly id: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly userId: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly trackId: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly deezerId: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly scUrl: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly source: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly title: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly artistName: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly artistId: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly album: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly coverUrl: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly duration: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly durationSec: FieldRef<"UserRecentlyPlayed", 'Int'>
+    readonly previewUrl: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly isrc: FieldRef<"UserRecentlyPlayed", 'String'>
+    readonly playedAt: FieldRef<"UserRecentlyPlayed", 'DateTime'>
+    readonly updatedAt: FieldRef<"UserRecentlyPlayed", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * UserRecentlyPlayed findUnique
+   */
+  export type UserRecentlyPlayedFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserRecentlyPlayed
+     */
+    select?: UserRecentlyPlayedSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserRecentlyPlayed
+     */
+    omit?: UserRecentlyPlayedOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserRecentlyPlayedInclude<ExtArgs> | null
+    /**
+     * Filter, which UserRecentlyPlayed to fetch.
+     */
+    where: UserRecentlyPlayedWhereUniqueInput
+  }
+
+  /**
+   * UserRecentlyPlayed findUniqueOrThrow
+   */
+  export type UserRecentlyPlayedFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserRecentlyPlayed
+     */
+    select?: UserRecentlyPlayedSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserRecentlyPlayed
+     */
+    omit?: UserRecentlyPlayedOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserRecentlyPlayedInclude<ExtArgs> | null
+    /**
+     * Filter, which UserRecentlyPlayed to fetch.
+     */
+    where: UserRecentlyPlayedWhereUniqueInput
+  }
+
+  /**
+   * UserRecentlyPlayed findFirst
+   */
+  export type UserRecentlyPlayedFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserRecentlyPlayed
+     */
+    select?: UserRecentlyPlayedSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserRecentlyPlayed
+     */
+    omit?: UserRecentlyPlayedOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserRecentlyPlayedInclude<ExtArgs> | null
+    /**
+     * Filter, which UserRecentlyPlayed to fetch.
+     */
+    where?: UserRecentlyPlayedWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of UserRecentlyPlayeds to fetch.
+     */
+    orderBy?: UserRecentlyPlayedOrderByWithRelationInput | UserRecentlyPlayedOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for UserRecentlyPlayeds.
+     */
+    cursor?: UserRecentlyPlayedWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` UserRecentlyPlayeds from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` UserRecentlyPlayeds.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of UserRecentlyPlayeds.
+     */
+    distinct?: UserRecentlyPlayedScalarFieldEnum | UserRecentlyPlayedScalarFieldEnum[]
+  }
+
+  /**
+   * UserRecentlyPlayed findFirstOrThrow
+   */
+  export type UserRecentlyPlayedFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserRecentlyPlayed
+     */
+    select?: UserRecentlyPlayedSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserRecentlyPlayed
+     */
+    omit?: UserRecentlyPlayedOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserRecentlyPlayedInclude<ExtArgs> | null
+    /**
+     * Filter, which UserRecentlyPlayed to fetch.
+     */
+    where?: UserRecentlyPlayedWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of UserRecentlyPlayeds to fetch.
+     */
+    orderBy?: UserRecentlyPlayedOrderByWithRelationInput | UserRecentlyPlayedOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for UserRecentlyPlayeds.
+     */
+    cursor?: UserRecentlyPlayedWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` UserRecentlyPlayeds from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` UserRecentlyPlayeds.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of UserRecentlyPlayeds.
+     */
+    distinct?: UserRecentlyPlayedScalarFieldEnum | UserRecentlyPlayedScalarFieldEnum[]
+  }
+
+  /**
+   * UserRecentlyPlayed findMany
+   */
+  export type UserRecentlyPlayedFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserRecentlyPlayed
+     */
+    select?: UserRecentlyPlayedSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserRecentlyPlayed
+     */
+    omit?: UserRecentlyPlayedOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserRecentlyPlayedInclude<ExtArgs> | null
+    /**
+     * Filter, which UserRecentlyPlayeds to fetch.
+     */
+    where?: UserRecentlyPlayedWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of UserRecentlyPlayeds to fetch.
+     */
+    orderBy?: UserRecentlyPlayedOrderByWithRelationInput | UserRecentlyPlayedOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing UserRecentlyPlayeds.
+     */
+    cursor?: UserRecentlyPlayedWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` UserRecentlyPlayeds from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` UserRecentlyPlayeds.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of UserRecentlyPlayeds.
+     */
+    distinct?: UserRecentlyPlayedScalarFieldEnum | UserRecentlyPlayedScalarFieldEnum[]
+  }
+
+  /**
+   * UserRecentlyPlayed create
+   */
+  export type UserRecentlyPlayedCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserRecentlyPlayed
+     */
+    select?: UserRecentlyPlayedSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserRecentlyPlayed
+     */
+    omit?: UserRecentlyPlayedOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserRecentlyPlayedInclude<ExtArgs> | null
+    /**
+     * The data needed to create a UserRecentlyPlayed.
+     */
+    data: XOR<UserRecentlyPlayedCreateInput, UserRecentlyPlayedUncheckedCreateInput>
+  }
+
+  /**
+   * UserRecentlyPlayed createMany
+   */
+  export type UserRecentlyPlayedCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many UserRecentlyPlayeds.
+     */
+    data: UserRecentlyPlayedCreateManyInput | UserRecentlyPlayedCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * UserRecentlyPlayed createManyAndReturn
+   */
+  export type UserRecentlyPlayedCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserRecentlyPlayed
+     */
+    select?: UserRecentlyPlayedSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserRecentlyPlayed
+     */
+    omit?: UserRecentlyPlayedOmit<ExtArgs> | null
+    /**
+     * The data used to create many UserRecentlyPlayeds.
+     */
+    data: UserRecentlyPlayedCreateManyInput | UserRecentlyPlayedCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserRecentlyPlayedIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * UserRecentlyPlayed update
+   */
+  export type UserRecentlyPlayedUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserRecentlyPlayed
+     */
+    select?: UserRecentlyPlayedSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserRecentlyPlayed
+     */
+    omit?: UserRecentlyPlayedOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserRecentlyPlayedInclude<ExtArgs> | null
+    /**
+     * The data needed to update a UserRecentlyPlayed.
+     */
+    data: XOR<UserRecentlyPlayedUpdateInput, UserRecentlyPlayedUncheckedUpdateInput>
+    /**
+     * Choose, which UserRecentlyPlayed to update.
+     */
+    where: UserRecentlyPlayedWhereUniqueInput
+  }
+
+  /**
+   * UserRecentlyPlayed updateMany
+   */
+  export type UserRecentlyPlayedUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update UserRecentlyPlayeds.
+     */
+    data: XOR<UserRecentlyPlayedUpdateManyMutationInput, UserRecentlyPlayedUncheckedUpdateManyInput>
+    /**
+     * Filter which UserRecentlyPlayeds to update
+     */
+    where?: UserRecentlyPlayedWhereInput
+    /**
+     * Limit how many UserRecentlyPlayeds to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * UserRecentlyPlayed updateManyAndReturn
+   */
+  export type UserRecentlyPlayedUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserRecentlyPlayed
+     */
+    select?: UserRecentlyPlayedSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserRecentlyPlayed
+     */
+    omit?: UserRecentlyPlayedOmit<ExtArgs> | null
+    /**
+     * The data used to update UserRecentlyPlayeds.
+     */
+    data: XOR<UserRecentlyPlayedUpdateManyMutationInput, UserRecentlyPlayedUncheckedUpdateManyInput>
+    /**
+     * Filter which UserRecentlyPlayeds to update
+     */
+    where?: UserRecentlyPlayedWhereInput
+    /**
+     * Limit how many UserRecentlyPlayeds to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserRecentlyPlayedIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * UserRecentlyPlayed upsert
+   */
+  export type UserRecentlyPlayedUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserRecentlyPlayed
+     */
+    select?: UserRecentlyPlayedSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserRecentlyPlayed
+     */
+    omit?: UserRecentlyPlayedOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserRecentlyPlayedInclude<ExtArgs> | null
+    /**
+     * The filter to search for the UserRecentlyPlayed to update in case it exists.
+     */
+    where: UserRecentlyPlayedWhereUniqueInput
+    /**
+     * In case the UserRecentlyPlayed found by the `where` argument doesn't exist, create a new UserRecentlyPlayed with this data.
+     */
+    create: XOR<UserRecentlyPlayedCreateInput, UserRecentlyPlayedUncheckedCreateInput>
+    /**
+     * In case the UserRecentlyPlayed was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<UserRecentlyPlayedUpdateInput, UserRecentlyPlayedUncheckedUpdateInput>
+  }
+
+  /**
+   * UserRecentlyPlayed delete
+   */
+  export type UserRecentlyPlayedDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserRecentlyPlayed
+     */
+    select?: UserRecentlyPlayedSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserRecentlyPlayed
+     */
+    omit?: UserRecentlyPlayedOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserRecentlyPlayedInclude<ExtArgs> | null
+    /**
+     * Filter which UserRecentlyPlayed to delete.
+     */
+    where: UserRecentlyPlayedWhereUniqueInput
+  }
+
+  /**
+   * UserRecentlyPlayed deleteMany
+   */
+  export type UserRecentlyPlayedDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which UserRecentlyPlayeds to delete
+     */
+    where?: UserRecentlyPlayedWhereInput
+    /**
+     * Limit how many UserRecentlyPlayeds to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * UserRecentlyPlayed without action
+   */
+  export type UserRecentlyPlayedDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserRecentlyPlayed
+     */
+    select?: UserRecentlyPlayedSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserRecentlyPlayed
+     */
+    omit?: UserRecentlyPlayedOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserRecentlyPlayedInclude<ExtArgs> | null
   }
 
 
@@ -5603,11 +7187,47 @@ export namespace Prisma {
   export const UserLibraryScalarFieldEnum: {
     id: 'id',
     userId: 'userId',
+    trackId: 'trackId',
     deezerId: 'deezerId',
-    addedAt: 'addedAt'
+    scUrl: 'scUrl',
+    source: 'source',
+    title: 'title',
+    artistName: 'artistName',
+    artistId: 'artistId',
+    album: 'album',
+    coverUrl: 'coverUrl',
+    duration: 'duration',
+    durationSec: 'durationSec',
+    previewUrl: 'previewUrl',
+    isrc: 'isrc',
+    addedAt: 'addedAt',
+    updatedAt: 'updatedAt'
   };
 
   export type UserLibraryScalarFieldEnum = (typeof UserLibraryScalarFieldEnum)[keyof typeof UserLibraryScalarFieldEnum]
+
+
+  export const UserRecentlyPlayedScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    trackId: 'trackId',
+    deezerId: 'deezerId',
+    scUrl: 'scUrl',
+    source: 'source',
+    title: 'title',
+    artistName: 'artistName',
+    artistId: 'artistId',
+    album: 'album',
+    coverUrl: 'coverUrl',
+    duration: 'duration',
+    durationSec: 'durationSec',
+    previewUrl: 'previewUrl',
+    isrc: 'isrc',
+    playedAt: 'playedAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type UserRecentlyPlayedScalarFieldEnum = (typeof UserRecentlyPlayedScalarFieldEnum)[keyof typeof UserRecentlyPlayedScalarFieldEnum]
 
 
   export const SessionScalarFieldEnum: {
@@ -5697,6 +7317,20 @@ export namespace Prisma {
    */
   export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
+
+
+  /**
+   * Reference to a field of type 'Float'
+   */
+  export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+  /**
+   * Reference to a field of type 'Float[]'
+   */
+  export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
+    
   /**
    * Deep Input Types
    */
@@ -5717,6 +7351,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     userLibraries?: UserLibraryListRelationFilter
+    recentlyPlayed?: UserRecentlyPlayedListRelationFilter
     sessions?: SessionListRelationFilter
     codes?: VerificationCodeListRelationFilter
   }
@@ -5733,6 +7368,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     userLibraries?: UserLibraryOrderByRelationAggregateInput
+    recentlyPlayed?: UserRecentlyPlayedOrderByRelationAggregateInput
     sessions?: SessionOrderByRelationAggregateInput
     codes?: VerificationCodeOrderByRelationAggregateInput
   }
@@ -5752,6 +7388,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     userLibraries?: UserLibraryListRelationFilter
+    recentlyPlayed?: UserRecentlyPlayedListRelationFilter
     sessions?: SessionListRelationFilter
     codes?: VerificationCodeListRelationFilter
   }, "id" | "email" | "username" | "verifyToken">
@@ -5849,38 +7486,94 @@ export namespace Prisma {
     NOT?: UserLibraryWhereInput | UserLibraryWhereInput[]
     id?: StringFilter<"UserLibrary"> | string
     userId?: StringFilter<"UserLibrary"> | string
-    deezerId?: StringFilter<"UserLibrary"> | string
+    trackId?: StringNullableFilter<"UserLibrary"> | string | null
+    deezerId?: StringNullableFilter<"UserLibrary"> | string | null
+    scUrl?: StringNullableFilter<"UserLibrary"> | string | null
+    source?: StringFilter<"UserLibrary"> | string
+    title?: StringFilter<"UserLibrary"> | string
+    artistName?: StringFilter<"UserLibrary"> | string
+    artistId?: StringNullableFilter<"UserLibrary"> | string | null
+    album?: StringNullableFilter<"UserLibrary"> | string | null
+    coverUrl?: StringNullableFilter<"UserLibrary"> | string | null
+    duration?: StringFilter<"UserLibrary"> | string
+    durationSec?: IntFilter<"UserLibrary"> | number
+    previewUrl?: StringNullableFilter<"UserLibrary"> | string | null
+    isrc?: StringNullableFilter<"UserLibrary"> | string | null
     addedAt?: DateTimeFilter<"UserLibrary"> | Date | string
+    updatedAt?: DateTimeFilter<"UserLibrary"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }
 
   export type UserLibraryOrderByWithRelationInput = {
     id?: SortOrder
     userId?: SortOrder
-    deezerId?: SortOrder
+    trackId?: SortOrderInput | SortOrder
+    deezerId?: SortOrderInput | SortOrder
+    scUrl?: SortOrderInput | SortOrder
+    source?: SortOrder
+    title?: SortOrder
+    artistName?: SortOrder
+    artistId?: SortOrderInput | SortOrder
+    album?: SortOrderInput | SortOrder
+    coverUrl?: SortOrderInput | SortOrder
+    duration?: SortOrder
+    durationSec?: SortOrder
+    previewUrl?: SortOrderInput | SortOrder
+    isrc?: SortOrderInput | SortOrder
     addedAt?: SortOrder
+    updatedAt?: SortOrder
     user?: UserOrderByWithRelationInput
   }
 
   export type UserLibraryWhereUniqueInput = Prisma.AtLeast<{
     id?: string
+    userId_deezerId?: UserLibraryUserIdDeezerIdCompoundUniqueInput
+    userId_scUrl?: UserLibraryUserIdScUrlCompoundUniqueInput
     AND?: UserLibraryWhereInput | UserLibraryWhereInput[]
     OR?: UserLibraryWhereInput[]
     NOT?: UserLibraryWhereInput | UserLibraryWhereInput[]
     userId?: StringFilter<"UserLibrary"> | string
-    deezerId?: StringFilter<"UserLibrary"> | string
+    trackId?: StringNullableFilter<"UserLibrary"> | string | null
+    deezerId?: StringNullableFilter<"UserLibrary"> | string | null
+    scUrl?: StringNullableFilter<"UserLibrary"> | string | null
+    source?: StringFilter<"UserLibrary"> | string
+    title?: StringFilter<"UserLibrary"> | string
+    artistName?: StringFilter<"UserLibrary"> | string
+    artistId?: StringNullableFilter<"UserLibrary"> | string | null
+    album?: StringNullableFilter<"UserLibrary"> | string | null
+    coverUrl?: StringNullableFilter<"UserLibrary"> | string | null
+    duration?: StringFilter<"UserLibrary"> | string
+    durationSec?: IntFilter<"UserLibrary"> | number
+    previewUrl?: StringNullableFilter<"UserLibrary"> | string | null
+    isrc?: StringNullableFilter<"UserLibrary"> | string | null
     addedAt?: DateTimeFilter<"UserLibrary"> | Date | string
+    updatedAt?: DateTimeFilter<"UserLibrary"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
-  }, "id">
+  }, "id" | "userId_deezerId" | "userId_scUrl">
 
   export type UserLibraryOrderByWithAggregationInput = {
     id?: SortOrder
     userId?: SortOrder
-    deezerId?: SortOrder
+    trackId?: SortOrderInput | SortOrder
+    deezerId?: SortOrderInput | SortOrder
+    scUrl?: SortOrderInput | SortOrder
+    source?: SortOrder
+    title?: SortOrder
+    artistName?: SortOrder
+    artistId?: SortOrderInput | SortOrder
+    album?: SortOrderInput | SortOrder
+    coverUrl?: SortOrderInput | SortOrder
+    duration?: SortOrder
+    durationSec?: SortOrder
+    previewUrl?: SortOrderInput | SortOrder
+    isrc?: SortOrderInput | SortOrder
     addedAt?: SortOrder
+    updatedAt?: SortOrder
     _count?: UserLibraryCountOrderByAggregateInput
+    _avg?: UserLibraryAvgOrderByAggregateInput
     _max?: UserLibraryMaxOrderByAggregateInput
     _min?: UserLibraryMinOrderByAggregateInput
+    _sum?: UserLibrarySumOrderByAggregateInput
   }
 
   export type UserLibraryScalarWhereWithAggregatesInput = {
@@ -5889,8 +7582,140 @@ export namespace Prisma {
     NOT?: UserLibraryScalarWhereWithAggregatesInput | UserLibraryScalarWhereWithAggregatesInput[]
     id?: StringWithAggregatesFilter<"UserLibrary"> | string
     userId?: StringWithAggregatesFilter<"UserLibrary"> | string
-    deezerId?: StringWithAggregatesFilter<"UserLibrary"> | string
+    trackId?: StringNullableWithAggregatesFilter<"UserLibrary"> | string | null
+    deezerId?: StringNullableWithAggregatesFilter<"UserLibrary"> | string | null
+    scUrl?: StringNullableWithAggregatesFilter<"UserLibrary"> | string | null
+    source?: StringWithAggregatesFilter<"UserLibrary"> | string
+    title?: StringWithAggregatesFilter<"UserLibrary"> | string
+    artistName?: StringWithAggregatesFilter<"UserLibrary"> | string
+    artistId?: StringNullableWithAggregatesFilter<"UserLibrary"> | string | null
+    album?: StringNullableWithAggregatesFilter<"UserLibrary"> | string | null
+    coverUrl?: StringNullableWithAggregatesFilter<"UserLibrary"> | string | null
+    duration?: StringWithAggregatesFilter<"UserLibrary"> | string
+    durationSec?: IntWithAggregatesFilter<"UserLibrary"> | number
+    previewUrl?: StringNullableWithAggregatesFilter<"UserLibrary"> | string | null
+    isrc?: StringNullableWithAggregatesFilter<"UserLibrary"> | string | null
     addedAt?: DateTimeWithAggregatesFilter<"UserLibrary"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"UserLibrary"> | Date | string
+  }
+
+  export type UserRecentlyPlayedWhereInput = {
+    AND?: UserRecentlyPlayedWhereInput | UserRecentlyPlayedWhereInput[]
+    OR?: UserRecentlyPlayedWhereInput[]
+    NOT?: UserRecentlyPlayedWhereInput | UserRecentlyPlayedWhereInput[]
+    id?: StringFilter<"UserRecentlyPlayed"> | string
+    userId?: StringFilter<"UserRecentlyPlayed"> | string
+    trackId?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    deezerId?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    scUrl?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    source?: StringFilter<"UserRecentlyPlayed"> | string
+    title?: StringFilter<"UserRecentlyPlayed"> | string
+    artistName?: StringFilter<"UserRecentlyPlayed"> | string
+    artistId?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    album?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    coverUrl?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    duration?: StringFilter<"UserRecentlyPlayed"> | string
+    durationSec?: IntFilter<"UserRecentlyPlayed"> | number
+    previewUrl?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    isrc?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    playedAt?: DateTimeFilter<"UserRecentlyPlayed"> | Date | string
+    updatedAt?: DateTimeFilter<"UserRecentlyPlayed"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }
+
+  export type UserRecentlyPlayedOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    trackId?: SortOrderInput | SortOrder
+    deezerId?: SortOrderInput | SortOrder
+    scUrl?: SortOrderInput | SortOrder
+    source?: SortOrder
+    title?: SortOrder
+    artistName?: SortOrder
+    artistId?: SortOrderInput | SortOrder
+    album?: SortOrderInput | SortOrder
+    coverUrl?: SortOrderInput | SortOrder
+    duration?: SortOrder
+    durationSec?: SortOrder
+    previewUrl?: SortOrderInput | SortOrder
+    isrc?: SortOrderInput | SortOrder
+    playedAt?: SortOrder
+    updatedAt?: SortOrder
+    user?: UserOrderByWithRelationInput
+  }
+
+  export type UserRecentlyPlayedWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    userId_deezerId?: UserRecentlyPlayedUserIdDeezerIdCompoundUniqueInput
+    userId_scUrl?: UserRecentlyPlayedUserIdScUrlCompoundUniqueInput
+    AND?: UserRecentlyPlayedWhereInput | UserRecentlyPlayedWhereInput[]
+    OR?: UserRecentlyPlayedWhereInput[]
+    NOT?: UserRecentlyPlayedWhereInput | UserRecentlyPlayedWhereInput[]
+    userId?: StringFilter<"UserRecentlyPlayed"> | string
+    trackId?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    deezerId?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    scUrl?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    source?: StringFilter<"UserRecentlyPlayed"> | string
+    title?: StringFilter<"UserRecentlyPlayed"> | string
+    artistName?: StringFilter<"UserRecentlyPlayed"> | string
+    artistId?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    album?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    coverUrl?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    duration?: StringFilter<"UserRecentlyPlayed"> | string
+    durationSec?: IntFilter<"UserRecentlyPlayed"> | number
+    previewUrl?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    isrc?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    playedAt?: DateTimeFilter<"UserRecentlyPlayed"> | Date | string
+    updatedAt?: DateTimeFilter<"UserRecentlyPlayed"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }, "id" | "userId_deezerId" | "userId_scUrl">
+
+  export type UserRecentlyPlayedOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    trackId?: SortOrderInput | SortOrder
+    deezerId?: SortOrderInput | SortOrder
+    scUrl?: SortOrderInput | SortOrder
+    source?: SortOrder
+    title?: SortOrder
+    artistName?: SortOrder
+    artistId?: SortOrderInput | SortOrder
+    album?: SortOrderInput | SortOrder
+    coverUrl?: SortOrderInput | SortOrder
+    duration?: SortOrder
+    durationSec?: SortOrder
+    previewUrl?: SortOrderInput | SortOrder
+    isrc?: SortOrderInput | SortOrder
+    playedAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: UserRecentlyPlayedCountOrderByAggregateInput
+    _avg?: UserRecentlyPlayedAvgOrderByAggregateInput
+    _max?: UserRecentlyPlayedMaxOrderByAggregateInput
+    _min?: UserRecentlyPlayedMinOrderByAggregateInput
+    _sum?: UserRecentlyPlayedSumOrderByAggregateInput
+  }
+
+  export type UserRecentlyPlayedScalarWhereWithAggregatesInput = {
+    AND?: UserRecentlyPlayedScalarWhereWithAggregatesInput | UserRecentlyPlayedScalarWhereWithAggregatesInput[]
+    OR?: UserRecentlyPlayedScalarWhereWithAggregatesInput[]
+    NOT?: UserRecentlyPlayedScalarWhereWithAggregatesInput | UserRecentlyPlayedScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"UserRecentlyPlayed"> | string
+    userId?: StringWithAggregatesFilter<"UserRecentlyPlayed"> | string
+    trackId?: StringNullableWithAggregatesFilter<"UserRecentlyPlayed"> | string | null
+    deezerId?: StringNullableWithAggregatesFilter<"UserRecentlyPlayed"> | string | null
+    scUrl?: StringNullableWithAggregatesFilter<"UserRecentlyPlayed"> | string | null
+    source?: StringWithAggregatesFilter<"UserRecentlyPlayed"> | string
+    title?: StringWithAggregatesFilter<"UserRecentlyPlayed"> | string
+    artistName?: StringWithAggregatesFilter<"UserRecentlyPlayed"> | string
+    artistId?: StringNullableWithAggregatesFilter<"UserRecentlyPlayed"> | string | null
+    album?: StringNullableWithAggregatesFilter<"UserRecentlyPlayed"> | string | null
+    coverUrl?: StringNullableWithAggregatesFilter<"UserRecentlyPlayed"> | string | null
+    duration?: StringWithAggregatesFilter<"UserRecentlyPlayed"> | string
+    durationSec?: IntWithAggregatesFilter<"UserRecentlyPlayed"> | number
+    previewUrl?: StringNullableWithAggregatesFilter<"UserRecentlyPlayed"> | string | null
+    isrc?: StringNullableWithAggregatesFilter<"UserRecentlyPlayed"> | string | null
+    playedAt?: DateTimeWithAggregatesFilter<"UserRecentlyPlayed"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"UserRecentlyPlayed"> | Date | string
   }
 
   export type SessionWhereInput = {
@@ -5960,6 +7785,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     userLibraries?: UserLibraryCreateNestedManyWithoutUserInput
+    recentlyPlayed?: UserRecentlyPlayedCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     codes?: VerificationCodeCreateNestedManyWithoutUserInput
   }
@@ -5976,6 +7802,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     userLibraries?: UserLibraryUncheckedCreateNestedManyWithoutUserInput
+    recentlyPlayed?: UserRecentlyPlayedUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     codes?: VerificationCodeUncheckedCreateNestedManyWithoutUserInput
   }
@@ -5992,6 +7819,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userLibraries?: UserLibraryUpdateManyWithoutUserNestedInput
+    recentlyPlayed?: UserRecentlyPlayedUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     codes?: VerificationCodeUpdateManyWithoutUserNestedInput
   }
@@ -6008,6 +7836,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userLibraries?: UserLibraryUncheckedUpdateManyWithoutUserNestedInput
+    recentlyPlayed?: UserRecentlyPlayedUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     codes?: VerificationCodeUncheckedUpdateManyWithoutUserNestedInput
   }
@@ -6108,50 +7937,280 @@ export namespace Prisma {
 
   export type UserLibraryCreateInput = {
     id?: string
-    deezerId: string
+    trackId?: string | null
+    deezerId?: string | null
+    scUrl?: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId?: string | null
+    album?: string | null
+    coverUrl?: string | null
+    duration: string
+    durationSec?: number
+    previewUrl?: string | null
+    isrc?: string | null
     addedAt?: Date | string
+    updatedAt?: Date | string
     user: UserCreateNestedOneWithoutUserLibrariesInput
   }
 
   export type UserLibraryUncheckedCreateInput = {
     id?: string
     userId: string
-    deezerId: string
+    trackId?: string | null
+    deezerId?: string | null
+    scUrl?: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId?: string | null
+    album?: string | null
+    coverUrl?: string | null
+    duration: string
+    durationSec?: number
+    previewUrl?: string | null
+    isrc?: string | null
     addedAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type UserLibraryUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    deezerId?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
     addedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutUserLibrariesNestedInput
   }
 
   export type UserLibraryUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
-    deezerId?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
     addedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type UserLibraryCreateManyInput = {
     id?: string
     userId: string
-    deezerId: string
+    trackId?: string | null
+    deezerId?: string | null
+    scUrl?: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId?: string | null
+    album?: string | null
+    coverUrl?: string | null
+    duration: string
+    durationSec?: number
+    previewUrl?: string | null
+    isrc?: string | null
     addedAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type UserLibraryUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    deezerId?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
     addedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type UserLibraryUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
-    deezerId?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
     addedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UserRecentlyPlayedCreateInput = {
+    id?: string
+    trackId?: string | null
+    deezerId?: string | null
+    scUrl?: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId?: string | null
+    album?: string | null
+    coverUrl?: string | null
+    duration: string
+    durationSec?: number
+    previewUrl?: string | null
+    isrc?: string | null
+    playedAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutRecentlyPlayedInput
+  }
+
+  export type UserRecentlyPlayedUncheckedCreateInput = {
+    id?: string
+    userId: string
+    trackId?: string | null
+    deezerId?: string | null
+    scUrl?: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId?: string | null
+    album?: string | null
+    coverUrl?: string | null
+    duration: string
+    durationSec?: number
+    previewUrl?: string | null
+    isrc?: string | null
+    playedAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UserRecentlyPlayedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
+    playedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutRecentlyPlayedNestedInput
+  }
+
+  export type UserRecentlyPlayedUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
+    playedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UserRecentlyPlayedCreateManyInput = {
+    id?: string
+    userId: string
+    trackId?: string | null
+    deezerId?: string | null
+    scUrl?: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId?: string | null
+    album?: string | null
+    coverUrl?: string | null
+    duration: string
+    durationSec?: number
+    previewUrl?: string | null
+    isrc?: string | null
+    playedAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UserRecentlyPlayedUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
+    playedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UserRecentlyPlayedUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
+    playedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type SessionCreateInput = {
@@ -6272,6 +8331,12 @@ export namespace Prisma {
     none?: UserLibraryWhereInput
   }
 
+  export type UserRecentlyPlayedListRelationFilter = {
+    every?: UserRecentlyPlayedWhereInput
+    some?: UserRecentlyPlayedWhereInput
+    none?: UserRecentlyPlayedWhereInput
+  }
+
   export type SessionListRelationFilter = {
     every?: SessionWhereInput
     some?: SessionWhereInput
@@ -6290,6 +8355,10 @@ export namespace Prisma {
   }
 
   export type UserLibraryOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type UserRecentlyPlayedOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -6441,25 +8510,187 @@ export namespace Prisma {
     createdAt?: SortOrder
   }
 
+  export type IntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
+  }
+
+  export type UserLibraryUserIdDeezerIdCompoundUniqueInput = {
+    userId: string
+    deezerId: string
+  }
+
+  export type UserLibraryUserIdScUrlCompoundUniqueInput = {
+    userId: string
+    scUrl: string
+  }
+
   export type UserLibraryCountOrderByAggregateInput = {
     id?: SortOrder
     userId?: SortOrder
+    trackId?: SortOrder
     deezerId?: SortOrder
+    scUrl?: SortOrder
+    source?: SortOrder
+    title?: SortOrder
+    artistName?: SortOrder
+    artistId?: SortOrder
+    album?: SortOrder
+    coverUrl?: SortOrder
+    duration?: SortOrder
+    durationSec?: SortOrder
+    previewUrl?: SortOrder
+    isrc?: SortOrder
     addedAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type UserLibraryAvgOrderByAggregateInput = {
+    durationSec?: SortOrder
   }
 
   export type UserLibraryMaxOrderByAggregateInput = {
     id?: SortOrder
     userId?: SortOrder
+    trackId?: SortOrder
     deezerId?: SortOrder
+    scUrl?: SortOrder
+    source?: SortOrder
+    title?: SortOrder
+    artistName?: SortOrder
+    artistId?: SortOrder
+    album?: SortOrder
+    coverUrl?: SortOrder
+    duration?: SortOrder
+    durationSec?: SortOrder
+    previewUrl?: SortOrder
+    isrc?: SortOrder
     addedAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type UserLibraryMinOrderByAggregateInput = {
     id?: SortOrder
     userId?: SortOrder
+    trackId?: SortOrder
     deezerId?: SortOrder
+    scUrl?: SortOrder
+    source?: SortOrder
+    title?: SortOrder
+    artistName?: SortOrder
+    artistId?: SortOrder
+    album?: SortOrder
+    coverUrl?: SortOrder
+    duration?: SortOrder
+    durationSec?: SortOrder
+    previewUrl?: SortOrder
+    isrc?: SortOrder
     addedAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type UserLibrarySumOrderByAggregateInput = {
+    durationSec?: SortOrder
+  }
+
+  export type IntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type UserRecentlyPlayedUserIdDeezerIdCompoundUniqueInput = {
+    userId: string
+    deezerId: string
+  }
+
+  export type UserRecentlyPlayedUserIdScUrlCompoundUniqueInput = {
+    userId: string
+    scUrl: string
+  }
+
+  export type UserRecentlyPlayedCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    trackId?: SortOrder
+    deezerId?: SortOrder
+    scUrl?: SortOrder
+    source?: SortOrder
+    title?: SortOrder
+    artistName?: SortOrder
+    artistId?: SortOrder
+    album?: SortOrder
+    coverUrl?: SortOrder
+    duration?: SortOrder
+    durationSec?: SortOrder
+    previewUrl?: SortOrder
+    isrc?: SortOrder
+    playedAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type UserRecentlyPlayedAvgOrderByAggregateInput = {
+    durationSec?: SortOrder
+  }
+
+  export type UserRecentlyPlayedMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    trackId?: SortOrder
+    deezerId?: SortOrder
+    scUrl?: SortOrder
+    source?: SortOrder
+    title?: SortOrder
+    artistName?: SortOrder
+    artistId?: SortOrder
+    album?: SortOrder
+    coverUrl?: SortOrder
+    duration?: SortOrder
+    durationSec?: SortOrder
+    previewUrl?: SortOrder
+    isrc?: SortOrder
+    playedAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type UserRecentlyPlayedMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    trackId?: SortOrder
+    deezerId?: SortOrder
+    scUrl?: SortOrder
+    source?: SortOrder
+    title?: SortOrder
+    artistName?: SortOrder
+    artistId?: SortOrder
+    album?: SortOrder
+    coverUrl?: SortOrder
+    duration?: SortOrder
+    durationSec?: SortOrder
+    previewUrl?: SortOrder
+    isrc?: SortOrder
+    playedAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type UserRecentlyPlayedSumOrderByAggregateInput = {
+    durationSec?: SortOrder
   }
 
   export type SessionCountOrderByAggregateInput = {
@@ -6493,6 +8724,13 @@ export namespace Prisma {
     connect?: UserLibraryWhereUniqueInput | UserLibraryWhereUniqueInput[]
   }
 
+  export type UserRecentlyPlayedCreateNestedManyWithoutUserInput = {
+    create?: XOR<UserRecentlyPlayedCreateWithoutUserInput, UserRecentlyPlayedUncheckedCreateWithoutUserInput> | UserRecentlyPlayedCreateWithoutUserInput[] | UserRecentlyPlayedUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: UserRecentlyPlayedCreateOrConnectWithoutUserInput | UserRecentlyPlayedCreateOrConnectWithoutUserInput[]
+    createMany?: UserRecentlyPlayedCreateManyUserInputEnvelope
+    connect?: UserRecentlyPlayedWhereUniqueInput | UserRecentlyPlayedWhereUniqueInput[]
+  }
+
   export type SessionCreateNestedManyWithoutUserInput = {
     create?: XOR<SessionCreateWithoutUserInput, SessionUncheckedCreateWithoutUserInput> | SessionCreateWithoutUserInput[] | SessionUncheckedCreateWithoutUserInput[]
     connectOrCreate?: SessionCreateOrConnectWithoutUserInput | SessionCreateOrConnectWithoutUserInput[]
@@ -6512,6 +8750,13 @@ export namespace Prisma {
     connectOrCreate?: UserLibraryCreateOrConnectWithoutUserInput | UserLibraryCreateOrConnectWithoutUserInput[]
     createMany?: UserLibraryCreateManyUserInputEnvelope
     connect?: UserLibraryWhereUniqueInput | UserLibraryWhereUniqueInput[]
+  }
+
+  export type UserRecentlyPlayedUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<UserRecentlyPlayedCreateWithoutUserInput, UserRecentlyPlayedUncheckedCreateWithoutUserInput> | UserRecentlyPlayedCreateWithoutUserInput[] | UserRecentlyPlayedUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: UserRecentlyPlayedCreateOrConnectWithoutUserInput | UserRecentlyPlayedCreateOrConnectWithoutUserInput[]
+    createMany?: UserRecentlyPlayedCreateManyUserInputEnvelope
+    connect?: UserRecentlyPlayedWhereUniqueInput | UserRecentlyPlayedWhereUniqueInput[]
   }
 
   export type SessionUncheckedCreateNestedManyWithoutUserInput = {
@@ -6562,6 +8807,20 @@ export namespace Prisma {
     deleteMany?: UserLibraryScalarWhereInput | UserLibraryScalarWhereInput[]
   }
 
+  export type UserRecentlyPlayedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<UserRecentlyPlayedCreateWithoutUserInput, UserRecentlyPlayedUncheckedCreateWithoutUserInput> | UserRecentlyPlayedCreateWithoutUserInput[] | UserRecentlyPlayedUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: UserRecentlyPlayedCreateOrConnectWithoutUserInput | UserRecentlyPlayedCreateOrConnectWithoutUserInput[]
+    upsert?: UserRecentlyPlayedUpsertWithWhereUniqueWithoutUserInput | UserRecentlyPlayedUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: UserRecentlyPlayedCreateManyUserInputEnvelope
+    set?: UserRecentlyPlayedWhereUniqueInput | UserRecentlyPlayedWhereUniqueInput[]
+    disconnect?: UserRecentlyPlayedWhereUniqueInput | UserRecentlyPlayedWhereUniqueInput[]
+    delete?: UserRecentlyPlayedWhereUniqueInput | UserRecentlyPlayedWhereUniqueInput[]
+    connect?: UserRecentlyPlayedWhereUniqueInput | UserRecentlyPlayedWhereUniqueInput[]
+    update?: UserRecentlyPlayedUpdateWithWhereUniqueWithoutUserInput | UserRecentlyPlayedUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: UserRecentlyPlayedUpdateManyWithWhereWithoutUserInput | UserRecentlyPlayedUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: UserRecentlyPlayedScalarWhereInput | UserRecentlyPlayedScalarWhereInput[]
+  }
+
   export type SessionUpdateManyWithoutUserNestedInput = {
     create?: XOR<SessionCreateWithoutUserInput, SessionUncheckedCreateWithoutUserInput> | SessionCreateWithoutUserInput[] | SessionUncheckedCreateWithoutUserInput[]
     connectOrCreate?: SessionCreateOrConnectWithoutUserInput | SessionCreateOrConnectWithoutUserInput[]
@@ -6602,6 +8861,20 @@ export namespace Prisma {
     update?: UserLibraryUpdateWithWhereUniqueWithoutUserInput | UserLibraryUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: UserLibraryUpdateManyWithWhereWithoutUserInput | UserLibraryUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: UserLibraryScalarWhereInput | UserLibraryScalarWhereInput[]
+  }
+
+  export type UserRecentlyPlayedUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<UserRecentlyPlayedCreateWithoutUserInput, UserRecentlyPlayedUncheckedCreateWithoutUserInput> | UserRecentlyPlayedCreateWithoutUserInput[] | UserRecentlyPlayedUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: UserRecentlyPlayedCreateOrConnectWithoutUserInput | UserRecentlyPlayedCreateOrConnectWithoutUserInput[]
+    upsert?: UserRecentlyPlayedUpsertWithWhereUniqueWithoutUserInput | UserRecentlyPlayedUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: UserRecentlyPlayedCreateManyUserInputEnvelope
+    set?: UserRecentlyPlayedWhereUniqueInput | UserRecentlyPlayedWhereUniqueInput[]
+    disconnect?: UserRecentlyPlayedWhereUniqueInput | UserRecentlyPlayedWhereUniqueInput[]
+    delete?: UserRecentlyPlayedWhereUniqueInput | UserRecentlyPlayedWhereUniqueInput[]
+    connect?: UserRecentlyPlayedWhereUniqueInput | UserRecentlyPlayedWhereUniqueInput[]
+    update?: UserRecentlyPlayedUpdateWithWhereUniqueWithoutUserInput | UserRecentlyPlayedUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: UserRecentlyPlayedUpdateManyWithWhereWithoutUserInput | UserRecentlyPlayedUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: UserRecentlyPlayedScalarWhereInput | UserRecentlyPlayedScalarWhereInput[]
   }
 
   export type SessionUncheckedUpdateManyWithoutUserNestedInput = {
@@ -6652,12 +8925,34 @@ export namespace Prisma {
     connect?: UserWhereUniqueInput
   }
 
+  export type IntFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
   export type UserUpdateOneRequiredWithoutUserLibrariesNestedInput = {
     create?: XOR<UserCreateWithoutUserLibrariesInput, UserUncheckedCreateWithoutUserLibrariesInput>
     connectOrCreate?: UserCreateOrConnectWithoutUserLibrariesInput
     upsert?: UserUpsertWithoutUserLibrariesInput
     connect?: UserWhereUniqueInput
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutUserLibrariesInput, UserUpdateWithoutUserLibrariesInput>, UserUncheckedUpdateWithoutUserLibrariesInput>
+  }
+
+  export type UserCreateNestedOneWithoutRecentlyPlayedInput = {
+    create?: XOR<UserCreateWithoutRecentlyPlayedInput, UserUncheckedCreateWithoutRecentlyPlayedInput>
+    connectOrCreate?: UserCreateOrConnectWithoutRecentlyPlayedInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type UserUpdateOneRequiredWithoutRecentlyPlayedNestedInput = {
+    create?: XOR<UserCreateWithoutRecentlyPlayedInput, UserUncheckedCreateWithoutRecentlyPlayedInput>
+    connectOrCreate?: UserCreateOrConnectWithoutRecentlyPlayedInput
+    upsert?: UserUpsertWithoutRecentlyPlayedInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutRecentlyPlayedInput, UserUpdateWithoutRecentlyPlayedInput>, UserUncheckedUpdateWithoutRecentlyPlayedInput>
   }
 
   export type UserCreateNestedOneWithoutSessionsInput = {
@@ -6821,16 +9116,69 @@ export namespace Prisma {
     _max?: NestedDateTimeFilter<$PrismaModel>
   }
 
+  export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type NestedFloatFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatFilter<$PrismaModel> | number
+  }
+
   export type UserLibraryCreateWithoutUserInput = {
     id?: string
-    deezerId: string
+    trackId?: string | null
+    deezerId?: string | null
+    scUrl?: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId?: string | null
+    album?: string | null
+    coverUrl?: string | null
+    duration: string
+    durationSec?: number
+    previewUrl?: string | null
+    isrc?: string | null
     addedAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type UserLibraryUncheckedCreateWithoutUserInput = {
     id?: string
-    deezerId: string
+    trackId?: string | null
+    deezerId?: string | null
+    scUrl?: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId?: string | null
+    album?: string | null
+    coverUrl?: string | null
+    duration: string
+    durationSec?: number
+    previewUrl?: string | null
+    isrc?: string | null
     addedAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type UserLibraryCreateOrConnectWithoutUserInput = {
@@ -6840,6 +9188,54 @@ export namespace Prisma {
 
   export type UserLibraryCreateManyUserInputEnvelope = {
     data: UserLibraryCreateManyUserInput | UserLibraryCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type UserRecentlyPlayedCreateWithoutUserInput = {
+    id?: string
+    trackId?: string | null
+    deezerId?: string | null
+    scUrl?: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId?: string | null
+    album?: string | null
+    coverUrl?: string | null
+    duration: string
+    durationSec?: number
+    previewUrl?: string | null
+    isrc?: string | null
+    playedAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UserRecentlyPlayedUncheckedCreateWithoutUserInput = {
+    id?: string
+    trackId?: string | null
+    deezerId?: string | null
+    scUrl?: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId?: string | null
+    album?: string | null
+    coverUrl?: string | null
+    duration: string
+    durationSec?: number
+    previewUrl?: string | null
+    isrc?: string | null
+    playedAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UserRecentlyPlayedCreateOrConnectWithoutUserInput = {
+    where: UserRecentlyPlayedWhereUniqueInput
+    create: XOR<UserRecentlyPlayedCreateWithoutUserInput, UserRecentlyPlayedUncheckedCreateWithoutUserInput>
+  }
+
+  export type UserRecentlyPlayedCreateManyUserInputEnvelope = {
+    data: UserRecentlyPlayedCreateManyUserInput | UserRecentlyPlayedCreateManyUserInput[]
     skipDuplicates?: boolean
   }
 
@@ -6913,8 +9309,60 @@ export namespace Prisma {
     NOT?: UserLibraryScalarWhereInput | UserLibraryScalarWhereInput[]
     id?: StringFilter<"UserLibrary"> | string
     userId?: StringFilter<"UserLibrary"> | string
-    deezerId?: StringFilter<"UserLibrary"> | string
+    trackId?: StringNullableFilter<"UserLibrary"> | string | null
+    deezerId?: StringNullableFilter<"UserLibrary"> | string | null
+    scUrl?: StringNullableFilter<"UserLibrary"> | string | null
+    source?: StringFilter<"UserLibrary"> | string
+    title?: StringFilter<"UserLibrary"> | string
+    artistName?: StringFilter<"UserLibrary"> | string
+    artistId?: StringNullableFilter<"UserLibrary"> | string | null
+    album?: StringNullableFilter<"UserLibrary"> | string | null
+    coverUrl?: StringNullableFilter<"UserLibrary"> | string | null
+    duration?: StringFilter<"UserLibrary"> | string
+    durationSec?: IntFilter<"UserLibrary"> | number
+    previewUrl?: StringNullableFilter<"UserLibrary"> | string | null
+    isrc?: StringNullableFilter<"UserLibrary"> | string | null
     addedAt?: DateTimeFilter<"UserLibrary"> | Date | string
+    updatedAt?: DateTimeFilter<"UserLibrary"> | Date | string
+  }
+
+  export type UserRecentlyPlayedUpsertWithWhereUniqueWithoutUserInput = {
+    where: UserRecentlyPlayedWhereUniqueInput
+    update: XOR<UserRecentlyPlayedUpdateWithoutUserInput, UserRecentlyPlayedUncheckedUpdateWithoutUserInput>
+    create: XOR<UserRecentlyPlayedCreateWithoutUserInput, UserRecentlyPlayedUncheckedCreateWithoutUserInput>
+  }
+
+  export type UserRecentlyPlayedUpdateWithWhereUniqueWithoutUserInput = {
+    where: UserRecentlyPlayedWhereUniqueInput
+    data: XOR<UserRecentlyPlayedUpdateWithoutUserInput, UserRecentlyPlayedUncheckedUpdateWithoutUserInput>
+  }
+
+  export type UserRecentlyPlayedUpdateManyWithWhereWithoutUserInput = {
+    where: UserRecentlyPlayedScalarWhereInput
+    data: XOR<UserRecentlyPlayedUpdateManyMutationInput, UserRecentlyPlayedUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type UserRecentlyPlayedScalarWhereInput = {
+    AND?: UserRecentlyPlayedScalarWhereInput | UserRecentlyPlayedScalarWhereInput[]
+    OR?: UserRecentlyPlayedScalarWhereInput[]
+    NOT?: UserRecentlyPlayedScalarWhereInput | UserRecentlyPlayedScalarWhereInput[]
+    id?: StringFilter<"UserRecentlyPlayed"> | string
+    userId?: StringFilter<"UserRecentlyPlayed"> | string
+    trackId?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    deezerId?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    scUrl?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    source?: StringFilter<"UserRecentlyPlayed"> | string
+    title?: StringFilter<"UserRecentlyPlayed"> | string
+    artistName?: StringFilter<"UserRecentlyPlayed"> | string
+    artistId?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    album?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    coverUrl?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    duration?: StringFilter<"UserRecentlyPlayed"> | string
+    durationSec?: IntFilter<"UserRecentlyPlayed"> | number
+    previewUrl?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    isrc?: StringNullableFilter<"UserRecentlyPlayed"> | string | null
+    playedAt?: DateTimeFilter<"UserRecentlyPlayed"> | Date | string
+    updatedAt?: DateTimeFilter<"UserRecentlyPlayed"> | Date | string
   }
 
   export type SessionUpsertWithWhereUniqueWithoutUserInput = {
@@ -6983,6 +9431,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     userLibraries?: UserLibraryCreateNestedManyWithoutUserInput
+    recentlyPlayed?: UserRecentlyPlayedCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
   }
 
@@ -6998,6 +9447,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     userLibraries?: UserLibraryUncheckedCreateNestedManyWithoutUserInput
+    recentlyPlayed?: UserRecentlyPlayedUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
   }
 
@@ -7029,6 +9479,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userLibraries?: UserLibraryUpdateManyWithoutUserNestedInput
+    recentlyPlayed?: UserRecentlyPlayedUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
   }
 
@@ -7044,6 +9495,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userLibraries?: UserLibraryUncheckedUpdateManyWithoutUserNestedInput
+    recentlyPlayed?: UserRecentlyPlayedUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
   }
 
@@ -7058,6 +9510,7 @@ export namespace Prisma {
     verifyTokenExp?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    recentlyPlayed?: UserRecentlyPlayedCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     codes?: VerificationCodeCreateNestedManyWithoutUserInput
   }
@@ -7073,6 +9526,7 @@ export namespace Prisma {
     verifyTokenExp?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    recentlyPlayed?: UserRecentlyPlayedUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     codes?: VerificationCodeUncheckedCreateNestedManyWithoutUserInput
   }
@@ -7104,6 +9558,7 @@ export namespace Prisma {
     verifyTokenExp?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    recentlyPlayed?: UserRecentlyPlayedUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     codes?: VerificationCodeUpdateManyWithoutUserNestedInput
   }
@@ -7119,6 +9574,87 @@ export namespace Prisma {
     verifyTokenExp?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    recentlyPlayed?: UserRecentlyPlayedUncheckedUpdateManyWithoutUserNestedInput
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    codes?: VerificationCodeUncheckedUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserCreateWithoutRecentlyPlayedInput = {
+    id?: string
+    name: string
+    email: string
+    username: string
+    passwordHash: string
+    isVerified?: boolean
+    verifyToken?: string | null
+    verifyTokenExp?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    userLibraries?: UserLibraryCreateNestedManyWithoutUserInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    codes?: VerificationCodeCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutRecentlyPlayedInput = {
+    id?: string
+    name: string
+    email: string
+    username: string
+    passwordHash: string
+    isVerified?: boolean
+    verifyToken?: string | null
+    verifyTokenExp?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    userLibraries?: UserLibraryUncheckedCreateNestedManyWithoutUserInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    codes?: VerificationCodeUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutRecentlyPlayedInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutRecentlyPlayedInput, UserUncheckedCreateWithoutRecentlyPlayedInput>
+  }
+
+  export type UserUpsertWithoutRecentlyPlayedInput = {
+    update: XOR<UserUpdateWithoutRecentlyPlayedInput, UserUncheckedUpdateWithoutRecentlyPlayedInput>
+    create: XOR<UserCreateWithoutRecentlyPlayedInput, UserUncheckedCreateWithoutRecentlyPlayedInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutRecentlyPlayedInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutRecentlyPlayedInput, UserUncheckedUpdateWithoutRecentlyPlayedInput>
+  }
+
+  export type UserUpdateWithoutRecentlyPlayedInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    isVerified?: BoolFieldUpdateOperationsInput | boolean
+    verifyToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verifyTokenExp?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    userLibraries?: UserLibraryUpdateManyWithoutUserNestedInput
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    codes?: VerificationCodeUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutRecentlyPlayedInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    isVerified?: BoolFieldUpdateOperationsInput | boolean
+    verifyToken?: NullableStringFieldUpdateOperationsInput | string | null
+    verifyTokenExp?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    userLibraries?: UserLibraryUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     codes?: VerificationCodeUncheckedUpdateManyWithoutUserNestedInput
   }
@@ -7135,6 +9671,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     userLibraries?: UserLibraryCreateNestedManyWithoutUserInput
+    recentlyPlayed?: UserRecentlyPlayedCreateNestedManyWithoutUserInput
     codes?: VerificationCodeCreateNestedManyWithoutUserInput
   }
 
@@ -7150,6 +9687,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     userLibraries?: UserLibraryUncheckedCreateNestedManyWithoutUserInput
+    recentlyPlayed?: UserRecentlyPlayedUncheckedCreateNestedManyWithoutUserInput
     codes?: VerificationCodeUncheckedCreateNestedManyWithoutUserInput
   }
 
@@ -7181,6 +9719,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userLibraries?: UserLibraryUpdateManyWithoutUserNestedInput
+    recentlyPlayed?: UserRecentlyPlayedUpdateManyWithoutUserNestedInput
     codes?: VerificationCodeUpdateManyWithoutUserNestedInput
   }
 
@@ -7196,13 +9735,46 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userLibraries?: UserLibraryUncheckedUpdateManyWithoutUserNestedInput
+    recentlyPlayed?: UserRecentlyPlayedUncheckedUpdateManyWithoutUserNestedInput
     codes?: VerificationCodeUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserLibraryCreateManyUserInput = {
     id?: string
-    deezerId: string
+    trackId?: string | null
+    deezerId?: string | null
+    scUrl?: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId?: string | null
+    album?: string | null
+    coverUrl?: string | null
+    duration: string
+    durationSec?: number
+    previewUrl?: string | null
+    isrc?: string | null
     addedAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UserRecentlyPlayedCreateManyUserInput = {
+    id?: string
+    trackId?: string | null
+    deezerId?: string | null
+    scUrl?: string | null
+    source: string
+    title: string
+    artistName: string
+    artistId?: string | null
+    album?: string | null
+    coverUrl?: string | null
+    duration: string
+    durationSec?: number
+    previewUrl?: string | null
+    isrc?: string | null
+    playedAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type SessionCreateManyUserInput = {
@@ -7221,20 +9793,116 @@ export namespace Prisma {
 
   export type UserLibraryUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
-    deezerId?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
     addedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type UserLibraryUncheckedUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
-    deezerId?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
     addedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type UserLibraryUncheckedUpdateManyWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
-    deezerId?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
     addedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UserRecentlyPlayedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
+    playedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UserRecentlyPlayedUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
+    playedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UserRecentlyPlayedUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    trackId?: NullableStringFieldUpdateOperationsInput | string | null
+    deezerId?: NullableStringFieldUpdateOperationsInput | string | null
+    scUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    artistName?: StringFieldUpdateOperationsInput | string
+    artistId?: NullableStringFieldUpdateOperationsInput | string | null
+    album?: NullableStringFieldUpdateOperationsInput | string | null
+    coverUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    duration?: StringFieldUpdateOperationsInput | string
+    durationSec?: IntFieldUpdateOperationsInput | number
+    previewUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isrc?: NullableStringFieldUpdateOperationsInput | string | null
+    playedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type SessionUpdateWithoutUserInput = {

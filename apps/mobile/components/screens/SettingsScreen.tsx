@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Pressable, Switch, View } from 'react-native';
 
+import { RestoreLibraryModal } from '@/components/RestoreLibraryModal';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -13,6 +15,7 @@ export function SettingsScreen() {
   const { dynamicAccent, setDynamicAccent } = useSettingsStore();
   const closeSettings = useOverlayStore((s) => s.closeSettings);
   const openFaq = useOverlayStore((s) => s.openFaq);
+  const [showRestoreLibrary, setShowRestoreLibrary] = useState(false);
 
   return (
     <ScreenContainer>
@@ -173,6 +176,61 @@ export function SettingsScreen() {
           </View>
         </View>
       </View>
+      {/* Cloud */}
+      <View style={{ gap: 14, marginTop: 10 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <AppIcon name="download" size={16} color={COLORS.textMuted} />
+          <AppText
+            variant="label"
+            weight="medium"
+            style={{
+              color: COLORS.textSecondary,
+              letterSpacing: 1,
+              fontSize: 11,
+            }}
+          >
+            {t('settings.cloudSection').toUpperCase()}
+          </AppText>
+        </View>
+
+        <View
+          style={{
+            borderTopWidth: 0.5,
+            borderTopColor: COLORS.border,
+          }}
+        >
+          <Pressable
+            onPress={() => setShowRestoreLibrary(true)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 14,
+              borderBottomWidth: 0.5,
+              borderBottomColor: COLORS.divider,
+            }}
+          >
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <AppText variant="label" weight="medium">
+                {t('settings.restoreLibrary')}
+              </AppText>
+              <AppText
+                variant="caption"
+                style={{ color: COLORS.textMuted, marginTop: 2 }}
+              >
+                {t('settings.restoreLibraryDesc')}
+              </AppText>
+            </View>
+            <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
+          </Pressable>
+        </View>
+      </View>
       {/* About */}
       <View style={{ gap: 14, marginTop: 10 }}>
         <View
@@ -220,6 +278,10 @@ export function SettingsScreen() {
           </Pressable>
         </View>
       </View>
+      <RestoreLibraryModal
+        visible={showRestoreLibrary}
+        onClose={() => setShowRestoreLibrary(false)}
+      />
     </ScreenContainer>
   );
 }

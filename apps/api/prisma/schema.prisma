@@ -19,6 +19,7 @@ model User {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   userLibraries  UserLibrary[]
+  recentlyPlayed UserRecentlyPlayed[]
   sessions       Session[]
   codes          VerificationCode[]
 }
@@ -33,11 +34,53 @@ model VerificationCode {
 }
 
 model UserLibrary {
-  id       String   @id @default(uuid())
-  userId   String
-  deezerId String
-  addedAt  DateTime @default(now())
-  user     User     @relation(fields: [userId], references: [id])
+  id          String   @id @default(uuid())
+  userId      String
+  trackId     String?
+  deezerId    String?
+  scUrl       String?
+  source      String
+  title       String
+  artistName  String
+  artistId    String?
+  album       String?
+  coverUrl    String?
+  duration    String
+  durationSec Int      @default(0)
+  previewUrl  String?
+  isrc        String?
+  addedAt     DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deezerId])
+  @@unique([userId, scUrl])
+  @@index([userId, addedAt])
+}
+
+model UserRecentlyPlayed {
+  id          String   @id @default(uuid())
+  userId      String
+  trackId     String?
+  deezerId    String?
+  scUrl       String?
+  source      String
+  title       String
+  artistName  String
+  artistId    String?
+  album       String?
+  coverUrl    String?
+  duration    String
+  durationSec Int      @default(0)
+  previewUrl  String?
+  isrc        String?
+  playedAt    DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deezerId])
+  @@unique([userId, scUrl])
+  @@index([userId, playedAt])
 }
 
 model Session {

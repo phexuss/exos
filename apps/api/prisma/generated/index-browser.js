@@ -144,8 +144,41 @@ exports.Prisma.VerificationCodeScalarFieldEnum = {
 exports.Prisma.UserLibraryScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
+  trackId: 'trackId',
   deezerId: 'deezerId',
-  addedAt: 'addedAt'
+  scUrl: 'scUrl',
+  source: 'source',
+  title: 'title',
+  artistName: 'artistName',
+  artistId: 'artistId',
+  album: 'album',
+  coverUrl: 'coverUrl',
+  duration: 'duration',
+  durationSec: 'durationSec',
+  previewUrl: 'previewUrl',
+  isrc: 'isrc',
+  addedAt: 'addedAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.UserRecentlyPlayedScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  trackId: 'trackId',
+  deezerId: 'deezerId',
+  scUrl: 'scUrl',
+  source: 'source',
+  title: 'title',
+  artistName: 'artistName',
+  artistId: 'artistId',
+  album: 'album',
+  coverUrl: 'coverUrl',
+  duration: 'duration',
+  durationSec: 'durationSec',
+  previewUrl: 'previewUrl',
+  isrc: 'isrc',
+  playedAt: 'playedAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.SessionScalarFieldEnum = {
@@ -176,6 +209,7 @@ exports.Prisma.ModelName = {
   User: 'User',
   VerificationCode: 'VerificationCode',
   UserLibrary: 'UserLibrary',
+  UserRecentlyPlayed: 'UserRecentlyPlayed',
   Session: 'Session'
 };
 

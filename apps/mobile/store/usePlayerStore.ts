@@ -3,6 +3,7 @@ import { apiPost } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
 import * as audio from '@/services/audio/audioService';
 import { addRecentlyPlayed, getDownloadedTrack } from '@/services/db/database';
+import { syncRecentlyPlayedTrack } from '@/services/sync/librarySyncService';
 import type { Track } from '@/types/domain';
 
 export type RepeatMode = 'off' | 'all' | 'one';
@@ -118,6 +119,7 @@ function smartPlay(
       !!track.filePath,
     );
   addRecentlyPlayed(track).catch(() => {});
+  void syncRecentlyPlayedTrack(track);
 
   if (track.filePath) {
     audio.playLocalFile(track.filePath);

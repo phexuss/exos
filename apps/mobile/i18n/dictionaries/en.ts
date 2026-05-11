@@ -80,6 +80,12 @@ export const en = {
     dynamicAccent: 'Dynamic accent color',
     dynamicAccentDesc:
       'Tint the player with the dominant color from the album cover',
+    cloudSection: 'Cloud backup',
+    restoreLibrary: 'Restore library',
+    restoreLibraryDesc: 'Show backed-up downloads and save them again',
+    restoreLibraryTitle: 'Restore library',
+    restoreLibraryEmpty: 'No backed-up tracks yet',
+    restoreLibraryError: 'Could not load your cloud library.',
     aboutSection: 'About',
     faq: 'How EXØS works',
   },

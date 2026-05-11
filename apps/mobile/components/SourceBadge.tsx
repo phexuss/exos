@@ -3,11 +3,10 @@ import { View } from 'react-native';
 import { DeezerIcon } from '@/components/icons/DeezerIcon';
 import { SoundCloudIcon } from '@/components/icons/SoundCloudIcon';
 import { AppText } from '@/components/ui/AppText';
-import { COLORS } from '@/constants/colors';
 import { SOURCES, type SourceKey } from '@/constants/sources';
 
 type SourceBadgeProps = {
-  source: SourceKey;
+  source: SourceKey | null | undefined;
 };
 
 const SOURCE_ICON: Partial<
@@ -18,8 +17,9 @@ const SOURCE_ICON: Partial<
 };
 
 export function SourceBadge({ source }: SourceBadgeProps) {
-  const srcColor = SOURCES[source].color;
-  const renderIcon = SOURCE_ICON[source];
+  const safeSource = source && source in SOURCES ? source : 'deezer';
+  const srcColor = SOURCES[safeSource].color;
+  const renderIcon = SOURCE_ICON[safeSource];
 
   return (
     <View
@@ -47,7 +47,7 @@ export function SourceBadge({ source }: SourceBadgeProps) {
             color: srcColor,
           }}
         >
-          {SOURCES[source].badge}
+          {SOURCES[safeSource].badge}
         </AppText>
       )}
     </View>

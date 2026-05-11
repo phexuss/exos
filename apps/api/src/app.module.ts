@@ -8,6 +8,7 @@ import { AppService } from './app.service';
 import { ArtistsModule } from './artists/artists.module';
 import { AuthModule } from './auth/auth.module';
 import { DownloadModule } from './download/download.module';
+import { LibraryModule } from './library/library.module';
 import { LyricsModule } from './lyrics/lyrics.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProvidersModule } from './providers/providers.module';
@@ -57,6 +58,7 @@ import { UserModule } from './user/user.module';
     ArtistsModule,
     AlbumsModule,
     LyricsModule,
+    LibraryModule,
     DownloadModule,
     UserModule,
     ResendModule,

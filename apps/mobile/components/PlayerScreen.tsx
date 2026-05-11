@@ -335,7 +335,6 @@ export default function PlayerScreen() {
             <SeekBar
               progress={progress}
               isPlaying={isPlaying}
-              durationSec={totalDurationSec}
               onSeek={handleSeek}
               onSeekStart={startSeeking}
               onSeekEnd={stopSeeking}

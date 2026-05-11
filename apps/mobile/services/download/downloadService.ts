@@ -9,6 +9,7 @@ import {
   insertDownloadedTrack,
   type LyricsData,
 } from '@/services/db/database';
+import { syncDownloadedTrack } from '@/services/sync/librarySyncService';
 import { useDownloadStore } from '@/store/useDownloadStore';
 import type { Track } from '@/types/domain';
 
@@ -224,6 +225,7 @@ export async function downloadTrack(track: Track): Promise<DownloadResult> {
     ]);
 
     await insertDownloadedTrack(track, filePath, downloadFormat, lyrics);
+    void syncDownloadedTrack(track);
     useDownloadStore.getState().markDownloaded(track.id);
 
     state.status = 'done';
