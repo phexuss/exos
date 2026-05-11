@@ -1,18 +1,11 @@
+import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  FlatList,
-  Image,
-  type ListRenderItem,
-  Modal,
-  Pressable,
-  ScrollView,
-  TextInput,
-  View,
-} from 'react-native';
+import { Image, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AnimatedModal } from '@/components/AnimatedModal';
 import { TrackActionsSheet } from '@/components/TrackActionsSheet';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
@@ -103,6 +96,10 @@ function PlaylistCardComponent({
 
 const PlaylistCard = memo(PlaylistCardComponent);
 
+function TrackSeparator() {
+  return <View style={{ height: 12 }} />;
+}
+
 export default function LibraryScreen() {
   const { t } = useI18n();
   const play = usePlayerStore((s) => s.play);
@@ -110,6 +107,7 @@ export default function LibraryScreen() {
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const accentColor = useDynamicAccent();
   const revision = useDownloadStore((s) => s.revision);
+  const playlistOverlayId = useOverlayStore((s) => s.playlistId);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [playlists, setPlaylists] = useState<PlaylistRow[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -149,6 +147,12 @@ export default function LibraryScreen() {
       load();
     }
   }, [revision, load]);
+
+  useEffect(() => {
+    if (!playlistOverlayId) {
+      load();
+    }
+  }, [playlistOverlayId, load]);
 
   useEffect(() => {
     setSelectedIds((previous) => {
@@ -373,12 +377,13 @@ export default function LibraryScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <FlatList
+      <FlashList
         data={tracks}
         keyExtractor={keyExtractor}
         renderItem={renderTrack}
         extraData={selectedIds}
         ListHeaderComponent={ListHeader}
+        ListHeaderComponentStyle={{ marginBottom: 12 }}
         ListEmptyComponent={
           <View style={{ paddingVertical: 40, alignItems: 'center', gap: 8 }}>
             <AppIcon name="download" size={28} color={COLORS.textMuted} />
@@ -387,17 +392,13 @@ export default function LibraryScreen() {
             </AppText>
           </View>
         }
+        ItemSeparatorComponent={TrackSeparator}
         contentContainerStyle={{
           paddingHorizontal: SPACING.lg,
           paddingTop: SPACING.md,
           paddingBottom: selectionMode ? 150 : 100,
-          gap: 12,
         }}
         showsVerticalScrollIndicator={false}
-        initialNumToRender={12}
-        maxToRenderPerBatch={10}
-        windowSize={11}
-        removeClippedSubviews
       />
 
       <TrackActionsSheet
@@ -512,93 +513,82 @@ export default function LibraryScreen() {
         </View>
       ) : null}
 
-      <Modal
+      <AnimatedModal
         visible={showBulkDelete}
-        transparent
-        animationType="fade"
         onRequestClose={() => {
           if (!deletingSelection) setShowBulkDelete(false);
         }}
+        onBackdropPress={() => setShowBulkDelete(false)}
+        disableBackdropPress={deletingSelection}
+        backdropStyle={{
+          backgroundColor: 'rgba(0,0,0,0.62)',
+          paddingHorizontal: SPACING.xxl,
+        }}
+        contentStyle={{
+          backgroundColor: COLORS.surface,
+          borderRadius: 18,
+          borderWidth: 0.5,
+          borderColor: COLORS.border,
+          padding: 20,
+          gap: 18,
+        }}
       >
-        <Pressable
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.62)',
-            justifyContent: 'center',
-            paddingHorizontal: SPACING.xxl,
-          }}
-          disabled={deletingSelection}
-          onPress={() => setShowBulkDelete(false)}
-        >
+        <View style={{ gap: 8 }}>
+          <AppText variant="title" weight="bold">
+            Delete downloads?
+          </AppText>
+          <AppText
+            variant="body"
+            style={{ color: COLORS.textSecondary, lineHeight: 22 }}
+          >
+            Remove {selectedCount} selected tracks from this device.
+          </AppText>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
           <Pressable
+            disabled={deletingSelection}
+            onPress={() => setShowBulkDelete(false)}
             style={{
-              backgroundColor: COLORS.surface,
-              borderRadius: 18,
-              borderWidth: 0.5,
-              borderColor: COLORS.border,
-              padding: 20,
-              gap: 18,
+              flex: 1,
+              paddingVertical: 13,
+              borderRadius: 10,
+              alignItems: 'center',
+              backgroundColor: COLORS.surfaceMuted,
+              opacity: deletingSelection ? 0.6 : 1,
             }}
           >
-            <View style={{ gap: 8 }}>
-              <AppText variant="title" weight="bold">
-                Delete downloads?
-              </AppText>
-              <AppText
-                variant="body"
-                style={{ color: COLORS.textSecondary, lineHeight: 22 }}
-              >
-                Remove {selectedCount} selected tracks from this device.
-              </AppText>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Pressable
-                disabled={deletingSelection}
-                onPress={() => setShowBulkDelete(false)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 13,
-                  borderRadius: 10,
-                  alignItems: 'center',
-                  backgroundColor: COLORS.surfaceMuted,
-                  opacity: deletingSelection ? 0.6 : 1,
-                }}
-              >
-                <AppText variant="body" weight="medium">
-                  Cancel
-                </AppText>
-              </Pressable>
-              <Pressable
-                disabled={deletingSelection}
-                onPress={confirmBulkDelete}
-                style={{
-                  flex: 1,
-                  paddingVertical: 13,
-                  borderRadius: 10,
-                  alignItems: 'center',
-                  backgroundColor: 'rgba(248, 113, 113, 0.16)',
-                  borderWidth: 0.5,
-                  borderColor: 'rgba(248, 113, 113, 0.35)',
-                  opacity: deletingSelection ? 0.6 : 1,
-                }}
-              >
-                <AppText
-                  variant="body"
-                  weight="medium"
-                  style={{ color: COLORS.danger }}
-                >
-                  {deletingSelection ? 'Deleting...' : 'Delete'}
-                </AppText>
-              </Pressable>
-            </View>
+            <AppText variant="body" weight="medium">
+              Cancel
+            </AppText>
           </Pressable>
-        </Pressable>
-      </Modal>
+          <Pressable
+            disabled={deletingSelection}
+            onPress={confirmBulkDelete}
+            style={{
+              flex: 1,
+              paddingVertical: 13,
+              borderRadius: 10,
+              alignItems: 'center',
+              backgroundColor: 'rgba(248, 113, 113, 0.16)',
+              borderWidth: 0.5,
+              borderColor: 'rgba(248, 113, 113, 0.35)',
+              opacity: deletingSelection ? 0.6 : 1,
+            }}
+          >
+            <AppText
+              variant="body"
+              weight="medium"
+              style={{ color: COLORS.danger }}
+            >
+              {deletingSelection ? 'Deleting...' : 'Delete'}
+            </AppText>
+          </Pressable>
+        </View>
+      </AnimatedModal>
 
-      <Modal
+      <AnimatedModal
         visible={showBulkPlaylists}
-        transparent
-        animationType="slide"
+        variant="sheet"
         onRequestClose={() => {
           if (!addingSelection) {
             setShowBulkPlaylists(false);
@@ -606,172 +596,152 @@ export default function LibraryScreen() {
             setBulkPlaylistName('');
           }
         }}
+        onBackdropPress={() => {
+          setShowBulkPlaylists(false);
+          setShowBulkCreatePlaylist(false);
+          setBulkPlaylistName('');
+        }}
+        disableBackdropPress={addingSelection}
+        backdropStyle={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+        contentStyle={{
+          backgroundColor: COLORS.surface,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          paddingBottom: 34,
+        }}
       >
-        <Pressable
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}
-          disabled={addingSelection}
-          onPress={() => {
-            setShowBulkPlaylists(false);
-            setShowBulkCreatePlaylist(false);
-            setBulkPlaylistName('');
-          }}
-        >
-          <View style={{ flex: 1 }} />
-          <Pressable
+        <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+          <View
             style={{
-              backgroundColor: COLORS.surface,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              paddingBottom: 34,
+              width: 40,
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: COLORS.border,
             }}
-          >
-            <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+          />
+        </View>
+
+        <View style={{ paddingHorizontal: 20, paddingBottom: 10, gap: 4 }}>
+          <AppText variant="title" weight="bold">
+            Add to playlist
+          </AppText>
+          <AppText variant="caption" style={{ color: COLORS.textMuted }}>
+            {selectedCount} selected tracks
+          </AppText>
+        </View>
+
+        {showBulkCreatePlaylist ? (
+          <View style={{ padding: 20, gap: 12 }}>
+            <TextInput
+              placeholder="Playlist name"
+              placeholderTextColor={COLORS.textMuted}
+              value={bulkPlaylistName}
+              onChangeText={setBulkPlaylistName}
+              autoFocus
+              editable={!addingSelection}
+              style={{
+                borderWidth: 1,
+                borderColor: COLORS.border,
+                borderRadius: 8,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                color: COLORS.textPrimary,
+                fontFamily: FONT_FAMILY.regular,
+                fontSize: 14,
+              }}
+            />
+            <Pressable
+              disabled={addingSelection || !bulkPlaylistName.trim()}
+              onPress={createPlaylistForSelection}
+              style={{
+                backgroundColor: COLORS.accent,
+                paddingVertical: 12,
+                borderRadius: 8,
+                alignItems: 'center',
+                opacity: addingSelection || !bulkPlaylistName.trim() ? 0.6 : 1,
+              }}
+            >
+              <AppText variant="body" weight="medium" style={{ color: '#fff' }}>
+                {addingSelection ? 'Adding...' : 'Create & Add'}
+              </AppText>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={{ paddingHorizontal: 20, gap: 4 }}>
+            <Pressable
+              disabled={addingSelection}
+              onPress={() => setShowBulkCreatePlaylist(true)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
+                paddingVertical: 14,
+                borderBottomWidth: 0.5,
+                borderBottomColor: COLORS.divider,
+                opacity: addingSelection ? 0.6 : 1,
+              }}
+            >
               <View
                 style={{
                   width: 40,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: COLORS.border,
+                  height: 40,
+                  borderRadius: 8,
+                  backgroundColor: COLORS.accent,
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
-              />
-            </View>
-
-            <View style={{ paddingHorizontal: 20, paddingBottom: 10, gap: 4 }}>
-              <AppText variant="title" weight="bold">
-                Add to playlist
+              >
+                <AppText variant="body" weight="bold" style={{ color: '#fff' }}>
+                  +
+                </AppText>
+              </View>
+              <AppText variant="body" weight="medium">
+                New Playlist
               </AppText>
-              <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-                {selectedCount} selected tracks
-              </AppText>
-            </View>
-
-            {showBulkCreatePlaylist ? (
-              <View style={{ padding: 20, gap: 12 }}>
-                <TextInput
-                  placeholder="Playlist name"
-                  placeholderTextColor={COLORS.textMuted}
-                  value={bulkPlaylistName}
-                  onChangeText={setBulkPlaylistName}
-                  autoFocus
-                  editable={!addingSelection}
+            </Pressable>
+            {playlists.map((playlist) => (
+              <Pressable
+                key={playlist.id}
+                disabled={addingSelection}
+                onPress={() => addSelectionToPlaylist(playlist.id)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 14,
+                  paddingVertical: 14,
+                  borderBottomWidth: 0.5,
+                  borderBottomColor: COLORS.divider,
+                  opacity: addingSelection ? 0.6 : 1,
+                }}
+              >
+                <View
                   style={{
-                    borderWidth: 1,
-                    borderColor: COLORS.border,
+                    width: 40,
+                    height: 40,
                     borderRadius: 8,
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    color: COLORS.textPrimary,
-                    fontFamily: FONT_FAMILY.regular,
-                    fontSize: 14,
-                  }}
-                />
-                <Pressable
-                  disabled={addingSelection || !bulkPlaylistName.trim()}
-                  onPress={createPlaylistForSelection}
-                  style={{
-                    backgroundColor: COLORS.accent,
-                    paddingVertical: 12,
-                    borderRadius: 8,
+                    backgroundColor: COLORS.surfaceMuted,
                     alignItems: 'center',
-                    opacity:
-                      addingSelection || !bulkPlaylistName.trim() ? 0.6 : 1,
+                    justifyContent: 'center',
                   }}
                 >
+                  <AppIcon name="playlist" size={18} color={COLORS.textMuted} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppText variant="body" weight="medium" numberOfLines={1}>
+                    {playlist.name}
+                  </AppText>
                   <AppText
-                    variant="body"
-                    weight="medium"
-                    style={{ color: '#fff' }}
+                    variant="caption"
+                    style={{ color: COLORS.textMuted }}
                   >
-                    {addingSelection ? 'Adding...' : 'Create & Add'}
+                    {playlist.track_count} tracks
                   </AppText>
-                </Pressable>
-              </View>
-            ) : (
-              <View style={{ paddingHorizontal: 20, gap: 4 }}>
-                <Pressable
-                  disabled={addingSelection}
-                  onPress={() => setShowBulkCreatePlaylist(true)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 14,
-                    paddingVertical: 14,
-                    borderBottomWidth: 0.5,
-                    borderBottomColor: COLORS.divider,
-                    opacity: addingSelection ? 0.6 : 1,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 8,
-                      backgroundColor: COLORS.accent,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <AppText
-                      variant="body"
-                      weight="bold"
-                      style={{ color: '#fff' }}
-                    >
-                      +
-                    </AppText>
-                  </View>
-                  <AppText variant="body" weight="medium">
-                    New Playlist
-                  </AppText>
-                </Pressable>
-                {playlists.map((playlist) => (
-                  <Pressable
-                    key={playlist.id}
-                    disabled={addingSelection}
-                    onPress={() => addSelectionToPlaylist(playlist.id)}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 14,
-                      paddingVertical: 14,
-                      borderBottomWidth: 0.5,
-                      borderBottomColor: COLORS.divider,
-                      opacity: addingSelection ? 0.6 : 1,
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 8,
-                        backgroundColor: COLORS.surfaceMuted,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <AppIcon
-                        name="playlist"
-                        size={18}
-                        color={COLORS.textMuted}
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <AppText variant="body" weight="medium" numberOfLines={1}>
-                        {playlist.name}
-                      </AppText>
-                      <AppText
-                        variant="caption"
-                        style={{ color: COLORS.textMuted }}
-                      >
-                        {playlist.track_count} tracks
-                      </AppText>
-                    </View>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </AnimatedModal>
     </SafeAreaView>
   );
 }

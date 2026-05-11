@@ -1,21 +1,16 @@
+import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  FlatList,
-  type ListRenderItem,
-  Pressable,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { AppText } from '@/components/ui/AppText';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { SourcePill } from '@/components/ui/SourcePill';
 import { COLORS } from '@/constants/colors';
-import { SPACING } from '@/constants/spacing';
 import type { SourceKey } from '@/constants/sources';
+import { SPACING } from '@/constants/spacing';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useI18n } from '@/hooks/useI18n';
@@ -25,6 +20,10 @@ import type { Track } from '@/types/domain';
 
 const SOURCE_KEYS: SourceKey[] = ['deezer', 'soundcloud'];
 const DEBOUNCE_MS = 500;
+
+function TrackSeparator() {
+  return <View style={{ height: 12 }} />;
+}
 
 export default function SearchScreen() {
   const { t } = useI18n();
@@ -216,24 +215,21 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <FlatList
+      <FlashList
         data={filteredResults}
         keyExtractor={keyExtractor}
         renderItem={renderTrack}
         ListHeaderComponent={ListHeader}
+        ListHeaderComponentStyle={{ marginBottom: 12 }}
         ListEmptyComponent={ListEmpty}
+        ItemSeparatorComponent={TrackSeparator}
         contentContainerStyle={{
           paddingHorizontal: SPACING.lg,
           paddingTop: SPACING.md,
           paddingBottom: 100,
-          gap: 12,
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        initialNumToRender={12}
-        maxToRenderPerBatch={10}
-        windowSize={11}
-        removeClippedSubviews
       />
     </SafeAreaView>
   );

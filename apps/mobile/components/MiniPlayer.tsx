@@ -1,4 +1,11 @@
+import { useEffect } from 'react';
 import { Image, Pressable, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { SourceBadge } from '@/components/SourceBadge';
@@ -15,6 +22,18 @@ export function MiniPlayer() {
   const progress = usePlayerStore((s) => s.progress);
   const togglePlayback = usePlayerStore((s) => s.togglePlayback);
   const accentColor = useDynamicAccent();
+  const progressWidth = useSharedValue(Math.max(progress * 100, 0.5));
+
+  useEffect(() => {
+    progressWidth.value = withTiming(Math.max(progress * 100, 0.5), {
+      duration: 250,
+      easing: Easing.linear,
+    });
+  }, [progress, progressWidth]);
+
+  const progressStyle = useAnimatedStyle(() => ({
+    width: `${progressWidth.value}%`,
+  }));
 
   if (!currentTrack) return null;
 
@@ -38,12 +57,14 @@ export function MiniPlayer() {
           backgroundColor: COLORS.divider,
         }}
       >
-        <View
-          style={{
-            height: 1,
-            width: `${Math.max(progress * 100, 0.5)}%`,
-            backgroundColor: accentColor,
-          }}
+        <Animated.View
+          style={[
+            {
+              height: 1,
+              backgroundColor: accentColor,
+            },
+            progressStyle,
+          ]}
         />
       </View>
 

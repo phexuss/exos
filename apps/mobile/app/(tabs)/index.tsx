@@ -1,24 +1,19 @@
+import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { memo, useCallback, useEffect, useState } from 'react';
-import {
-  FlatList,
-  Image,
-  type ListRenderItem,
-  Pressable,
-  View,
-} from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { SourceBadge } from '@/components/SourceBadge';
 import { AppIcon } from '@/components/ui/AppIcon';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useI18n } from '@/hooks/useI18n';
 import { mapDeezerTrackToTrack } from '@/services/adapters/search.adapter';
 import { getChart } from '@/services/api/search';
-import { type SimilarTrack, getSimilarTracks } from '@/services/api/similar';
+import { getSimilarTracks, type SimilarTrack } from '@/services/api/similar';
 import { getRecentlyPlayed } from '@/services/db/database';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -217,7 +212,11 @@ function ArtistCardComponent({
       )}
       <AppText
         variant="caption"
-        style={{ color: COLORS.textSecondary, fontSize: 11, textAlign: 'center' }}
+        style={{
+          color: COLORS.textSecondary,
+          fontSize: 11,
+          textAlign: 'center',
+        }}
         numberOfLines={1}
       >
         {artist.name}
@@ -345,6 +344,10 @@ function SectionHeader({ label }: { label: string }) {
   );
 }
 
+function HorizontalSeparator() {
+  return <View style={{ width: 14 }} />;
+}
+
 export default function HomeScreen() {
   const { t } = useI18n();
   const play = usePlayerStore((s) => s.play);
@@ -356,7 +359,9 @@ export default function HomeScreen() {
   const [chartArtists, setChartArtists] = useState<DeezerArtist[]>([]);
   const [chartAlbums, setChartAlbums] = useState<DeezerAlbum[]>([]);
   const [chartLoading, setChartLoading] = useState(true);
-  const [similarTracks, setSimilarTracks] = useState<SimilarTrack[] | null>(null);
+  const [similarTracks, setSimilarTracks] = useState<SimilarTrack[] | null>(
+    null,
+  );
   const [similarLoading, setSimilarLoading] = useState(false);
   const [similarArtist, setSimilarArtist] = useState('');
 
@@ -381,7 +386,9 @@ export default function HomeScreen() {
       const [chart, similar] = await Promise.all([
         getChart().catch(() => null),
         recent[0]
-          ? getSimilarTracks(recent[0].artist.name, recent[0].title).catch(() => null)
+          ? getSimilarTracks(recent[0].artist.name, recent[0].title).catch(
+              () => null,
+            )
           : Promise.resolve(null),
       ]);
 
@@ -494,8 +501,14 @@ export default function HomeScreen() {
   );
 
   const keyExtractor = useCallback((item: Track) => item.id, []);
-  const artistKeyExtractor = useCallback((item: DeezerArtist) => String(item.id), []);
-  const albumKeyExtractor = useCallback((item: DeezerAlbum) => String(item.id), []);
+  const artistKeyExtractor = useCallback(
+    (item: DeezerArtist) => String(item.id),
+    [],
+  );
+  const albumKeyExtractor = useCallback(
+    (item: DeezerAlbum) => String(item.id),
+    [],
+  );
 
   return (
     <ScreenContainer>
@@ -532,16 +545,14 @@ export default function HomeScreen() {
         {chartLoading ? (
           <TrackSkeletonRow count={2} />
         ) : recentTracks.length > 0 ? (
-          <FlatList
+          <FlashList
             data={recentTracks}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={keyExtractor}
-            contentContainerStyle={{ gap: 14 }}
             renderItem={renderRecentCard}
-            initialNumToRender={6}
-            maxToRenderPerBatch={6}
-            windowSize={5}
+            ItemSeparatorComponent={HorizontalSeparator}
+            style={{ height: 218 }}
           />
         ) : null}
       </View>
@@ -554,16 +565,14 @@ export default function HomeScreen() {
           {similarLoading ? (
             <SimilarSkeletonRow count={4} />
           ) : (
-            <FlatList
-              data={similarTracks!}
+            <FlashList
+              data={similarTracks ?? []}
               horizontal
               showsHorizontalScrollIndicator={false}
               keyExtractor={similarKeyExtractor}
-              contentContainerStyle={{ gap: 14 }}
               renderItem={renderSimilarCard}
-              initialNumToRender={5}
-              maxToRenderPerBatch={5}
-              windowSize={5}
+              ItemSeparatorComponent={HorizontalSeparator}
+              style={{ height: 182 }}
             />
           )}
         </View>
@@ -574,16 +583,14 @@ export default function HomeScreen() {
         {chartLoading ? (
           <TrackSkeletonRow count={3} />
         ) : (
-          <FlatList
+          <FlashList
             data={chartTracks}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={keyExtractor}
-            contentContainerStyle={{ gap: 14 }}
             renderItem={renderChartCard}
-            initialNumToRender={6}
-            maxToRenderPerBatch={6}
-            windowSize={5}
+            ItemSeparatorComponent={HorizontalSeparator}
+            style={{ height: 218 }}
           />
         )}
       </View>
@@ -593,16 +600,14 @@ export default function HomeScreen() {
         {chartLoading ? (
           <ArtistSkeletonRow count={4} />
         ) : (
-          <FlatList
+          <FlashList
             data={chartArtists}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={artistKeyExtractor}
-            contentContainerStyle={{ gap: 14 }}
             renderItem={renderArtistCard}
-            initialNumToRender={8}
-            maxToRenderPerBatch={8}
-            windowSize={5}
+            ItemSeparatorComponent={HorizontalSeparator}
+            style={{ height: 92 }}
           />
         )}
       </View>
@@ -612,16 +617,14 @@ export default function HomeScreen() {
         {chartLoading ? (
           <AlbumSkeletonRow count={3} />
         ) : (
-          <FlatList
+          <FlashList
             data={chartAlbums}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={albumKeyExtractor}
-            contentContainerStyle={{ gap: 14 }}
             renderItem={renderAlbumCard}
-            initialNumToRender={6}
-            maxToRenderPerBatch={6}
-            windowSize={5}
+            ItemSeparatorComponent={HorizontalSeparator}
+            style={{ height: 150 }}
           />
         )}
       </View>

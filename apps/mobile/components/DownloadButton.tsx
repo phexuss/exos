@@ -1,6 +1,7 @@
-import { useCallback } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, View } from 'react-native';
 
+import { AppDialog } from '@/components/AppDialog';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
@@ -22,6 +23,7 @@ type Props = {
 
 export function DownloadButton({ track, size = 20, onDownloaded }: Props) {
   const { t } = useI18n();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isDownloaded = useDownloadStore((s) => s.downloadedIds.has(track.id));
   const markTrackDownloaded = usePlayerStore((s) => s.markTrackDownloaded);
 
@@ -56,72 +58,87 @@ export function DownloadButton({ track, size = 20, onDownloaded }: Props) {
               ? e.message
               : t('common.error');
       console.warn('[Download]', e);
-      Alert.alert(t('common.error'), message);
+      setErrorMessage(message);
     }
   }, [track, status, markTrackDownloaded, onDownloaded, t]);
 
   const indicatorSize = size + 4;
 
   return (
-    <Pressable
-      onPress={handlePress}
-      hitSlop={10}
-      style={{
-        width: size + 16,
-        height: size + 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {status === 'loading' ? (
-        <View style={{ width: indicatorSize, height: indicatorSize }}>
-          <View
-            style={{
-              position: 'absolute',
-              width: indicatorSize,
-              height: indicatorSize,
-              borderRadius: indicatorSize / 2,
-              borderWidth: 2,
-              borderColor: COLORS.border,
-            }}
+    <>
+      <Pressable
+        onPress={handlePress}
+        hitSlop={10}
+        style={{
+          width: size + 16,
+          height: size + 16,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {status === 'loading' ? (
+          <View style={{ width: indicatorSize, height: indicatorSize }}>
+            <View
+              style={{
+                position: 'absolute',
+                width: indicatorSize,
+                height: indicatorSize,
+                borderRadius: indicatorSize / 2,
+                borderWidth: 2,
+                borderColor: COLORS.border,
+              }}
+            />
+            <View
+              style={{
+                position: 'absolute',
+                width: indicatorSize,
+                height: indicatorSize,
+                borderRadius: indicatorSize / 2,
+                borderWidth: 2,
+                borderColor: COLORS.accent,
+                borderTopColor: progress > 0.99 ? COLORS.accent : 'transparent',
+                borderRightColor:
+                  progress > 0.25 ? COLORS.accent : 'transparent',
+                borderBottomColor:
+                  progress > 0.5 ? COLORS.accent : 'transparent',
+                borderLeftColor:
+                  progress > 0.75 ? COLORS.accent : 'transparent',
+                transform: [{ rotate: '-90deg' }],
+              }}
+            />
+            <AppText
+              variant="caption"
+              style={{
+                position: 'absolute',
+                width: indicatorSize,
+                height: indicatorSize,
+                textAlign: 'center',
+                lineHeight: indicatorSize,
+                fontSize: 8,
+                color: COLORS.textMuted,
+              }}
+            >
+              {Math.round(progress * 100)}
+            </AppText>
+          </View>
+        ) : (
+          <AppIcon
+            name={status === 'done' ? 'check' : 'download'}
+            size={size}
+            color={status === 'done' ? COLORS.accent : COLORS.textMuted}
           />
-          <View
-            style={{
-              position: 'absolute',
-              width: indicatorSize,
-              height: indicatorSize,
-              borderRadius: indicatorSize / 2,
-              borderWidth: 2,
-              borderColor: COLORS.accent,
-              borderTopColor: progress > 0.99 ? COLORS.accent : 'transparent',
-              borderRightColor: progress > 0.25 ? COLORS.accent : 'transparent',
-              borderBottomColor: progress > 0.5 ? COLORS.accent : 'transparent',
-              borderLeftColor: progress > 0.75 ? COLORS.accent : 'transparent',
-              transform: [{ rotate: '-90deg' }],
-            }}
-          />
-          <AppText
-            variant="caption"
-            style={{
-              position: 'absolute',
-              width: indicatorSize,
-              height: indicatorSize,
-              textAlign: 'center',
-              lineHeight: indicatorSize,
-              fontSize: 8,
-              color: COLORS.textMuted,
-            }}
-          >
-            {Math.round(progress * 100)}
-          </AppText>
-        </View>
-      ) : (
-        <AppIcon
-          name={status === 'done' ? 'check' : 'download'}
-          size={size}
-          color={status === 'done' ? COLORS.accent : COLORS.textMuted}
-        />
-      )}
-    </Pressable>
+        )}
+      </Pressable>
+
+      <AppDialog
+        visible={!!errorMessage}
+        title={t('common.error')}
+        message={errorMessage}
+        confirmLabel={t('common.close')}
+        showCancel={false}
+        onConfirm={() => setErrorMessage(null)}
+        onClose={() => setErrorMessage(null)}
+      />
+    </>
   );
 }

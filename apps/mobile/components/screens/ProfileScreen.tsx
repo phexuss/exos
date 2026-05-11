@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { AppDialog } from '@/components/AppDialog';
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 import { EditFieldModal } from '@/components/auth/EditFieldModal';
 import { AppIcon } from '@/components/ui/AppIcon';
@@ -72,30 +73,37 @@ export function ProfileScreen() {
 
   const [editing, setEditing] = useState<EditableField | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [notice, setNotice] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   const handleLogout = () => {
-    Alert.alert(
-      t('profile.logoutConfirmTitle'),
-      t('profile.logoutConfirmDesc'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('profile.logout'),
-          style: 'destructive',
-          onPress: async () => {
-            closeProfile();
-            await logout();
-          },
-        },
-      ],
-    );
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      setShowLogoutConfirm(false);
+      closeProfile();
+      await logout();
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   const handleSaveField = async (field: EditableField, value: string) => {
     try {
       await updateProfile({ [field]: value });
       if (field === 'email') {
-        Alert.alert(t('common.save'), t('profile.emailReverify'));
+        setNotice({
+          title: t('common.save'),
+          message: t('profile.emailReverify'),
+        });
       }
     } catch (e) {
       const message = e instanceof ApiError ? e.message : (e as Error).message;
@@ -109,7 +117,10 @@ export function ProfileScreen() {
   ) => {
     try {
       await changePassword(currentPassword, newPassword);
-      Alert.alert(t('common.save'), t('profile.passwordChanged'));
+      setNotice({
+        title: t('common.save'),
+        message: t('profile.passwordChanged'),
+      });
     } catch (e) {
       const message = e instanceof ApiError ? e.message : (e as Error).message;
       throw new Error(message);
@@ -398,6 +409,28 @@ export function ProfileScreen() {
         visible={showChangePassword}
         onClose={() => setShowChangePassword(false)}
         onSubmit={handleChangePassword}
+      />
+      <AppDialog
+        visible={showLogoutConfirm}
+        title={t('profile.logoutConfirmTitle')}
+        message={t('profile.logoutConfirmDesc')}
+        cancelLabel={t('common.cancel')}
+        confirmLabel={t('profile.logout')}
+        confirmTone="danger"
+        busy={loggingOut}
+        onClose={() => {
+          if (!loggingOut) setShowLogoutConfirm(false);
+        }}
+        onConfirm={confirmLogout}
+      />
+      <AppDialog
+        visible={!!notice}
+        title={notice?.title ?? ''}
+        message={notice?.message}
+        confirmLabel={t('common.close')}
+        showCancel={false}
+        onConfirm={() => setNotice(null)}
+        onClose={() => setNotice(null)}
       />
     </>
   );

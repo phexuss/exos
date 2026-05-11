@@ -1,10 +1,9 @@
+import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Image,
-  type ListRenderItem,
   Pressable,
   ScrollView,
   View,
@@ -303,16 +302,12 @@ export function ArtistScreen({ id }: Props) {
       edges={['bottom']}
       style={{ flex: 1, backgroundColor: COLORS.background }}
     >
-      <FlatList
+      <FlashList
         data={tracks}
         keyExtractor={keyExtractor}
         renderItem={renderTrack}
         ListHeaderComponent={ListHeader}
         contentContainerStyle={{ paddingBottom: 100 }}
-        initialNumToRender={12}
-        maxToRenderPerBatch={10}
-        windowSize={11}
-        removeClippedSubviews
       />
     </SafeAreaView>
   );

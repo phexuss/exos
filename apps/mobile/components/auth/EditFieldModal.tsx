@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 
+import { AnimatedModal } from '@/components/AnimatedModal';
 import { AuthTextField } from '@/components/auth/AuthTextField';
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { AppText } from '@/components/ui/AppText';
@@ -71,64 +66,54 @@ export function EditFieldModal({
   };
 
   return (
-    <Modal
+    <AnimatedModal
       visible={visible}
-      transparent
-      animationType="fade"
       onRequestClose={onClose}
+      onBackdropPress={onClose}
+      backdropStyle={{ paddingHorizontal: SPACING.xxl }}
     >
-      <Pressable
-        onPress={onClose}
-        style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          justifyContent: 'center',
-          paddingHorizontal: SPACING.xxl,
-        }}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        <View
+          style={{
+            backgroundColor: COLORS.surface,
+            borderRadius: 16,
+            padding: SPACING.xxl,
+            gap: SPACING.lg,
+          }}
         >
-          <Pressable
-            style={{
-              backgroundColor: COLORS.surface,
-              borderRadius: 16,
-              padding: SPACING.xxl,
-              gap: SPACING.lg,
-            }}
-          >
-            <AppText variant="title" weight="bold">
-              {title}
-            </AppText>
-            <AuthTextField
-              label={label}
-              value={value}
-              onChangeText={setValue}
-              placeholder={placeholder}
-              keyboardType={keyboardType}
-              autoCapitalize={autoCapitalize}
-              maxLength={maxLength}
-              error={error}
-            />
-            <View style={{ flexDirection: 'row', gap: SPACING.md }}>
-              <View style={{ flex: 1 }}>
-                <PrimaryButton
-                  label={t('common.cancel')}
-                  onPress={onClose}
-                  variant="secondary"
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <PrimaryButton
-                  label={submitting ? t('common.saving') : t('common.save')}
-                  onPress={handleSubmit}
-                  loading={submitting}
-                />
-              </View>
+          <AppText variant="title" weight="bold">
+            {title}
+          </AppText>
+          <AuthTextField
+            label={label}
+            value={value}
+            onChangeText={setValue}
+            placeholder={placeholder}
+            keyboardType={keyboardType}
+            autoCapitalize={autoCapitalize}
+            maxLength={maxLength}
+            error={error}
+          />
+          <View style={{ flexDirection: 'row', gap: SPACING.md }}>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton
+                label={t('common.cancel')}
+                onPress={onClose}
+                variant="secondary"
+              />
             </View>
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Pressable>
-    </Modal>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton
+                label={submitting ? t('common.saving') : t('common.save')}
+                onPress={handleSubmit}
+                loading={submitting}
+              />
+            </View>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </AnimatedModal>
   );
 }

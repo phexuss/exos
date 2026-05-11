@@ -1,12 +1,6 @@
+import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  type ListRenderItem,
-  Pressable,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TrackItem } from '@/components/TrackItem';
@@ -185,16 +179,12 @@ export function AlbumScreen({ id, titleHint }: Props) {
       edges={['top', 'bottom']}
       style={{ flex: 1, backgroundColor: COLORS.background }}
     >
-      <FlatList
+      <FlashList
         data={album.tracks}
         keyExtractor={keyExtractor}
         renderItem={renderTrack}
         ListHeaderComponent={ListHeader}
         contentContainerStyle={{ paddingBottom: 100 }}
-        initialNumToRender={15}
-        maxToRenderPerBatch={10}
-        windowSize={11}
-        removeClippedSubviews
       />
     </SafeAreaView>
   );

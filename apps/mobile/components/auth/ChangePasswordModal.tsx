@@ -1,13 +1,7 @@
 import { useEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 
+import { AnimatedModal } from '@/components/AnimatedModal';
 import { AuthTextField } from '@/components/auth/AuthTextField';
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { AppText } from '@/components/ui/AppText';
@@ -70,83 +64,73 @@ export function ChangePasswordModal({
   };
 
   return (
-    <Modal
+    <AnimatedModal
       visible={visible}
-      transparent
-      animationType="fade"
       onRequestClose={onClose}
+      onBackdropPress={onClose}
+      backdropStyle={{ paddingHorizontal: SPACING.xxl }}
     >
-      <Pressable
-        onPress={onClose}
-        style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          justifyContent: 'center',
-          paddingHorizontal: SPACING.xxl,
-        }}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        <View
+          style={{
+            backgroundColor: COLORS.surface,
+            borderRadius: 16,
+            padding: SPACING.xxl,
+          }}
         >
-          <Pressable
-            style={{
-              backgroundColor: COLORS.surface,
-              borderRadius: 16,
-              padding: SPACING.xxl,
-            }}
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ gap: SPACING.lg }}
           >
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ gap: SPACING.lg }}
-            >
-              <AppText variant="title" weight="bold">
-                {t('profile.changePassword')}
-              </AppText>
-              <AuthTextField
-                label={t('profile.currentPassword')}
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                secureTextEntry
-                autoComplete="password"
-                textContentType="password"
-              />
-              <AuthTextField
-                label={t('profile.newPassword')}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry
-                autoComplete="new-password"
-                textContentType="password"
-              />
-              <AuthTextField
-                label={t('profile.confirmPassword')}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                autoComplete="new-password"
-                textContentType="password"
-                error={error}
-              />
-              <View style={{ flexDirection: 'row', gap: SPACING.md }}>
-                <View style={{ flex: 1 }}>
-                  <PrimaryButton
-                    label={t('common.cancel')}
-                    onPress={onClose}
-                    variant="secondary"
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <PrimaryButton
-                    label={submitting ? t('common.saving') : t('common.save')}
-                    onPress={handleSubmit}
-                    loading={submitting}
-                  />
-                </View>
+            <AppText variant="title" weight="bold">
+              {t('profile.changePassword')}
+            </AppText>
+            <AuthTextField
+              label={t('profile.currentPassword')}
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              secureTextEntry
+              autoComplete="password"
+              textContentType="password"
+            />
+            <AuthTextField
+              label={t('profile.newPassword')}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+              autoComplete="new-password"
+              textContentType="password"
+            />
+            <AuthTextField
+              label={t('profile.confirmPassword')}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoComplete="new-password"
+              textContentType="password"
+              error={error}
+            />
+            <View style={{ flexDirection: 'row', gap: SPACING.md }}>
+              <View style={{ flex: 1 }}>
+                <PrimaryButton
+                  label={t('common.cancel')}
+                  onPress={onClose}
+                  variant="secondary"
+                />
               </View>
-            </ScrollView>
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Pressable>
-    </Modal>
+              <View style={{ flex: 1 }}>
+                <PrimaryButton
+                  label={submitting ? t('common.saving') : t('common.save')}
+                  onPress={handleSubmit}
+                  loading={submitting}
+                />
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </AnimatedModal>
   );
 }

@@ -1,17 +1,12 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  LayoutChangeEvent,
-  Modal,
-  Pressable,
-  ScrollView,
-  View,
-} from 'react-native';
+import { LayoutChangeEvent, Pressable, ScrollView, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
 
+import { AnimatedModal } from '@/components/AnimatedModal';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { useI18n } from '@/hooks/useI18n';
@@ -213,8 +208,7 @@ export function LyricsView({
   }, []);
 
   useEffect(() => {
-    if (containerH <= 0 || currentLineIndex < 0 || !scrollRef.current)
-      return;
+    if (containerH <= 0 || currentLineIndex < 0 || !scrollRef.current) return;
 
     let offset = 0;
     for (let i = 0; i < currentLineIndex; i++) {
@@ -265,73 +259,60 @@ export function LyricsView({
             {t('lyricsFaq.why')}
           </AppText>
         </Pressable>
-        <Modal
+        <AnimatedModal
           visible={showLyricsFaq}
-          transparent
-          animationType="fade"
           onRequestClose={() => setShowLyricsFaq(false)}
+          onBackdropPress={() => setShowLyricsFaq(false)}
+          backdropStyle={{ alignItems: 'center' }}
+          contentStyle={{
+            backgroundColor: COLORS.surface,
+            borderRadius: 16,
+            padding: 24,
+            marginHorizontal: 32,
+            gap: 12,
+            borderWidth: 0.5,
+            borderColor: COLORS.border,
+          }}
         >
-          <Pressable
-            style={{
-              flex: 1,
-              backgroundColor: 'rgba(0,0,0,0.6)',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-            onPress={() => setShowLyricsFaq(false)}
+          <AppText
+            variant="body"
+            weight="bold"
+            style={{ color: COLORS.accent, fontSize: 16 }}
           >
-            <Pressable
-              style={{
-                backgroundColor: COLORS.surface,
-                borderRadius: 16,
-                padding: 24,
-                marginHorizontal: 32,
-                gap: 12,
-                borderWidth: 0.5,
-                borderColor: COLORS.border,
-              }}
+            {t('lyricsFaq.title')}
+          </AppText>
+          <AppText
+            variant="body"
+            style={{ color: COLORS.textSecondary, lineHeight: 20 }}
+          >
+            {t('lyricsFaq.body1')}
+          </AppText>
+          <AppText
+            variant="body"
+            style={{ color: COLORS.textSecondary, lineHeight: 20 }}
+          >
+            {t('lyricsFaq.body2')}
+          </AppText>
+          <Pressable
+            onPress={() => setShowLyricsFaq(false)}
+            style={{
+              alignSelf: 'flex-end',
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 8,
+              backgroundColor: 'rgba(99, 102, 241, 0.15)',
+              marginTop: 4,
+            }}
+          >
+            <AppText
+              variant="caption"
+              weight="medium"
+              style={{ color: COLORS.accent }}
             >
-              <AppText
-                variant="body"
-                weight="bold"
-                style={{ color: COLORS.accent, fontSize: 16 }}
-              >
-                {t('lyricsFaq.title')}
-              </AppText>
-              <AppText
-                variant="body"
-                style={{ color: COLORS.textSecondary, lineHeight: 20 }}
-              >
-                {t('lyricsFaq.body1')}
-              </AppText>
-              <AppText
-                variant="body"
-                style={{ color: COLORS.textSecondary, lineHeight: 20 }}
-              >
-                {t('lyricsFaq.body2')}
-              </AppText>
-              <Pressable
-                onPress={() => setShowLyricsFaq(false)}
-                style={{
-                  alignSelf: 'flex-end',
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  borderRadius: 8,
-                  backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                  marginTop: 4,
-                }}
-              >
-                <AppText
-                  variant="caption"
-                  weight="medium"
-                  style={{ color: COLORS.accent }}
-                >
-                  {t('lyricsFaq.dismiss')}
-                </AppText>
-              </Pressable>
-            </Pressable>
+              {t('lyricsFaq.dismiss')}
+            </AppText>
           </Pressable>
-        </Modal>
+        </AnimatedModal>
       </View>
     );
   }

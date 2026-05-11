@@ -1,28 +1,23 @@
+import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  FlatList,
-  Image,
-  type ListRenderItem,
-  Modal,
-  Pressable,
-  TextInput,
-  View,
-} from 'react-native';
+import { Image, Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AnimatedModal } from '@/components/AnimatedModal';
+import { AppDialog } from '@/components/AppDialog';
 import { TrackActionsSheet } from '@/components/TrackActionsSheet';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { AppText } from '@/components/ui/AppText';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import {
-  getPlaylistTracks,
+  deletePlaylist,
   getPlaylists,
+  getPlaylistTracks,
   type PlaylistRow,
   removeTrackFromPlaylist,
   renamePlaylist,
@@ -49,6 +44,12 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
   const [showEdit, setShowEdit] = useState(false);
   const [editName, setEditName] = useState('');
   const [editCover, setEditCover] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingPlaylist, setDeletingPlaylist] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [removingTrack, setRemovingTrack] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -92,23 +93,27 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
 
   const handleRemoveFromPlaylist = useCallback(() => {
     if (!selectedTrack || !id) return;
-    Alert.alert(
-      'Remove from Playlist',
-      `Remove "${selectedTrack.title}" from this playlist?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            await removeTrackFromPlaylist(id, selectedTrack.id);
-            setSelectedTrack(null);
-            load();
-          },
-        },
-      ],
-    );
-  }, [selectedTrack, id, load]);
+    setRemoveError(null);
+    setShowRemoveConfirm(true);
+  }, [selectedTrack, id]);
+
+  const confirmRemoveFromPlaylist = useCallback(async () => {
+    if (!selectedTrack || !id || removingTrack) return;
+
+    setRemovingTrack(true);
+    setRemoveError(null);
+    try {
+      await removeTrackFromPlaylist(id, selectedTrack.id);
+      setShowRemoveConfirm(false);
+      setSelectedTrack(null);
+      load();
+    } catch (error) {
+      if (__DEV__) console.warn('[Playlist] Remove track failed:', error);
+      setRemoveError('Could not remove track from playlist.');
+    } finally {
+      setRemovingTrack(false);
+    }
+  }, [selectedTrack, id, removingTrack, load]);
 
   const openEditModal = useCallback(() => {
     if (!playlist) return;
@@ -129,6 +134,29 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
     setShowEdit(false);
     load();
   }, [id, playlist, editName, editCover, load]);
+
+  const handleDeletePlaylist = useCallback(() => {
+    setDeleteError(null);
+    setShowDeleteConfirm(true);
+  }, []);
+
+  const confirmDeletePlaylist = useCallback(async () => {
+    if (!id || !playlist || deletingPlaylist) return;
+
+    setDeletingPlaylist(true);
+    setDeleteError(null);
+    try {
+      await deletePlaylist(id);
+      setShowDeleteConfirm(false);
+      setShowEdit(false);
+      closePlaylist();
+    } catch (error) {
+      if (__DEV__) console.warn('[Playlist] Delete failed:', error);
+      setDeleteError('Could not delete playlist.');
+    } finally {
+      setDeletingPlaylist(false);
+    }
+  }, [id, playlist, deletingPlaylist, closePlaylist]);
 
   const pickCoverFromGallery = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -190,16 +218,12 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
         </AppText>
       </View>
 
-      <FlatList
+      <FlashList
         data={tracks}
         keyExtractor={keyExtractor}
         renderItem={renderTrack}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
-        initialNumToRender={12}
-        maxToRenderPerBatch={10}
-        windowSize={11}
-        removeClippedSubviews
         ListEmptyComponent={
           <View
             style={{
@@ -221,7 +245,10 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
       <TrackActionsSheet
         track={selectedTrack}
         visible={!!selectedTrack}
-        onClose={() => setSelectedTrack(null)}
+        onClose={() => {
+          setShowRemoveConfirm(false);
+          setSelectedTrack(null);
+        }}
         onDeleted={load}
         extraAction={{
           label: 'Remove from Playlist',
@@ -231,138 +258,169 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
         }}
       />
 
-      <Modal
+      <AppDialog
+        visible={showRemoveConfirm}
+        title="Remove from playlist?"
+        message={
+          selectedTrack
+            ? `Remove "${selectedTrack.title}" from this playlist?`
+            : null
+        }
+        error={removeError}
+        cancelLabel="Cancel"
+        confirmLabel="Remove"
+        busyLabel="Removing..."
+        confirmTone="danger"
+        busy={removingTrack}
+        onClose={() => setShowRemoveConfirm(false)}
+        onConfirm={confirmRemoveFromPlaylist}
+      />
+
+      <AnimatedModal
         visible={showEdit}
-        transparent
-        animationType="fade"
         onRequestClose={() => setShowEdit(false)}
+        onBackdropPress={() => setShowEdit(false)}
+        backdropStyle={{ paddingHorizontal: 24 }}
+        contentStyle={{
+          backgroundColor: COLORS.surface,
+          borderRadius: 16,
+          padding: 20,
+          gap: 16,
+        }}
       >
+        <AppText variant="title" weight="bold" style={{ textAlign: 'center' }}>
+          Edit Playlist
+        </AppText>
+
         <Pressable
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            justifyContent: 'center',
-            paddingHorizontal: 24,
-          }}
-          onPress={() => setShowEdit(false)}
+          onPress={pickCoverFromGallery}
+          style={{ alignSelf: 'center' }}
         >
+          {editCover ? (
+            <Image
+              source={{ uri: editCover }}
+              style={{
+                width: 100,
+                height: 100,
+                borderRadius: 12,
+              }}
+            />
+          ) : (
+            <View
+              style={{
+                width: 100,
+                height: 100,
+                borderRadius: 12,
+                backgroundColor: COLORS.surfaceMuted,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: COLORS.border,
+                borderStyle: 'dashed',
+              }}
+            >
+              <AppIcon name="music" size={32} color={COLORS.textMuted} />
+              <AppText
+                variant="caption"
+                style={{
+                  color: COLORS.textMuted,
+                  marginTop: 4,
+                  fontSize: 10,
+                }}
+              >
+                Add Cover
+              </AppText>
+            </View>
+          )}
+        </Pressable>
+
+        <TextInput
+          value={editName}
+          onChangeText={setEditName}
+          placeholder="Playlist name"
+          placeholderTextColor={COLORS.textMuted}
+          autoFocus
+          style={{
+            borderWidth: 1,
+            borderColor: COLORS.border,
+            borderRadius: 10,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            color: COLORS.textPrimary,
+            fontFamily: FONT_FAMILY.regular,
+            fontSize: 15,
+          }}
+        />
+
+        <Pressable
+          onPress={handleDeletePlaylist}
+          style={{
+            paddingVertical: 12,
+            borderRadius: 10,
+            alignItems: 'center',
+            backgroundColor: 'rgba(248, 113, 113, 0.16)',
+            borderWidth: 0.5,
+            borderColor: 'rgba(248, 113, 113, 0.35)',
+          }}
+        >
+          <AppText
+            variant="body"
+            weight="medium"
+            style={{ color: COLORS.danger }}
+          >
+            Delete Playlist
+          </AppText>
+        </Pressable>
+
+        <View style={{ flexDirection: 'row', gap: 12 }}>
           <Pressable
+            onPress={() => setShowEdit(false)}
             style={{
-              backgroundColor: COLORS.surface,
-              borderRadius: 16,
-              padding: 20,
-              gap: 16,
+              flex: 1,
+              paddingVertical: 12,
+              borderRadius: 10,
+              alignItems: 'center',
+              backgroundColor: COLORS.surfaceMuted,
             }}
           >
             <AppText
-              variant="title"
-              weight="bold"
-              style={{ textAlign: 'center' }}
+              variant="body"
+              weight="medium"
+              style={{ color: COLORS.textSecondary }}
             >
-              Edit Playlist
+              Cancel
             </AppText>
-
-            <Pressable
-              onPress={pickCoverFromGallery}
-              style={{ alignSelf: 'center' }}
-            >
-              {editCover ? (
-                <Image
-                  source={{ uri: editCover }}
-                  style={{
-                    width: 100,
-                    height: 100,
-                    borderRadius: 12,
-                  }}
-                />
-              ) : (
-                <View
-                  style={{
-                    width: 100,
-                    height: 100,
-                    borderRadius: 12,
-                    backgroundColor: COLORS.surfaceMuted,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: 1,
-                    borderColor: COLORS.border,
-                    borderStyle: 'dashed',
-                  }}
-                >
-                  <AppIcon name="music" size={32} color={COLORS.textMuted} />
-                  <AppText
-                    variant="caption"
-                    style={{
-                      color: COLORS.textMuted,
-                      marginTop: 4,
-                      fontSize: 10,
-                    }}
-                  >
-                    Add Cover
-                  </AppText>
-                </View>
-              )}
-            </Pressable>
-
-            <TextInput
-              value={editName}
-              onChangeText={setEditName}
-              placeholder="Playlist name"
-              placeholderTextColor={COLORS.textMuted}
-              autoFocus
-              style={{
-                borderWidth: 1,
-                borderColor: COLORS.border,
-                borderRadius: 10,
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-                color: COLORS.textPrimary,
-                fontFamily: FONT_FAMILY.regular,
-                fontSize: 15,
-              }}
-            />
-
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <Pressable
-                onPress={() => setShowEdit(false)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 12,
-                  borderRadius: 10,
-                  alignItems: 'center',
-                  backgroundColor: COLORS.surfaceMuted,
-                }}
-              >
-                <AppText
-                  variant="body"
-                  weight="medium"
-                  style={{ color: COLORS.textSecondary }}
-                >
-                  Cancel
-                </AppText>
-              </Pressable>
-              <Pressable
-                onPress={handleSaveEdit}
-                style={{
-                  flex: 1,
-                  paddingVertical: 12,
-                  borderRadius: 10,
-                  alignItems: 'center',
-                  backgroundColor: COLORS.accent,
-                }}
-              >
-                <AppText
-                  variant="body"
-                  weight="medium"
-                  style={{ color: '#fff' }}
-                >
-                  Save
-                </AppText>
-              </Pressable>
-            </View>
           </Pressable>
-        </Pressable>
-      </Modal>
+          <Pressable
+            onPress={handleSaveEdit}
+            style={{
+              flex: 1,
+              paddingVertical: 12,
+              borderRadius: 10,
+              alignItems: 'center',
+              backgroundColor: COLORS.accent,
+            }}
+          >
+            <AppText variant="body" weight="medium" style={{ color: '#fff' }}>
+              Save
+            </AppText>
+          </Pressable>
+        </View>
+      </AnimatedModal>
+
+      <AppDialog
+        visible={showDeleteConfirm}
+        title="Delete playlist?"
+        message={`Delete "${playlist.name}"? Tracks will stay downloaded.`}
+        error={deleteError}
+        cancelLabel="Cancel"
+        confirmLabel="Delete"
+        busyLabel="Deleting..."
+        confirmTone="danger"
+        busy={deletingPlaylist}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDeletePlaylist}
+      />
     </SafeAreaView>
   );
 }
