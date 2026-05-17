@@ -150,7 +150,7 @@ export function ProfileScreen() {
   return (
     <>
       <ScreenContainer>
-        {/* Header */}
+        {}
         <View
           style={{
             flexDirection: 'row',
@@ -190,7 +190,7 @@ export function ProfileScreen() {
           </Pressable>
         </View>
 
-        {/* Avatar header */}
+        {}
         <View
           style={{
             flexDirection: 'row',
@@ -277,7 +277,7 @@ export function ProfileScreen() {
           </View>
         </View>
 
-        {/* Account section */}
+        {}
         <View style={{ gap: 4 }}>
           <View
             style={{
@@ -322,7 +322,7 @@ export function ProfileScreen() {
           />
         </View>
 
-        {/* Library shortcut */}
+        {}
         <Pressable
           onPress={handleOpenLibrary}
           style={{
@@ -353,7 +353,7 @@ export function ProfileScreen() {
           <AppIcon name="chevron-right" size={14} color={COLORS.textMuted} />
         </Pressable>
 
-        {/* Logout */}
+        {}
         <Pressable
           onPress={handleLogout}
           style={{

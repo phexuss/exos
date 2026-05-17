@@ -120,3 +120,17 @@ export class UserPublicDto {
   @ApiProperty({ format: 'date-time' })
   updatedAt!: Date;
 }
+
+export class UserProfileDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty()
+  username!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  createdAt!: Date;
+}

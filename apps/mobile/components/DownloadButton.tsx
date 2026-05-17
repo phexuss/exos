@@ -57,7 +57,7 @@ export function DownloadButton({ track, size = 20, onDownloaded }: Props) {
             : e instanceof Error
               ? e.message
               : t('common.error');
-      console.warn('[Download]', e);
+      if (__DEV__) console.warn('[Download]', e);
       setErrorMessage(message);
     }
   }, [track, status, markTrackDownloaded, onDownloaded, t]);

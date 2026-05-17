@@ -1,9 +1,12 @@
-import { spawn } from 'node:child_process';
+import { type ChildProcess, spawn } from 'node:child_process';
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import {
   BadRequestException,
   Injectable,
   Logger,
+  type OnApplicationShutdown,
+  type OnModuleInit,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -23,11 +26,63 @@ type DownloadTicketPayload = DownloadDto & {
 };
 
 @Injectable()
-export class DownloadService {
+export class DownloadService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(DownloadService.name);
   private activeYtdlpProcesses = 0;
+  /**
+   * Cached on boot via `onModuleInit`. We don't re-check `existsSync` on
+   * every request — the file is mounted statically, and an `fs.stat` per
+   * download would add unnecessary syscall overhead.
+   */
+  private resolvedCookiesPath: string | null = null;
+  /**
+   * Live yt-dlp child processes spawned for streaming. Tracked so we can
+   * kill them all on graceful shutdown (SIGTERM from Docker/orchestrator)
+   * instead of orphaning them past the parent's exit.
+   */
+  private readonly liveStreamProcesses = new Set<ChildProcess>();
 
   constructor(private readonly configService: ConfigService) {}
+
+  onApplicationShutdown(signal?: string): void {
+    if (this.liveStreamProcesses.size === 0) return;
+    this.logger.log(
+      `Shutdown (${signal ?? 'unknown'}) — killing ${this.liveStreamProcesses.size} in-flight yt-dlp stream(s)`,
+    );
+    for (const proc of this.liveStreamProcesses) {
+      if (!proc.killed) proc.kill('SIGKILL');
+    }
+    this.liveStreamProcesses.clear();
+  }
+
+  onModuleInit(): void {
+    // Resolve and validate the cookies path once at boot. YouTube tends to
+    // IP-block server ranges with "Sign in to confirm you're not a bot",
+    // and the only practical workaround is to pass a Netscape cookies file
+    // exported from an authenticated browser session.
+    const configured = this.configService
+      .get<string>('YTDLP_COOKIES_PATH')
+      ?.trim();
+
+    if (!configured) {
+      this.logger.warn(
+        'YTDLP_COOKIES_PATH is not set. YouTube extraction may fail on ' +
+          'server IPs with "Sign in to confirm you\'re not a bot".',
+      );
+      return;
+    }
+
+    if (!existsSync(configured)) {
+      this.logger.error(
+        `YTDLP_COOKIES_PATH points to a non-existent file: ${configured}. ` +
+          'Falling back to no-cookies mode.',
+      );
+      return;
+    }
+
+    this.resolvedCookiesPath = configured;
+    this.logger.log(`yt-dlp cookies loaded from ${configured}`);
+  }
 
   private get ticketSecret(): string {
     return this.configService.getOrThrow<string>('JWT_ACCESS_SECRET');
@@ -244,19 +299,22 @@ export class DownloadService {
 
       this.logger.debug(`Resolving source: ${source}`);
 
-      const result = (await ytdlp(
-        source,
-        {
-          getUrl: true,
-          format,
-          noPlaylist: true,
-          ...({ extractorRetries: 1 } as Record<string, unknown>),
-        },
-        {
-          timeout: this.ytdlpTimeoutMs,
-          killSignal: 'SIGKILL',
-        },
-      )) as unknown as string;
+      const ytdlpOptions: Record<string, unknown> = {
+        getUrl: true,
+        format,
+        noPlaylist: true,
+        extractorRetries: 1,
+      };
+      if (this.resolvedCookiesPath) {
+        // `youtube-dl-exec` maps camelCase keys to `--kebab-case` flags, so
+        // `cookies` here becomes `--cookies <path>`.
+        ytdlpOptions.cookies = this.resolvedCookiesPath;
+      }
+
+      const result = (await ytdlp(source, ytdlpOptions, {
+        timeout: this.ytdlpTimeoutMs,
+        killSignal: 'SIGKILL',
+      })) as unknown as string;
 
       this.logger.debug(`Result URL resolved (${result.trim().length} chars)`);
       return { url: result.trim() };
@@ -295,6 +353,13 @@ export class DownloadService {
       '1',
     ];
 
+    if (this.resolvedCookiesPath) {
+      // See `onModuleInit` for why this exists. We push it BEFORE the
+      // optional `-x` post-processing flags so the cookies apply to the
+      // network fetch as well as any HLS/dash fragment requests.
+      args.push('--cookies', this.resolvedCookiesPath);
+    }
+
     if (audioFormat) {
       // `-x --audio-format <fmt>` makes yt-dlp guarantee the output
       // container/codec: copy when the source already matches, ffmpeg
@@ -311,9 +376,13 @@ export class DownloadService {
     const proc = spawn(this.ytdlpPath, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+    this.liveStreamProcesses.add(proc);
 
     let wroteOutput = false;
     let stderrBuf = '';
+    // Cap stderr buffering: yt-dlp can emit megabytes of progress/retry chatter
+    // on problematic sources. We only need the tail for diagnostics.
+    const STDERR_MAX = 16 * 1024;
     const startupTimer = setTimeout(() => {
       if (!wroteOutput && !proc.killed) {
         this.logger.warn(
@@ -326,6 +395,7 @@ export class DownloadService {
 
     const finalizeProcess = () => {
       clearTimeout(startupTimer);
+      this.liveStreamProcesses.delete(proc);
       release();
     };
 
@@ -334,7 +404,12 @@ export class DownloadService {
       clearTimeout(startupTimer);
     });
     proc.stderr.on('data', (chunk: Buffer) => {
+      if (stderrBuf.length >= STDERR_MAX) return;
       stderrBuf += chunk.toString();
+      if (stderrBuf.length > STDERR_MAX) {
+        // Keep the tail — the last lines tend to carry the actual error.
+        stderrBuf = stderrBuf.slice(-STDERR_MAX);
+      }
     });
 
     proc.on('error', (err) => {

@@ -11,7 +11,7 @@ function getBestThumbnail(
   thumbnails?: { url: string; resolution?: string }[],
 ): string | undefined {
   if (!thumbnails || thumbnails.length === 0) return undefined;
-  // Prefer t500x500, then original, then last (highest quality)
+
   const preferred = thumbnails.find(
     (t) => t.resolution === 't500x500' || t.resolution === 'original',
   );
@@ -29,9 +29,9 @@ export function mapSoundCloudTrackToTrack(sc: SoundCloudTrack): Track {
     duration: formatDuration(sc.duration),
     durationSec: sc.duration,
     coverUrl: getBestThumbnail(sc.thumbnails),
-    previewUrl: undefined, // SC plays full track, no preview concept
+    previewUrl: undefined,
     source: 'soundcloud',
-    // webpage_url is used by download service to resolve stream via yt-dlp
+
     isrc: sc.webpage_url,
   };
 }

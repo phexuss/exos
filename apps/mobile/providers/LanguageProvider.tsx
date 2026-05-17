@@ -44,9 +44,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
         if (SUPPORTED_LOCALES.includes(stored as Locale)) {
           setLocaleState(stored as Locale);
         }
-      } catch {
-        // ignore storage errors
-      }
+      } catch {}
     };
     loadLocale();
     return () => {

@@ -1,5 +1,5 @@
 import { create, type StateCreator } from 'zustand';
-import { apiPost } from '@/services/api/client';
+import { API_BASE_URL, apiPost } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
 import * as audio from '@/services/audio/audioService';
 import { addRecentlyPlayed, getDownloadedTrack } from '@/services/db/database';
@@ -174,14 +174,15 @@ async function resolveAndPlayStream(
         ? (track.isrc ?? `${track.artist.name} ${track.title}`)
         : `${track.artist.name} ${track.title}`;
     if (__DEV__) console.log('[Stream] Resolving:', query);
-    const { url } = await apiPost<{ url: string }>(API_ENDPOINTS.download, {
-      query,
-      format: 'm4a',
-    });
+    const { token } = await apiPost<{ token: string; expiresAt: number }>(
+      `${API_ENDPOINTS.download}/stream-ticket`,
+      { query, format: 'm4a' },
+    );
     if (!isCurrentPlaybackRequest(requestId, track.id, get)) return;
     if (!get().isPlaying) return;
+    const streamUrl = `${API_BASE_URL}/download/stream-ticket?token=${encodeURIComponent(token)}`;
     set({ isPlaying: true });
-    audio.playUrl(url);
+    audio.playUrl(streamUrl);
   } catch (e) {
     if (__DEV__) console.warn('[Stream] Failed to resolve URL:', e);
     if (!isCurrentPlaybackRequest(requestId, track.id, get)) return;

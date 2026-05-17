@@ -8,9 +8,7 @@ const prisma = new PrismaClient({
   }),
 });
 
-async function main() {
-  // Safe seed placeholder
-}
+async function main() {}
 
 main()
   .catch(async (error) => {

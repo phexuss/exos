@@ -54,6 +54,11 @@ export async function withDb<T>(
 
 async function migrate(database: SQLite.SQLiteDatabase) {
   await database.execAsync(`
+    PRAGMA journal_mode = WAL;
+    PRAGMA synchronous = NORMAL;
+  `);
+
+  await database.execAsync(`
     CREATE TABLE IF NOT EXISTS tracks (
       id            TEXT PRIMARY KEY,
       title         TEXT NOT NULL,
@@ -103,7 +108,6 @@ async function migrate(database: SQLite.SQLiteDatabase) {
     );
   `);
 
-  // Migration: add source column to tracks if missing
   const cols = await database.getAllAsync<{ name: string }>(
     `PRAGMA table_info(tracks)`,
   );
@@ -113,8 +117,6 @@ async function migrate(database: SQLite.SQLiteDatabase) {
     );
   }
 }
-
-// ── Downloaded tracks ────────────────────────────────────────
 
 export type LyricsData = {
   syncedLyrics: string | null;
@@ -230,8 +232,6 @@ export function deleteDownloadedTrack(trackId: string): Promise<void> {
     );
   });
 }
-
-// ── Playlists ────────────────────────────────────────────────
 
 export type PlaylistRow = {
   id: string;
@@ -383,8 +383,6 @@ export async function getPlaylistTracks(playlistId: string): Promise<Track[]> {
     }));
   });
 }
-
-// ── Recently played ──────────────────────────────────────────
 
 export function insertRecentlyPlayed(
   track: Track,

@@ -30,8 +30,6 @@ function formatFanCount(count: number): string {
   return String(count);
 }
 
-// ── Album card (horizontal list) ────────────────────────────
-
 type AlbumCardProps = {
   album: ArtistAlbum;
 };
@@ -86,8 +84,6 @@ function AlbumCardComponent({ album }: AlbumCardProps) {
 
 const AlbumCard = memo(AlbumCardComponent);
 
-// ── Main ArtistScreen ───────────────────────────────────────
-
 type Props = {
   id: string;
 };
@@ -115,7 +111,7 @@ export function ArtistScreen({ id }: Props) {
         setAlbums(al);
       })
       .catch((e) => {
-        if (!cancelled) console.warn('[Artist] Load error:', e);
+        if (!cancelled && __DEV__) console.warn('[Artist] Load error:', e);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -184,7 +180,7 @@ export function ArtistScreen({ id }: Props) {
 
   const ListHeader = (
     <View style={{ gap: 24 }}>
-      {/* Hero */}
+      {}
       <View style={{ alignItems: 'center', gap: 16 }}>
         <View style={{ position: 'relative', width: '100%', height: 260 }}>
           <Image
@@ -209,7 +205,7 @@ export function ArtistScreen({ id }: Props) {
               borderBottomRightRadius: 24,
             }}
           />
-          {/* Back button */}
+          {}
           <Pressable
             onPress={closeArtist}
             hitSlop={12}
@@ -252,7 +248,7 @@ export function ArtistScreen({ id }: Props) {
         </View>
       </View>
 
-      {/* Albums horizontal */}
+      {}
       {albums.length > 0 && (
         <View style={{ gap: 12 }}>
           <AppText
@@ -279,7 +275,7 @@ export function ArtistScreen({ id }: Props) {
         </View>
       )}
 
-      {/* Top tracks label */}
+      {}
       {tracks.length > 0 && (
         <AppText
           variant="label"

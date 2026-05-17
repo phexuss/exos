@@ -349,13 +349,13 @@ export class AuthService {
       data: { passwordHash: newHash },
     });
 
-    // Invalidate all sessions to force re-login on other devices
     await this.prismaService.session.deleteMany({ where: { userId } });
   }
 
   async requestPasswordReset(email: string): Promise<void> {
+    const normalizedEmail = email.trim().toLowerCase();
     const user = await this.prismaService.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (!user) {
@@ -386,8 +386,9 @@ export class AuthService {
     email: string,
     code: string,
   ): Promise<{ resetToken: string }> {
+    const normalizedEmail = email.trim().toLowerCase();
     const user = await this.prismaService.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (!user) {

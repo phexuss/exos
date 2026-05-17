@@ -28,7 +28,7 @@ model VerificationCode {
   id        String   @id @default(uuid())
   code      String
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
@@ -89,5 +89,5 @@ model Session {
   refreshTokenHash String   @unique
   device           String?
   expiresAt        DateTime
-  user             User     @relation(fields: [userId], references: [id])
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -49,14 +49,11 @@ export function ArtistOverlay() {
     >
       {artistId ? <ArtistScreen id={artistId} /> : null}
 
-      {/* Album sub-overlay (slides on top of artist when artist is open;
-          renders alone when album was opened from outside artist context) */}
+      {}
       {albumId && (
         <Animated.View
           entering={
-            artistId
-              ? SlideInRight.duration(260)
-              : SlideInRight.duration(280)
+            artistId ? SlideInRight.duration(260) : SlideInRight.duration(280)
           }
           exiting={SlideOutRight.duration(220)}
           style={{

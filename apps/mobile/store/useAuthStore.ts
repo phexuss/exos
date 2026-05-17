@@ -160,7 +160,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       await apiChangePassword(currentPassword, newPassword);
-      // Backend invalidates sessions — clear local user.
+
       set({ user: null });
     } finally {
       set({ isLoading: false });

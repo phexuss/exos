@@ -7,10 +7,12 @@ import {
 } from '@/services/auth/tokenStorage';
 
 function resolveBaseUrl(): string {
-  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
   if (envUrl) return envUrl;
 
-  const configUrl = Constants.expoConfig?.extra?.apiUrl as string | undefined;
+  const configUrl = (
+    Constants.expoConfig?.extra?.apiUrl as string | undefined
+  )?.trim();
   if (configUrl) return configUrl;
 
   if (__DEV__) {
@@ -21,7 +23,10 @@ function resolveBaseUrl(): string {
     return 'http://localhost:3000/api';
   }
 
-  return 'https://api.example.com/api';
+  throw new Error(
+    'API base URL is not configured. ' +
+      'Set EXPO_PUBLIC_API_URL at build time or expo.extra.apiUrl in app.json.',
+  );
 }
 
 export const API_BASE_URL = resolveBaseUrl();
@@ -44,7 +49,7 @@ type RequestOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;
   params?: Record<string, string | undefined>;
-  /** When true, the request will not automatically attach the bearer token. */
+
   skipAuth?: boolean;
 };
 
@@ -166,9 +171,7 @@ async function parseError(res: Response, path: string): Promise<ApiError> {
       if (typeof m === 'string') message = m;
       else if (Array.isArray(m) && typeof m[0] === 'string') message = m[0];
     }
-  } catch {
-    // ignore
-  }
+  } catch {}
   return new ApiError(res.status, message, body);
 }
 
@@ -212,7 +215,6 @@ export async function apiRequest<T>(
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
-  // Auto-refresh on 401 (unless we already tried without auth)
   if (res.status === 401 && !skipAuth) {
     const newToken = await refreshAccessToken();
     if (newToken) {
@@ -231,7 +233,6 @@ export async function apiRequest<T>(
     throw await parseError(res, path);
   }
 
-  // 204 No Content
   if (res.status === 204) return undefined as T;
 
   const text = await res.text();

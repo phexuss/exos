@@ -204,9 +204,80 @@ export class LibraryService {
     userId: string,
     tracks: LibraryTrackDto[],
   ): Promise<number> {
-    await Promise.all(
-      tracks.map((track) => this.upsertDownload(userId, track)),
-    );
+    if (tracks.length === 0) return 0;
+
+    const normalized = tracks.map((dto) => ({
+      data: {
+        ...this.baseData(dto),
+        addedAt: this.parseDate(dto.addedAt),
+      },
+    }));
+
+    const deezerIds = normalized
+      .map(({ data }) => data.deezerId)
+      .filter((id): id is string => !!id);
+    const scUrls = normalized
+      .map(({ data }) => data.scUrl)
+      .filter((url): url is string => !!url);
+
+    const existing = await this.prismaService.userLibrary.findMany({
+      where: {
+        userId,
+        OR: [
+          ...(deezerIds.length ? [{ deezerId: { in: deezerIds } }] : []),
+          ...(scUrls.length ? [{ scUrl: { in: scUrls } }] : []),
+        ],
+      },
+      select: { id: true, deezerId: true, scUrl: true, addedAt: true },
+    });
+
+    const byDeezer = new Map<string, (typeof existing)[number]>();
+    const byScUrl = new Map<string, (typeof existing)[number]>();
+    for (const row of existing) {
+      if (row.deezerId) byDeezer.set(row.deezerId, row);
+      if (row.scUrl) byScUrl.set(row.scUrl, row);
+    }
+
+    const toCreate: Array<
+      { userId: string } & (typeof normalized)[number]['data']
+    > = [];
+    const toUpdate: Array<{
+      where: { id: string };
+      data: (typeof normalized)[number]['data'];
+    }> = [];
+
+    for (const { data } of normalized) {
+      const match = data.deezerId
+        ? byDeezer.get(data.deezerId)
+        : data.scUrl
+          ? byScUrl.get(data.scUrl)
+          : undefined;
+
+      if (match) {
+        toUpdate.push({
+          where: { id: match.id },
+          data: {
+            ...data,
+            addedAt: this.latestDate(match.addedAt, data.addedAt),
+          },
+        });
+      } else {
+        toCreate.push({ userId, ...data });
+      }
+    }
+
+    await this.prismaService.$transaction([
+      ...(toCreate.length
+        ? [
+            this.prismaService.userLibrary.createMany({
+              data: toCreate,
+              skipDuplicates: true,
+            }),
+          ]
+        : []),
+      ...toUpdate.map((u) => this.prismaService.userLibrary.update(u)),
+    ]);
+
     return tracks.length;
   }
 
@@ -275,9 +346,80 @@ export class LibraryService {
     userId: string,
     tracks: LibraryTrackDto[],
   ): Promise<number> {
-    await Promise.all(
-      tracks.map((track) => this.upsertRecentlyPlayed(userId, track)),
-    );
+    if (tracks.length === 0) return 0;
+
+    const normalized = tracks.map((dto) => ({
+      data: {
+        ...this.baseData(dto),
+        playedAt: this.parseDate(dto.playedAt),
+      },
+    }));
+
+    const deezerIds = normalized
+      .map(({ data }) => data.deezerId)
+      .filter((id): id is string => !!id);
+    const scUrls = normalized
+      .map(({ data }) => data.scUrl)
+      .filter((url): url is string => !!url);
+
+    const existing = await this.prismaService.userRecentlyPlayed.findMany({
+      where: {
+        userId,
+        OR: [
+          ...(deezerIds.length ? [{ deezerId: { in: deezerIds } }] : []),
+          ...(scUrls.length ? [{ scUrl: { in: scUrls } }] : []),
+        ],
+      },
+      select: { id: true, deezerId: true, scUrl: true, playedAt: true },
+    });
+
+    const byDeezer = new Map<string, (typeof existing)[number]>();
+    const byScUrl = new Map<string, (typeof existing)[number]>();
+    for (const row of existing) {
+      if (row.deezerId) byDeezer.set(row.deezerId, row);
+      if (row.scUrl) byScUrl.set(row.scUrl, row);
+    }
+
+    const toCreate: Array<
+      { userId: string } & (typeof normalized)[number]['data']
+    > = [];
+    const toUpdate: Array<{
+      where: { id: string };
+      data: (typeof normalized)[number]['data'];
+    }> = [];
+
+    for (const { data } of normalized) {
+      const match = data.deezerId
+        ? byDeezer.get(data.deezerId)
+        : data.scUrl
+          ? byScUrl.get(data.scUrl)
+          : undefined;
+
+      if (match) {
+        toUpdate.push({
+          where: { id: match.id },
+          data: {
+            ...data,
+            playedAt: this.latestDate(match.playedAt, data.playedAt),
+          },
+        });
+      } else {
+        toCreate.push({ userId, ...data });
+      }
+    }
+
+    await this.prismaService.$transaction([
+      ...(toCreate.length
+        ? [
+            this.prismaService.userRecentlyPlayed.createMany({
+              data: toCreate,
+              skipDuplicates: true,
+            }),
+          ]
+        : []),
+      ...toUpdate.map((u) => this.prismaService.userRecentlyPlayed.update(u)),
+    ]);
+
     return tracks.length;
   }
 }

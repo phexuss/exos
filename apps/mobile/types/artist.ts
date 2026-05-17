@@ -1,4 +1,3 @@
-/** Raw Deezer artist details (from /api/artists/:id) */
 export interface DeezerArtistDetails {
   id: number;
   name: string;
@@ -16,7 +15,6 @@ export interface DeezerArtistDetails {
   type: 'artist';
 }
 
-/** Raw Deezer album item (from /api/artists/:id/albums) */
 export interface DeezerAlbumItem {
   id: number;
   title: string;
@@ -37,7 +35,6 @@ export interface DeezerAlbumListResponse {
   next?: string;
 }
 
-/** Domain artist for the mobile app */
 export type ArtistDetails = {
   id: string;
   name: string;
@@ -47,7 +44,6 @@ export type ArtistDetails = {
   albumCount: number;
 };
 
-/** Domain album card */
 export type ArtistAlbum = {
   id: string;
   title: string;

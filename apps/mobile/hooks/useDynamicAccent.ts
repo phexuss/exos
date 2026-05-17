@@ -4,11 +4,27 @@ import { COLORS } from '@/constants/colors';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
+const CACHE_CAPACITY = 200;
 const cache = new Map<string, string>();
 
-/**
- * Convert RGB (0-255) to HSL (h: 0-1, s: 0-1, l: 0-1)
- */
+function cacheGet(url: string): string | undefined {
+  const value = cache.get(url);
+  if (value !== undefined) {
+    cache.delete(url);
+    cache.set(url, value);
+  }
+  return value;
+}
+
+function cacheSet(url: string, color: string): void {
+  if (cache.has(url)) cache.delete(url);
+  cache.set(url, color);
+  if (cache.size > CACHE_CAPACITY) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey !== undefined) cache.delete(oldestKey);
+  }
+}
+
 function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
   r /= 255;
   g /= 255;
@@ -26,9 +42,6 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
   return [h, s, l];
 }
 
-/**
- * Convert HSL (0-1 each) back to RGB hex string
- */
 function hslToHex(h: number, s: number, l: number): string {
   const hue2rgb = (p: number, q: number, t: number) => {
     if (t < 0) t += 1;
@@ -54,9 +67,6 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${hex(r)}${hex(g)}${hex(b)}`;
 }
 
-/**
- * Parse a hex string (#rrggbb or #rgb) into [r, g, b]
- */
 function parseHex(hex: string): [number, number, number] {
   const clean = hex.replace('#', '');
   if (clean.length === 3) {
@@ -73,9 +83,6 @@ function parseHex(hex: string): [number, number, number] {
   ];
 }
 
-/**
- * Boost saturation and clamp lightness to produce a vibrant accent color
- */
 function boostSaturation(hex: string): string {
   const [r, g, b] = parseHex(hex);
   let [h, s, l] = rgbToHsl(r, g, b);
@@ -84,15 +91,8 @@ function boostSaturation(hex: string): string {
   return hslToHex(h, s, l);
 }
 
-/**
- * Extract dominant color by sampling a tiny version of the image.
- * Pure JS — works in Expo Go, no native modules needed.
- *
- * TODO: replace with react-native-image-colors when building natively
- */
 async function extractColor(url: string): Promise<string | null> {
   try {
-    // Deezer: request a 1x1 pixel version
     const tinyUrl = url.includes('dzcdn.net')
       ? url.replace(/\/\d+x\d+/, '/1x1')
       : url;
@@ -106,8 +106,7 @@ async function extractColor(url: string): Promise<string | null> {
     return new Promise<string | null>((resolve) => {
       reader.onloadend = () => {
         const base64 = reader.result as string;
-        // For JPEG/PNG, try to extract color from the raw data
-        // Simple heuristic: sample bytes near the end of the data
+
         const data = base64.split(',')[1];
         if (!data) {
           resolve(null);
@@ -120,19 +119,16 @@ async function extractColor(url: string): Promise<string | null> {
           bytes[i] = raw.charCodeAt(i);
         }
 
-        // For a 1x1 JPEG the last few bytes before EOI (0xFFD9)
-        // contain the pixel data. For larger images, sample center.
         if (bytes.length < 10) {
           resolve(null);
           return;
         }
 
-        // Fallback: Average of all byte triplets as rough color estimate
         let rSum = 0,
           gSum = 0,
           bSum = 0,
           count = 0;
-        // Skip header bytes, sample from middle portion
+
         const start = Math.floor(bytes.length * 0.3);
         const end = Math.floor(bytes.length * 0.9);
         for (let i = start; i + 2 < end; i += 3) {
@@ -176,7 +172,7 @@ export function useDynamicAccent(): string {
     if (coverUrl === lastUrlRef.current) return;
     lastUrlRef.current = coverUrl;
 
-    const cached = cache.get(coverUrl);
+    const cached = cacheGet(coverUrl);
     if (cached) {
       setColor(cached);
       return;
@@ -188,7 +184,7 @@ export function useDynamicAccent(): string {
       .then((hex) => {
         if (cancelled || !hex) return;
         const boosted = boostSaturation(hex);
-        cache.set(coverUrl, boosted);
+        cacheSet(coverUrl, boosted);
         setColor(boosted);
       })
       .catch(() => {

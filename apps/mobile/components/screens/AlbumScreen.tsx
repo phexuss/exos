@@ -35,7 +35,7 @@ export function AlbumScreen({ id, titleHint }: Props) {
         if (!cancelled) setAlbum(a);
       })
       .catch((e) => {
-        if (!cancelled) console.warn('[Album] Load error:', e);
+        if (!cancelled && __DEV__) console.warn('[Album] Load error:', e);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -104,7 +104,7 @@ export function AlbumScreen({ id, titleHint }: Props) {
 
   const ListHeader = (
     <View style={{ gap: 16, alignItems: 'center', paddingVertical: 16 }}>
-      {/* Back button */}
+      {}
       <View
         style={{
           width: '100%',
@@ -128,7 +128,7 @@ export function AlbumScreen({ id, titleHint }: Props) {
         </Pressable>
       </View>
 
-      {/* Cover */}
+      {}
       {album.coverUrl ? (
         <Image
           source={{ uri: album.coverUrl }}

@@ -6,25 +6,24 @@ export type DownloadProgress = {
 };
 
 type DownloadStoreState = {
-  /** Set of track IDs that are confirmed downloaded */
   downloadedIds: Set<string>;
-  /** Active download progress keyed by trackId */
+
   activeDownloads: Record<string, DownloadProgress>;
-  /** Mark a track as downloaded */
+
   markDownloaded: (trackId: string) => void;
-  /** Mark a track as removed (no longer downloaded) */
+
   markRemoved: (trackId: string) => void;
-  /** Bulk-set downloaded IDs (e.g. from DB on init) */
+
   setDownloadedIds: (ids: string[]) => void;
-  /** Update download progress for a track */
+
   setDownloadProgress: (
     trackId: string,
     progress: number,
     status: DownloadProgress['status'],
   ) => void;
-  /** Remove download progress entry (cleanup) */
+
   clearDownloadProgress: (trackId: string) => void;
-  /** Revision counter — bumped on every change to trigger re-renders */
+
   revision: number;
 };
 

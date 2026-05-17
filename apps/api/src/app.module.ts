@@ -28,7 +28,8 @@ import { UserModule } from './user/user.module';
         PORT: Joi.number().default(3000),
         DATABASE_URL: Joi.string().required(),
         REDIS_URL: Joi.string().required(),
-        SWAGGER_ENABLED: Joi.boolean().default(true),
+
+        SWAGGER_ENABLED: Joi.boolean().default(false),
         YTDLP_PATH: Joi.string().optional(),
         YTDLP_TIMEOUT_MS: Joi.number().default(10000),
         YTDLP_MAX_CONCURRENT: Joi.number().integer().min(1).default(3),
@@ -36,10 +37,12 @@ import { UserModule } from './user/user.module';
         JWT_REFRESH_SECRET: Joi.string().required(),
         JWT_ACCESS_EXPIRES: Joi.string().required(),
         JWT_REFRESH_EXPIRES: Joi.string().required(),
-        LASTFM_API_KEY: Joi.string().required(),
+
+        LASTFM_API_KEY: Joi.string().optional().allow(''),
         RESEND_API_KEY: Joi.string().required(),
         RESEND_TEST_ENDPOINT_ENABLED: Joi.boolean().default(false),
-        YOUTUBE_COOKIE: Joi.string().optional(),
+
+        YTDLP_COOKIES_PATH: Joi.string().optional(),
       }),
     }),
     CacheModule.registerAsync({
@@ -47,7 +50,7 @@ import { UserModule } from './user/user.module';
       useFactory: () => ({
         store: require('cache-manager-ioredis'),
         url: process.env.REDIS_URL,
-        tls: true,
+
         ttl: 60 * 60 * 24,
       }),
     }),

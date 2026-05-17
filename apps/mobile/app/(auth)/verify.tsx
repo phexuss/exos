@@ -54,7 +54,7 @@ export default function VerifyScreen() {
   const handleDigitChange = (index: number, value: string) => {
     setError(null);
     setInfo(null);
-    // Allow paste of the whole code
+
     const digitsOnly = value.replace(/\D/g, '');
     if (!digitsOnly) {
       const next = [...digits];

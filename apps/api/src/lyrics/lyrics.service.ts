@@ -23,7 +23,6 @@ export class LyricsService {
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) return cached;
 
-    // 1. Try exact match
     try {
       const { data } = await firstValueFrom(
         this.httpService.get<LRCLibResponse>(`${this.BASE_URL}/get`, {
@@ -47,7 +46,6 @@ export class LyricsService {
       }
     }
 
-    // 2. Fallback to fuzzy search
     try {
       const { data: results } = await firstValueFrom(
         this.httpService.get<LRCLibResponse[]>(`${this.BASE_URL}/search`, {

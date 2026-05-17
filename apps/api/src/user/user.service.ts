@@ -9,9 +9,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreateUserDto,
   CreateUserResponseDto,
+  UserProfileDto,
   UserPublicDto,
 } from 'src/user/dto/create-user.dto';
 import { UpdateUserDto } from 'src/user/dto/update-user.dto';
+
+function normalizeIdentifier(value: string): string {
+  return value.trim().toLowerCase();
+}
 
 @Injectable()
 export class UserService {
@@ -38,14 +43,18 @@ export class UserService {
   }
 
   async createUser(dto: CreateUserDto): Promise<CreateUserResponseDto> {
+    const email = normalizeIdentifier(dto.email);
+    const username = normalizeIdentifier(dto.username);
+    const name = dto.name.trim();
+
     const existingByEmail = await this.prismaService.user.findUnique({
-      where: { email: dto.email },
+      where: { email },
     });
     if (existingByEmail) {
       throw new ConflictException('Email is already in use');
     }
     const existingByUsername = await this.prismaService.user.findUnique({
-      where: { username: dto.username },
+      where: { username },
     });
     if (existingByUsername) {
       throw new ConflictException('Username is already taken');
@@ -55,9 +64,9 @@ export class UserService {
 
     const newUser = await this.prismaService.user.create({
       data: {
-        name: dto.name,
-        username: dto.username,
-        email: dto.email,
+        name,
+        username,
+        email,
         passwordHash: hashedPassword,
       },
     });
@@ -70,25 +79,22 @@ export class UserService {
     };
   }
 
-  async findById(id: string): Promise<UserPublicDto | null> {
+  async findById(id: string): Promise<UserProfileDto | null> {
     const user = await this.prismaService.user.findUnique({
       where: { id },
       select: {
         id: true,
         name: true,
-        email: true,
         username: true,
-        isVerified: true,
         createdAt: true,
-        updatedAt: true,
       },
     });
-    return user ? this.toPublic(user) : null;
+    return user;
   }
 
   async findByUsername(username: string) {
     const user = await this.prismaService.user.findUnique({
-      where: { username },
+      where: { username: normalizeIdentifier(username) },
     });
     return user;
   }
@@ -124,43 +130,65 @@ export class UserService {
   async updateProfile(
     id: string,
     dto: UpdateUserDto,
-  ): Promise<{ user: UserPublicDto; emailChanged: boolean }> {
+  ): Promise<{
+    user: UserPublicDto;
+    emailChanged: boolean;
+
+    verificationCode: string | null;
+  }> {
     const current = await this.prismaService.user.findUnique({ where: { id } });
     if (!current) {
       throw new NotFoundException('User not found');
     }
 
-    if (dto.username && dto.username !== current.username) {
+    const nextUsername =
+      dto.username !== undefined
+        ? normalizeIdentifier(dto.username)
+        : undefined;
+    const nextEmail =
+      dto.email !== undefined ? normalizeIdentifier(dto.email) : undefined;
+    const nextName = dto.name?.trim();
+
+    if (nextUsername !== undefined && nextUsername !== current.username) {
       const taken = await this.prismaService.user.findUnique({
-        where: { username: dto.username },
+        where: { username: nextUsername },
       });
       if (taken && taken.id !== id) {
         throw new ConflictException('Username is already taken');
       }
     }
 
-    const emailChanged = !!dto.email && dto.email !== current.email;
+    const emailChanged = nextEmail !== undefined && nextEmail !== current.email;
     if (emailChanged) {
       const taken = await this.prismaService.user.findUnique({
-        where: { email: dto.email as string },
+        where: { email: nextEmail as string },
       });
       if (taken && taken.id !== id) {
         throw new ConflictException('Email is already in use');
       }
     }
 
+    let verificationCode: string | null = null;
+    let verifyTokenHash: string | null | undefined = undefined;
+    let verifyTokenExp: Date | null | undefined = undefined;
+    if (emailChanged) {
+      verificationCode = randomInt(100000, 1000000).toString();
+      verifyTokenHash = await argon2.hash(verificationCode);
+      verifyTokenExp = new Date(Date.now() + 30 * 60 * 1000);
+    }
+
     const updated = await this.prismaService.user.update({
       where: { id },
       data: {
-        name: dto.name ?? undefined,
-        username: dto.username ?? undefined,
-        email: dto.email ?? undefined,
+        name: nextName ?? undefined,
+        username: nextUsername ?? undefined,
+        email: nextEmail ?? undefined,
         isVerified: emailChanged ? false : undefined,
-        verifyToken: emailChanged ? null : undefined,
-        verifyTokenExp: emailChanged ? null : undefined,
+        verifyToken: emailChanged ? verifyTokenHash : undefined,
+        verifyTokenExp: emailChanged ? verifyTokenExp : undefined,
       },
     });
 
-    return { user: this.toPublic(updated), emailChanged };
+    return { user: this.toPublic(updated), emailChanged, verificationCode };
   }
 }

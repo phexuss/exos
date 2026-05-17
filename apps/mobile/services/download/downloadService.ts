@@ -67,7 +67,13 @@ export function onDownloadProgress(trackId: string, fn: Listener): () => void {
   }
   trackListeners.add(fn);
   return () => {
-    listeners.get(trackId)?.delete(fn);
+    const set = listeners.get(trackId);
+    if (!set) return;
+    set.delete(fn);
+
+    if (set.size === 0) {
+      listeners.delete(trackId);
+    }
   };
 }
 

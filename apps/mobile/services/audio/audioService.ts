@@ -1,15 +1,20 @@
-import type { AudioPlayer, AudioStatus } from 'expo-audio';
-import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import type { Track as PlayerTrack } from 'react-native-track-player';
 
-let player: AudioPlayer | null = null;
-let statusSub: { remove: () => void } | null = null;
+type TrackPlayerModule = typeof import('react-native-track-player');
+type TrackPlayerApi = TrackPlayerModule['default'];
+
 let positionInterval: ReturnType<typeof setInterval> | null = null;
 let isSeeking = false;
 let isReplacing = false;
 let replaceStartedAt = 0;
 let replaceWatchdog: ReturnType<typeof setTimeout> | null = null;
-let didHandleFinish = false;
 let lastSeekTime = 0;
+let setupPromise: Promise<TrackPlayerApi> | null = null;
+let subscriptionsBound = false;
+let lastKnownDuration = 0;
+let progressPollInFlight = false;
+let trackPlayerModule: TrackPlayerModule | null = null;
+let trackPlayerApi: TrackPlayerApi | null = null;
 
 const SEEK_PROGRESS_FREEZE_MS = 250;
 const MIN_REPLACE_FREEZE_MS = 300;
@@ -28,7 +33,7 @@ export function bindStore(
 export function getDuration(): number {
   const track = _getStore?.()?.getState().currentTrack;
   return (
-    positiveSeconds(track?.durationSec) || positiveSeconds(player?.duration)
+    positiveSeconds(track?.durationSec) || positiveSeconds(lastKnownDuration)
   );
 }
 
@@ -76,95 +81,220 @@ function beginReplace() {
   replaceWatchdog = setTimeout(finishReplace, MAX_REPLACE_FREEZE_MS);
 }
 
-function isReplaceSettled(currentTime: number): boolean {
+function isReplaceSettled(position: number): boolean {
   const elapsedMs = Date.now() - replaceStartedAt;
   if (elapsedMs < MIN_REPLACE_FREEZE_MS) return false;
 
   const elapsedSec = elapsedMs / 1000;
-  return currentTime <= Math.max(2, elapsedSec + 0.75);
+  return position <= Math.max(2, elapsedSec + 0.75);
 }
 
 function warnAudioError(message: string, error: unknown): void {
   if (__DEV__) console.warn(message, error);
 }
 
-function playAfterSeek(p: AudioPlayer): void {
+function loadTrackPlayerModule(): TrackPlayerModule | null {
+  if (trackPlayerModule && trackPlayerApi) return trackPlayerModule;
+
   try {
-    p.play();
+    const mod = require('react-native-track-player') as TrackPlayerModule & {
+      default?: TrackPlayerApi;
+    };
+    const api = mod.default ?? (mod as unknown as TrackPlayerApi);
+    if (!api?.setupPlayer || !api?.addEventListener) {
+      throw new Error('react-native-track-player native module is unavailable');
+    }
+    trackPlayerModule = mod;
+    trackPlayerApi = api;
+    return mod;
   } catch (error) {
-    warnAudioError('[Audio] replay failed:', error);
+    warnAudioError('[Audio] TrackPlayer unavailable:', error);
+    return null;
   }
 }
 
-function getPlayer(): AudioPlayer {
-  if (!player) {
-    setAudioModeAsync({
-      playsInSilentMode: true,
-      shouldPlayInBackground: true,
-      interruptionMode: 'doNotMix',
-    });
-    player = createAudioPlayer();
+function getTrackPlayer(): TrackPlayerApi | null {
+  loadTrackPlayerModule();
+  return trackPlayerApi;
+}
 
-    statusSub = player.addListener(
-      'playbackStatusUpdate',
-      (status: AudioStatus) => {
-        const s = store();
-        if (status.playing && !s.getState().isPlaying) {
-          s.setState({ isPlaying: true });
-        }
+function bindTrackPlayerEvents() {
+  if (subscriptionsBound) return;
+  const trackPlayer = getTrackPlayer();
+  const trackPlayerModule = loadTrackPlayerModule();
+  if (!trackPlayer || !trackPlayerModule) return;
 
-        if (!status.didJustFinish) {
-          didHandleFinish = false;
-          return;
-        }
+  const { Event, State } = trackPlayerModule;
+  subscriptionsBound = true;
 
-        if (didHandleFinish) return;
-        didHandleFinish = true;
+  trackPlayer.addEventListener(Event.PlaybackState, ({ state }) => {
+    if (state === State.Playing) {
+      store().setState({ isPlaying: true });
+      startPositionTracking();
+      return;
+    }
 
-        const p = player;
-        if (!p) return;
+    if (
+      state === State.Paused ||
+      state === State.Stopped ||
+      state === State.Ended ||
+      state === State.None
+    ) {
+      store().setState({ isPlaying: false });
+      if (state !== State.Paused) stopPositionTracking();
+    }
+  });
 
-        const { repeat } = s.getState();
-        if (repeat === 'one') {
-          s.setState({ progress: 0 });
-          void p
-            .seekTo(0)
-            .then(() => playAfterSeek(p))
-            .catch((error: unknown) =>
-              warnAudioError('[Audio] repeat seek failed:', error),
-            );
-        } else {
-          s.getState().skipNext();
-        }
-      },
-    );
+  trackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
+    const s = store();
+    const { repeat } = s.getState();
+    if (repeat === 'one') {
+      s.setState({ progress: 0 });
+      void trackPlayer
+        .seekTo(0)
+        .then(() => trackPlayer.play())
+        .catch((error: unknown) =>
+          warnAudioError('[Audio] repeat seek failed:', error),
+        );
+      return;
+    }
+    s.getState().skipNext();
+  });
+
+  trackPlayer.addEventListener(Event.PlaybackError, (error) => {
+    warnAudioError('[Audio] playback error:', error);
+    store().setState({ isPlaying: false });
+    stopPositionTracking();
+  });
+}
+
+async function ensurePlayer(): Promise<TrackPlayerApi> {
+  const trackPlayer = getTrackPlayer();
+  const trackPlayerModule = loadTrackPlayerModule();
+  if (!trackPlayer || !trackPlayerModule) {
+    throw new Error('TrackPlayer is not available in this runtime');
   }
-  return player;
+
+  if (!setupPromise) {
+    const { AppKilledPlaybackBehavior, Capability } = trackPlayerModule;
+    setupPromise = trackPlayer
+      .setupPlayer({
+        autoHandleInterruptions: true,
+        autoUpdateMetadata: true,
+      })
+      .then(() =>
+        trackPlayer.updateOptions({
+          android: {
+            appKilledPlaybackBehavior:
+              AppKilledPlaybackBehavior.ContinuePlayback,
+          },
+          capabilities: [
+            Capability.Play,
+            Capability.Pause,
+            Capability.SkipToNext,
+            Capability.SkipToPrevious,
+            Capability.SeekTo,
+            Capability.JumpForward,
+            Capability.JumpBackward,
+            Capability.Stop,
+          ],
+          notificationCapabilities: [
+            Capability.Play,
+            Capability.Pause,
+            Capability.SkipToNext,
+            Capability.SkipToPrevious,
+            Capability.SeekTo,
+            Capability.JumpForward,
+            Capability.JumpBackward,
+            Capability.Stop,
+          ],
+          compactCapabilities: [
+            Capability.SkipToPrevious,
+            Capability.Play,
+            Capability.Pause,
+            Capability.SkipToNext,
+          ],
+          forwardJumpInterval: 10,
+          backwardJumpInterval: 10,
+          progressUpdateEventInterval: 1,
+        }),
+      )
+      .then(() => {
+        bindTrackPlayerEvents();
+        return trackPlayer;
+      })
+      .catch((error: unknown) => {
+        setupPromise = null;
+        throw error;
+      });
+  }
+
+  return setupPromise;
+}
+
+function buildPlayerTrack(uri: string): PlayerTrack {
+  const currentTrack = store().getState().currentTrack;
+  if (!currentTrack) {
+    return {
+      id: uri,
+      url: uri,
+      title: 'Unknown track',
+      artist: 'Unknown artist',
+    };
+  }
+
+  lastKnownDuration = positiveSeconds(currentTrack.durationSec);
+
+  return {
+    id: currentTrack.id,
+    url: uri,
+    title: currentTrack.title,
+    artist: currentTrack.artist.name,
+    album: currentTrack.album,
+    artwork: currentTrack.coverUrl,
+    duration: lastKnownDuration || undefined,
+  };
 }
 
 function startPositionTracking() {
   stopPositionTracking();
   positionInterval = setInterval(() => {
-    if (isSeeking || !player) return;
+    if (isSeeking || progressPollInFlight) return;
     if (!store().getState().isPlaying) return;
 
     if (Date.now() - lastSeekTime < SEEK_PROGRESS_FREEZE_MS) {
       return;
     }
 
-    const currentTime = Number.isFinite(player.currentTime)
-      ? player.currentTime
-      : 0;
+    const trackPlayer = getTrackPlayer();
+    if (!trackPlayer) return;
 
-    if (isReplacing) {
-      if (!isReplaceSettled(currentTime)) return;
-      finishReplace();
-    }
+    progressPollInFlight = true;
+    void trackPlayer
+      .getProgress()
+      .then(({ position, duration }) => {
+        if (positiveSeconds(duration)) {
+          lastKnownDuration = duration;
+        }
 
-    const duration = getDuration();
-    if (!duration) return;
+        if (isReplacing) {
+          if (!isReplaceSettled(position)) return;
+          finishReplace();
+        }
 
-    store().setState({ progress: clampRatio(currentTime / duration) });
+        const trackDuration = getDuration();
+        if (!trackDuration) return;
+
+        store().setState({
+          progress: clampRatio(position / trackDuration),
+        });
+      })
+      .catch((error: unknown) =>
+        warnAudioError('[Audio] progress polling failed:', error),
+      )
+      .finally(() => {
+        progressPollInFlight = false;
+      });
   }, 250);
 }
 
@@ -175,63 +305,61 @@ function stopPositionTracking() {
   }
 }
 
-function activateLockScreen(p: AudioPlayer): void {
-  if (typeof p.setActiveForLockScreen !== 'function') return;
+async function playSource(uri: string, label: string): Promise<void> {
+  if (__DEV__) console.log(`[Audio] Playing ${label}:`, uri);
+  beginReplace();
+
   try {
-    const track = store().getState().currentTrack;
-    if (!track) return;
-    p.setActiveForLockScreen(true, {
-      title: track.title,
-      artist: track.artist.name,
-      artworkUrl: track.coverUrl,
-    });
-  } catch {
-    // Lock screen controls not available (e.g. Expo Go)
+    const trackPlayer = await ensurePlayer();
+    await trackPlayer.reset();
+    await trackPlayer.load(buildPlayerTrack(uri));
+    await trackPlayer.play();
+    startPositionTracking();
+  } catch (error) {
+    finishReplace();
+    warnAudioError('[Audio] playback start failed:', error);
+    try {
+      store().setState({ isPlaying: false });
+    } catch {}
   }
 }
 
 export function playUrl(url: string): void {
-  const p = getPlayer();
-  if (__DEV__) console.log('[Audio] Playing URL:', url);
-  beginReplace();
-  p.replace({ uri: url });
-  p.play();
-  activateLockScreen(p);
-  startPositionTracking();
+  void playSource(url, 'URL');
 }
 
 export function playLocalFile(filePath: string): void {
-  const p = getPlayer();
-  if (__DEV__) console.log('[Audio] Playing local:', filePath);
-  beginReplace();
-  p.replace({ uri: filePath });
-  p.play();
-  activateLockScreen(p);
-  startPositionTracking();
+  void playSource(filePath, 'local');
 }
 
 export function pauseAudio(): void {
-  player?.pause();
+  const trackPlayer = getTrackPlayer();
+  if (!trackPlayer) return;
+
+  void trackPlayer
+    .pause()
+    .catch((error: unknown) => warnAudioError('[Audio] pause failed:', error));
   stopPositionTracking();
 }
 
 export function resumeAudio(): void {
-  player?.play();
-  startPositionTracking();
+  void ensurePlayer()
+    .then((trackPlayer) => trackPlayer.play())
+    .then(startPositionTracking)
+    .catch((error: unknown) => warnAudioError('[Audio] resume failed:', error));
 }
 
 export function seekTo(ratio: number): void {
-  const p = player;
-  if (!p) return;
-
   const duration = getDuration();
   if (!duration) return;
 
   const nextRatio = clampRatio(ratio);
   lastSeekTime = Date.now();
   const targetTime = nextRatio * duration;
+  const trackPlayer = getTrackPlayer();
+  if (!trackPlayer) return;
 
-  void p
+  void trackPlayer
     .seekTo(targetTime)
     .then(() => {
       lastSeekTime = 0;
@@ -251,18 +379,17 @@ export function stopSeeking(): void {
 
 export function releaseAudio(): void {
   stopPositionTracking();
-  statusSub?.remove();
-  statusSub = null;
-  try {
-    player?.pause();
-  } catch {}
-  try {
-    player?.remove();
-  } catch {}
-  player = null;
+  const trackPlayer = getTrackPlayer();
+  if (trackPlayer) {
+    void trackPlayer
+      .reset()
+      .catch((error: unknown) =>
+        warnAudioError('[Audio] reset failed:', error),
+      );
+  }
   resetTransientPlaybackState();
   finishReplace();
-  didHandleFinish = false;
+  lastKnownDuration = 0;
   if (_getStore) {
     try {
       store().setState({

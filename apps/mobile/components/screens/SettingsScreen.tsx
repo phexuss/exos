@@ -19,7 +19,7 @@ export function SettingsScreen() {
 
   return (
     <ScreenContainer>
-      {/* Header */}
+      {}
       <View
         style={{
           flexDirection: 'row',
@@ -45,7 +45,7 @@ export function SettingsScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      {/* Language */}
+      {}
       <View style={{ gap: 14, marginTop: 8 }}>
         <View
           style={{
@@ -114,7 +114,7 @@ export function SettingsScreen() {
         </View>
       </View>
 
-      {/* Appearance */}
+      {}
       <View style={{ gap: 14, marginTop: 10 }}>
         <View
           style={{
@@ -176,7 +176,7 @@ export function SettingsScreen() {
           </View>
         </View>
       </View>
-      {/* Cloud */}
+      {}
       <View style={{ gap: 14, marginTop: 10 }}>
         <View
           style={{
@@ -231,7 +231,7 @@ export function SettingsScreen() {
           </Pressable>
         </View>
       </View>
-      {/* About */}
+      {}
       <View style={{ gap: 14, marginTop: 10 }}>
         <View
           style={{

@@ -106,7 +106,8 @@ export default function LibraryScreen() {
   const setQueue = usePlayerStore((s) => s.setQueue);
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const accentColor = useDynamicAccent();
-  const revision = useDownloadStore((s) => s.revision);
+
+  const downloadedIds = useDownloadStore((s) => s.downloadedIds);
   const playlistOverlayId = useOverlayStore((s) => s.playlistId);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [playlists, setPlaylists] = useState<PlaylistRow[]>([]);
@@ -132,7 +133,7 @@ export default function LibraryScreen() {
       setTracks(t);
       setPlaylists(p);
     } catch (e) {
-      console.warn('Library fetch error:', e);
+      if (__DEV__) console.warn('Library fetch error:', e);
     }
   }, []);
 
@@ -143,10 +144,8 @@ export default function LibraryScreen() {
   );
 
   useEffect(() => {
-    if (revision >= 0) {
-      load();
-    }
-  }, [revision, load]);
+    load();
+  }, [downloadedIds, load]);
 
   useEffect(() => {
     if (!playlistOverlayId) {

@@ -83,7 +83,6 @@ export async function logout(): Promise<void> {
       );
     }
   } catch {
-    // ignore — we still clear local tokens below
   } finally {
     await clearTokens();
   }

@@ -13,7 +13,6 @@ import { useI18n } from '@/hooks/useI18n';
 
 type LyricLine = { time: number; text: string };
 
-/** Boost a hex colour's saturation & lightness so lyrics pop on dark bg */
 function vibrateHex(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
   const g = parseInt(hex.slice(3, 5), 16) / 255;
@@ -181,7 +180,6 @@ export function LyricsView({
     return null;
   }, [syncedLyrics]);
 
-  // Reset scroll/measure state when lyrics change (new track)
   useEffect(() => {
     isFirstScrollRef.current = true;
     prevLineRef.current = -1;
@@ -214,7 +212,7 @@ export function LyricsView({
     for (let i = 0; i < currentLineIndex; i++) {
       offset += lineHeights.current[i] || 43;
     }
-    // Place active line ~1/3 from top of container
+
     const targetY = Math.max(0, offset - containerH * 0.3);
 
     const prev = prevLineRef.current;

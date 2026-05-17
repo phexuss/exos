@@ -2,7 +2,6 @@ import { apiGet } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
 import type { Track } from '@/types/domain';
 
-/** Minimal shape we need from the Deezer album detail response */
 interface DeezerAlbumDetailRaw {
   id: number;
   title: string;

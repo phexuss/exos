@@ -56,7 +56,7 @@ export default function SearchScreen() {
         setResults(data);
         setQueue(data);
       } catch (e) {
-        console.warn('Search error:', e);
+        if (__DEV__) console.warn('Search error:', e);
       } finally {
         setLoading(false);
       }

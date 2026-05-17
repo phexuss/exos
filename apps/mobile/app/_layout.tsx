@@ -56,7 +56,6 @@ function useAuthRedirect() {
     const inAuthGroup = (segments[0] as string | undefined) === '(auth)';
 
     if (!user && !inAuthGroup) {
-      // Close any overlays before kicking the user out
       useOverlayStore.getState().closeAll();
       router.replace('/(auth)/welcome' as never);
     } else if (user && inAuthGroup) {
@@ -98,10 +97,8 @@ export default function RootLayout() {
       })
       .catch(() => {});
 
-    // Bootstrap auth state from secure storage
     useAuthStore.getState().checkAuth();
 
-    // Sign user out from local state when refresh chain fails on any request
     setUnauthorizedHandler(() => {
       useAuthStore.setState({ user: null });
     });

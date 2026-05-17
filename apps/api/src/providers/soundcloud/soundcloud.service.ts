@@ -75,10 +75,6 @@ export class SoundCloudService {
     }));
   }
 
-  /**
-   * Search SoundCloud tracks via yt-dlp `scsearch`.
-   * Returns up to `limit` results with metadata.
-   */
   async searchTracks(
     query: string,
     limit = 20,
@@ -121,9 +117,6 @@ export class SoundCloudService {
     }
   }
 
-  /**
-   * Get full track metadata via yt-dlp -J.
-   */
   async getTrackInfo(url: string): Promise<SoundCloudTrackInfo> {
     try {
       this.logger.debug(`SC track info: ${url}`);
@@ -172,9 +165,6 @@ export class SoundCloudService {
     }
   }
 
-  /**
-   * Get direct audio stream URL for a SoundCloud track.
-   */
   async getStreamUrl(url: string): Promise<{ url: string }> {
     try {
       this.logger.debug(`SC stream URL: ${url}`);
