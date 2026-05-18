@@ -119,7 +119,10 @@ export default function Hero() {
               initial="hidden"
               animate="visible"
             >
-              <Link href="#" target="_blank">
+              <Link
+                href="https://github.com/phexuss/exos/releases/download/v0.2.0-beta/exos.apk"
+                target="_blank"
+              >
                 <DownloadButton />
               </Link>
 

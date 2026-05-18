@@ -52,70 +52,164 @@ export async function withDb<T>(
   }
 }
 
-async function migrate(database: SQLite.SQLiteDatabase) {
-  await database.execAsync(`
-    PRAGMA journal_mode = WAL;
-    PRAGMA synchronous = NORMAL;
-  `);
+export function clearLocalDatabase(): Promise<void> {
+  return withDb(async (database) => {
+    await database.runAsync('DELETE FROM playlist_tracks');
+    await database.runAsync('DELETE FROM playlists');
+    await database.runAsync('DELETE FROM tracks');
+    await database.runAsync('DELETE FROM recently_played');
+    try {
+      await database.runAsync('VACUUM');
+    } catch (e) {
+      if (__DEV__) console.warn('[DB] VACUUM skipped:', e);
+    }
+  });
+}
 
-  await database.execAsync(`
-    CREATE TABLE IF NOT EXISTS tracks (
-      id            TEXT PRIMARY KEY,
-      title         TEXT NOT NULL,
-      artist        TEXT NOT NULL,
-      artist_id     TEXT,
-      album         TEXT,
-      cover_url     TEXT,
-      duration      TEXT NOT NULL,
-      duration_sec  INTEGER NOT NULL DEFAULT 0,
-      file_path     TEXT NOT NULL,
-      file_format   TEXT DEFAULT 'mp3',
-      isrc          TEXT,
-      preview_url   TEXT,
-      synced_lyrics TEXT,
-      plain_lyrics  TEXT,
-      source        TEXT DEFAULT 'deezer',
-      downloaded_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS playlists (
-      id         TEXT PRIMARY KEY,
-      name       TEXT NOT NULL,
-      cover_url  TEXT,
-      created_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS playlist_tracks (
-      playlist_id  TEXT NOT NULL,
-      track_id     TEXT NOT NULL,
-      position     INTEGER,
-      PRIMARY KEY (playlist_id, track_id)
-    );
-
-    CREATE TABLE IF NOT EXISTS recently_played (
-      track_id   TEXT PRIMARY KEY,
-      title      TEXT NOT NULL,
-      artist     TEXT NOT NULL,
-      artist_id  TEXT,
-      album      TEXT,
-      cover_url  TEXT,
-      duration   TEXT NOT NULL,
-      duration_sec INTEGER NOT NULL DEFAULT 0,
-      preview_url TEXT,
-      isrc       TEXT,
-      source     TEXT NOT NULL,
-      played_at  INTEGER NOT NULL
-    );
-  `);
-
+async function ensureColumn(
+  database: SQLite.SQLiteDatabase,
+  table: string,
+  column: string,
+  definition: string,
+): Promise<void> {
   const cols = await database.getAllAsync<{ name: string }>(
-    `PRAGMA table_info(tracks)`,
+    `PRAGMA table_info(${table})`,
   );
-  if (!cols.some((c) => c.name === 'source')) {
-    await database.execAsync(
-      `ALTER TABLE tracks ADD COLUMN source TEXT DEFAULT 'deezer'`,
-    );
-  }
+  if (cols.some((c) => c.name === column)) return;
+  await database.runAsync(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
+}
+
+async function migrate(database: SQLite.SQLiteDatabase) {
+  await database.runAsync('PRAGMA journal_mode = WAL');
+  await database.runAsync('PRAGMA synchronous = NORMAL');
+
+  await database.runAsync(
+    `CREATE TABLE IF NOT EXISTS tracks (
+       id            TEXT PRIMARY KEY,
+       title         TEXT NOT NULL,
+       artist        TEXT NOT NULL,
+       artist_id     TEXT,
+       album         TEXT,
+       cover_url     TEXT,
+       duration      TEXT NOT NULL,
+       duration_sec  INTEGER NOT NULL DEFAULT 0,
+       file_path     TEXT NOT NULL,
+       file_format   TEXT DEFAULT 'mp3',
+       isrc          TEXT,
+       preview_url   TEXT,
+       synced_lyrics TEXT,
+       plain_lyrics  TEXT,
+       source        TEXT DEFAULT 'deezer',
+       downloaded_at INTEGER NOT NULL
+     )`,
+  );
+
+  await database.runAsync(
+    `CREATE TABLE IF NOT EXISTS playlists (
+       id         TEXT PRIMARY KEY,
+       name       TEXT NOT NULL,
+       cover_url  TEXT,
+       created_at INTEGER NOT NULL
+     )`,
+  );
+
+  await database.runAsync(
+    `CREATE TABLE IF NOT EXISTS playlist_tracks (
+       playlist_id  TEXT NOT NULL,
+       track_id     TEXT NOT NULL,
+       position     INTEGER,
+       PRIMARY KEY (playlist_id, track_id)
+     )`,
+  );
+
+  await database.runAsync(
+    `CREATE TABLE IF NOT EXISTS recently_played (
+       track_id     TEXT PRIMARY KEY,
+       title        TEXT NOT NULL,
+       artist       TEXT NOT NULL,
+       artist_id    TEXT,
+       album        TEXT,
+       cover_url    TEXT,
+       duration     TEXT NOT NULL,
+       duration_sec INTEGER NOT NULL DEFAULT 0,
+       preview_url  TEXT,
+       isrc         TEXT,
+       source       TEXT NOT NULL DEFAULT 'deezer',
+       played_at    INTEGER NOT NULL
+     )`,
+  );
+
+  await ensureColumn(database, 'tracks', 'artist_id', 'artist_id TEXT');
+  await ensureColumn(
+    database,
+    'tracks',
+    'duration_sec',
+    'duration_sec INTEGER NOT NULL DEFAULT 0',
+  );
+  await ensureColumn(
+    database,
+    'tracks',
+    'file_format',
+    "file_format TEXT DEFAULT 'mp3'",
+  );
+  await ensureColumn(database, 'tracks', 'isrc', 'isrc TEXT');
+  await ensureColumn(database, 'tracks', 'preview_url', 'preview_url TEXT');
+  await ensureColumn(database, 'tracks', 'synced_lyrics', 'synced_lyrics TEXT');
+  await ensureColumn(database, 'tracks', 'plain_lyrics', 'plain_lyrics TEXT');
+  await ensureColumn(
+    database,
+    'tracks',
+    'source',
+    "source TEXT DEFAULT 'deezer'",
+  );
+
+  await ensureColumn(database, 'playlists', 'cover_url', 'cover_url TEXT');
+  await ensureColumn(
+    database,
+    'playlists',
+    'created_at',
+    'created_at INTEGER NOT NULL DEFAULT 0',
+  );
+
+  await ensureColumn(
+    database,
+    'playlist_tracks',
+    'position',
+    'position INTEGER',
+  );
+
+  await ensureColumn(
+    database,
+    'recently_played',
+    'artist_id',
+    'artist_id TEXT',
+  );
+  await ensureColumn(database, 'recently_played', 'album', 'album TEXT');
+  await ensureColumn(
+    database,
+    'recently_played',
+    'cover_url',
+    'cover_url TEXT',
+  );
+  await ensureColumn(
+    database,
+    'recently_played',
+    'duration_sec',
+    'duration_sec INTEGER NOT NULL DEFAULT 0',
+  );
+  await ensureColumn(
+    database,
+    'recently_played',
+    'preview_url',
+    'preview_url TEXT',
+  );
+  await ensureColumn(database, 'recently_played', 'isrc', 'isrc TEXT');
+  await ensureColumn(
+    database,
+    'recently_played',
+    'source',
+    "source TEXT NOT NULL DEFAULT 'deezer'",
+  );
 }
 
 export type LyricsData = {

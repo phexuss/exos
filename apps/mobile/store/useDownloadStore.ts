@@ -24,6 +24,8 @@ type DownloadStoreState = {
 
   clearDownloadProgress: (trackId: string) => void;
 
+  clearAll: () => void;
+
   revision: number;
 };
 
@@ -71,4 +73,11 @@ export const useDownloadStore = create<DownloadStoreState>((set) => ({
       const { [trackId]: _, ...rest } = s.activeDownloads;
       return { activeDownloads: rest, revision: s.revision + 1 };
     }),
+
+  clearAll: () =>
+    set((s) => ({
+      downloadedIds: new Set(),
+      activeDownloads: {},
+      revision: s.revision + 1,
+    })),
 }));

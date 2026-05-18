@@ -86,6 +86,16 @@ export const ru = {
     restoreLibraryTitle: 'Восстановление библиотеки',
     restoreLibraryEmpty: 'В облаке пока нет треков',
     restoreLibraryError: 'Не удалось загрузить облачную библиотеку.',
+    localSection: 'Локальное хранилище',
+    clearCache: 'Очистить локальный кеш',
+    clearCacheDesc:
+      'Удалить скачанные файлы, локальные плейлисты и историю прослушивания',
+    clearCacheTitle: 'Очистить локальный кеш?',
+    clearCacheMessage:
+      'Скачанные треки и локальная музыкальная база на этом устройстве будут удалены. Аккаунт и облачная копия не пострадают.',
+    clearCacheConfirm: 'Очистить',
+    clearCacheBusy: 'Очистка...',
+    clearCacheError: 'Не удалось очистить локальный кеш.',
     aboutSection: 'О приложении',
     faq: 'Как работает EXØS',
   },

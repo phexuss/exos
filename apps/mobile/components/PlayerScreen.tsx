@@ -316,7 +316,11 @@ export default function PlayerScreen() {
                 }}
               >
                 <SourceBadge source={currentTrack.source} />
-                <DownloadButton track={currentTrack} size={18} />
+                <DownloadButton
+                  track={currentTrack}
+                  size={18}
+                  accentColor={accentColor}
+                />
                 <Pressable
                   hitSlop={10}
                   onPress={() => setShowLyrics((v) => !v)}
@@ -324,7 +328,7 @@ export default function PlayerScreen() {
                   <AppIcon
                     name="lyrics"
                     size={20}
-                    color={showLyrics ? COLORS.accent : COLORS.textSecondary}
+                    color={showLyrics ? accentColor : COLORS.textSecondary}
                   />
                 </Pressable>
               </View>
@@ -383,7 +387,7 @@ export default function PlayerScreen() {
               <AppIcon
                 name="shuffle"
                 size={20}
-                color={shuffle ? COLORS.accent : COLORS.textMuted}
+                color={shuffle ? accentColor : COLORS.textMuted}
               />
             </Pressable>
 
@@ -447,7 +451,7 @@ export default function PlayerScreen() {
               <AppIcon
                 name={repeat === 'one' ? 'repeat-one' : 'repeat'}
                 size={20}
-                color={repeat !== 'off' ? COLORS.accent : COLORS.textMuted}
+                color={repeat !== 'off' ? accentColor : COLORS.textMuted}
               />
             </Pressable>
           </View>

@@ -2,7 +2,7 @@
   "expo": {
     "name": "EXØS",
     "slug": "mobile",
-    "version": "1.0.0",
+    "version": "0.2.0",
     "newArchEnabled": true,
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -11,9 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": [
-          "audio"
-        ]
+        "UIBackgroundModes": ["audio"]
       }
     },
     "android": {
@@ -46,9 +44,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#080914",
+          "backgroundColor": "#121212",
           "dark": {
-            "backgroundColor": "#080914"
+            "backgroundColor": "#121212"
           }
         }
       ],

@@ -43,6 +43,11 @@ type PlayerState = {
 type PlayerSet = Parameters<StateCreator<PlayerState>>[0];
 type PlayerGet = Parameters<StateCreator<PlayerState>>[1];
 
+type DownloadTicketResponse = {
+  token: string;
+  expiresAt: number;
+};
+
 let playbackRequestId = 0;
 
 function isCurrentPlaybackRequest(
@@ -86,6 +91,17 @@ function getDownloadUpdateFromTrack(track: Track): TrackDownloadUpdate | null {
     syncedLyrics: track.syncedLyrics,
     plainLyrics: track.plainLyrics,
   };
+}
+
+function getStreamQuery(track: Track): string {
+  if (track.source === 'soundcloud' && track.isrc) {
+    return track.isrc;
+  }
+  return `${track.artist.name} ${track.title}`;
+}
+
+function getStreamContentType(track: Track): string {
+  return track.source === 'soundcloud' ? 'audio/mpeg' : 'audio/mp4';
 }
 
 async function hydrateCurrentTrackDownload(
@@ -168,23 +184,30 @@ async function resolveAndPlayStream(
   get: PlayerGet,
   requestId: number,
 ): Promise<void> {
+  const query = getStreamQuery(track);
+  // Log unconditionally so we can trace failures from production builds via
+  // adb logcat. The matching server-side log is in DownloadService.resolveDirectUrl.
+  console.warn(
+    `[Stream] Resolving (source=${track.source} trackId=${track.id}):`,
+    query,
+  );
   try {
-    const query =
-      track.source === 'soundcloud'
-        ? (track.isrc ?? `${track.artist.name} ${track.title}`)
-        : `${track.artist.name} ${track.title}`;
-    if (__DEV__) console.log('[Stream] Resolving:', query);
-    const { token } = await apiPost<{ token: string; expiresAt: number }>(
+    const { token } = await apiPost<DownloadTicketResponse>(
       `${API_ENDPOINTS.download}/stream-ticket`,
-      { query, format: 'm4a' },
+      { query, format: 'm4a', mode: 'stream' },
     );
+    const params = new URLSearchParams({ token });
+    const streamUrl = `${API_BASE_URL}${API_ENDPOINTS.download}/stream-ticket?${params.toString()}`;
+    console.warn(`[Stream] Ticket ready for trackId=${track.id}:`, streamUrl);
     if (!isCurrentPlaybackRequest(requestId, track.id, get)) return;
     if (!get().isPlaying) return;
-    const streamUrl = `${API_BASE_URL}/download/stream-ticket?token=${encodeURIComponent(token)}`;
     set({ isPlaying: true });
-    audio.playUrl(streamUrl);
+    audio.playUrl(streamUrl, { contentType: getStreamContentType(track) });
   } catch (e) {
-    if (__DEV__) console.warn('[Stream] Failed to resolve URL:', e);
+    console.warn(
+      `[Stream] Failed to resolve URL for trackId=${track.id} query="${query}":`,
+      e,
+    );
     if (!isCurrentPlaybackRequest(requestId, track.id, get)) return;
     set({ isPlaying: false });
   }

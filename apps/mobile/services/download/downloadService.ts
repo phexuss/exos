@@ -29,6 +29,7 @@ type DownloadPayload = {
   query: string;
   isrc?: string;
   format: DownloadFormat;
+  mode: 'download';
 };
 
 type DownloadTicketResponse = {
@@ -38,7 +39,7 @@ type DownloadTicketResponse = {
 
 function ensureDir() {
   if (!TRACKS_DIR.exists) {
-    TRACKS_DIR.create();
+    TRACKS_DIR.create({ idempotent: true });
   }
 }
 
@@ -79,6 +80,17 @@ export function onDownloadProgress(trackId: string, fn: Listener): () => void {
 
 export function isDownloading(trackId: string): boolean {
   return activeDownloads.has(trackId);
+}
+
+export async function clearDownloadedTrackFiles(): Promise<void> {
+  if (activeDownloads.size > 0) {
+    throw new Error('Downloads are still running');
+  }
+
+  if (TRACKS_DIR.exists) {
+    TRACKS_DIR.delete();
+  }
+  TRACKS_DIR.create({ idempotent: true });
 }
 
 function primaryArtist(artist: string): string {
@@ -128,6 +140,7 @@ function buildDownloadPayload(
     query,
     isrc: !soundCloudUrl ? track.isrc : undefined,
     format,
+    mode: 'download',
   };
 }
 

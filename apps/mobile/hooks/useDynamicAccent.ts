@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
 
 import { COLORS } from '@/constants/colors';
@@ -67,6 +68,11 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${hex(r)}${hex(g)}${hex(b)}`;
 }
 
+function rgbToHex(r: number, g: number, b: number): string {
+  const hex = (n: number) => Math.round(n).toString(16).padStart(2, '0');
+  return `#${hex(r)}${hex(g)}${hex(b)}`;
+}
+
 function parseHex(hex: string): [number, number, number] {
   const clean = hex.replace('#', '');
   if (clean.length === 3) {
@@ -91,67 +97,38 @@ function boostSaturation(hex: string): string {
   return hslToHex(h, s, l);
 }
 
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  const data = value.includes(',') ? value.split(',')[1] : value;
+  const raw = atob(data);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) {
+    bytes[i] = raw.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function thumbHashToAverageHex(hash: Uint8Array): string | null {
+  if (hash.length < 3) return null;
+
+  const header = hash[0] | (hash[1] << 8) | (hash[2] << 16);
+  const l = (header & 63) / 63;
+  const p = ((header >> 6) & 63) / 31.5 - 1;
+  const q = ((header >> 12) & 63) / 31.5 - 1;
+  const b = l - (2 / 3) * p;
+  const r = (3 * l - b + q) / 2;
+  const g = r - q;
+
+  return rgbToHex(clamp01(r) * 255, clamp01(g) * 255, clamp01(b) * 255);
+}
+
 async function extractColor(url: string): Promise<string | null> {
   try {
-    const tinyUrl = url.includes('dzcdn.net')
-      ? url.replace(/\/\d+x\d+/, '/1x1')
-      : url;
-
-    const res = await fetch(tinyUrl);
-    if (!res.ok) return null;
-
-    const blob = await res.blob();
-    const reader = new FileReader();
-
-    return new Promise<string | null>((resolve) => {
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-
-        const data = base64.split(',')[1];
-        if (!data) {
-          resolve(null);
-          return;
-        }
-
-        const raw = atob(data);
-        const bytes = new Uint8Array(raw.length);
-        for (let i = 0; i < raw.length; i++) {
-          bytes[i] = raw.charCodeAt(i);
-        }
-
-        if (bytes.length < 10) {
-          resolve(null);
-          return;
-        }
-
-        let rSum = 0,
-          gSum = 0,
-          bSum = 0,
-          count = 0;
-
-        const start = Math.floor(bytes.length * 0.3);
-        const end = Math.floor(bytes.length * 0.9);
-        for (let i = start; i + 2 < end; i += 3) {
-          rSum += bytes[i];
-          gSum += bytes[i + 1];
-          bSum += bytes[i + 2];
-          count++;
-        }
-
-        if (count === 0) {
-          resolve(null);
-          return;
-        }
-
-        const r = Math.round(rSum / count);
-        const g = Math.round(gSum / count);
-        const b = Math.round(bSum / count);
-        const toHex = (n: number) => n.toString(16).padStart(2, '0');
-        resolve(`#${toHex(r)}${toHex(g)}${toHex(b)}`);
-      };
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
+    const thumbhash = await Image.generateThumbhashAsync(url);
+    return thumbHashToAverageHex(base64ToBytes(thumbhash));
   } catch {
     return null;
   }
@@ -165,6 +142,7 @@ export function useDynamicAccent(): string {
 
   useEffect(() => {
     if (!dynamicAccent || !coverUrl) {
+      lastUrlRef.current = undefined;
       setColor(COLORS.accent);
       return;
     }
@@ -182,7 +160,11 @@ export function useDynamicAccent(): string {
 
     extractColor(coverUrl)
       .then((hex) => {
-        if (cancelled || !hex) return;
+        if (cancelled) return;
+        if (!hex) {
+          setColor(COLORS.accent);
+          return;
+        }
         const boosted = boostSaturation(hex);
         cacheSet(coverUrl, boosted);
         setColor(boosted);

@@ -3,6 +3,10 @@ import type { Track as PlayerTrack } from 'react-native-track-player';
 type TrackPlayerModule = typeof import('react-native-track-player');
 type TrackPlayerApi = TrackPlayerModule['default'];
 
+type PlaybackSourceOptions = {
+  contentType?: string;
+};
+
 let positionInterval: ReturnType<typeof setInterval> | null = null;
 let isSeeking = false;
 let isReplacing = false;
@@ -15,10 +19,15 @@ let lastKnownDuration = 0;
 let progressPollInFlight = false;
 let trackPlayerModule: TrackPlayerModule | null = null;
 let trackPlayerApi: TrackPlayerApi | null = null;
+let lastPlaybackUri: string | null = null;
+let lastPlaybackLabel: string | null = null;
 
 const SEEK_PROGRESS_FREEZE_MS = 250;
 const MIN_REPLACE_FREEZE_MS = 300;
 const MAX_REPLACE_FREEZE_MS = 2500;
+const MEDIA_NOTIFICATION_COLOR = 0xff121212;
+const MEDIA_NOTIFICATION_ICON =
+  require('../../assets/images/notification-icon.png') as number;
 
 let _getStore:
   | (() => typeof import('@/store/usePlayerStore').usePlayerStore)
@@ -90,7 +99,10 @@ function isReplaceSettled(position: number): boolean {
 }
 
 function warnAudioError(message: string, error: unknown): void {
-  if (__DEV__) console.warn(message, error);
+  // Always log — we need to see playback failures in production via adb logcat
+  // (e.g. expo-audio/RNTP 403 from IP-bound googlevideo URLs). console.warn is
+  // forwarded to native logs in both dev and release Hermes builds.
+  console.warn(message, error);
 }
 
 function loadTrackPlayerModule(): TrackPlayerModule | null {
@@ -129,8 +141,27 @@ function bindTrackPlayerEvents() {
 
   trackPlayer.addEventListener(Event.PlaybackState, ({ state }) => {
     if (state === State.Playing) {
+      finishReplace();
       store().setState({ isPlaying: true });
       startPositionTracking();
+      return;
+    }
+
+    if (
+      state === State.Loading ||
+      state === State.Buffering ||
+      state === State.Ready
+    ) {
+      return;
+    }
+
+    if (
+      isReplacing &&
+      (state === State.Paused ||
+        state === State.Stopped ||
+        state === State.Ended ||
+        state === State.None)
+    ) {
       return;
     }
 
@@ -138,7 +169,8 @@ function bindTrackPlayerEvents() {
       state === State.Paused ||
       state === State.Stopped ||
       state === State.Ended ||
-      state === State.None
+      state === State.None ||
+      state === State.Error
     ) {
       store().setState({ isPlaying: false });
       if (state !== State.Paused) stopPositionTracking();
@@ -146,6 +178,8 @@ function bindTrackPlayerEvents() {
   });
 
   trackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
+    if (isReplacing) return;
+
     const s = store();
     const { repeat } = s.getState();
     if (repeat === 'one') {
@@ -162,7 +196,15 @@ function bindTrackPlayerEvents() {
   });
 
   trackPlayer.addEventListener(Event.PlaybackError, (error) => {
-    warnAudioError('[Audio] playback error:', error);
+    // Include the URI that was loaded into the player so we can correlate
+    // RNTP/ExoPlayer/AVPlayer errors with the resolved stream URL on the
+    // server side (see DownloadService.resolveDirectUrl logs).
+    warnAudioError(
+      `[Audio] playback error (label=${lastPlaybackLabel ?? 'unknown'} uri=${
+        lastPlaybackUri ?? 'unknown'
+      }):`,
+      error,
+    );
     store().setState({ isPlaying: false });
     stopPositionTracking();
   });
@@ -214,6 +256,8 @@ async function ensurePlayer(): Promise<TrackPlayerApi> {
             Capability.Pause,
             Capability.SkipToNext,
           ],
+          color: MEDIA_NOTIFICATION_COLOR,
+          icon: MEDIA_NOTIFICATION_ICON,
           forwardJumpInterval: 10,
           backwardJumpInterval: 10,
           progressUpdateEventInterval: 1,
@@ -232,7 +276,10 @@ async function ensurePlayer(): Promise<TrackPlayerApi> {
   return setupPromise;
 }
 
-function buildPlayerTrack(uri: string): PlayerTrack {
+function buildPlayerTrack(
+  uri: string,
+  options: PlaybackSourceOptions = {},
+): PlayerTrack {
   const currentTrack = store().getState().currentTrack;
   if (!currentTrack) {
     return {
@@ -240,6 +287,7 @@ function buildPlayerTrack(uri: string): PlayerTrack {
       url: uri,
       title: 'Unknown track',
       artist: 'Unknown artist',
+      contentType: options.contentType,
     };
   }
 
@@ -253,6 +301,7 @@ function buildPlayerTrack(uri: string): PlayerTrack {
     album: currentTrack.album,
     artwork: currentTrack.coverUrl,
     duration: lastKnownDuration || undefined,
+    contentType: options.contentType,
   };
 }
 
@@ -305,14 +354,22 @@ function stopPositionTracking() {
   }
 }
 
-async function playSource(uri: string, label: string): Promise<void> {
-  if (__DEV__) console.log(`[Audio] Playing ${label}:`, uri);
+async function playSource(
+  uri: string,
+  label: string,
+  options: PlaybackSourceOptions = {},
+): Promise<void> {
+  // Log unconditionally so failed playback attempts on production builds are
+  // visible in adb logcat alongside the corresponding PlaybackError event.
+  console.warn(`[Audio] Playing ${label}:`, uri);
+  lastPlaybackUri = uri;
+  lastPlaybackLabel = label;
   beginReplace();
 
   try {
     const trackPlayer = await ensurePlayer();
     await trackPlayer.reset();
-    await trackPlayer.load(buildPlayerTrack(uri));
+    await trackPlayer.load(buildPlayerTrack(uri, options));
     await trackPlayer.play();
     startPositionTracking();
   } catch (error) {
@@ -324,8 +381,11 @@ async function playSource(uri: string, label: string): Promise<void> {
   }
 }
 
-export function playUrl(url: string): void {
-  void playSource(url, 'URL');
+export function playUrl(
+  url: string,
+  options: PlaybackSourceOptions = {},
+): void {
+  void playSource(url, 'URL', options);
 }
 
 export function playLocalFile(filePath: string): void {

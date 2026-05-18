@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { Pressable, Switch, View } from 'react-native';
 
+import { AppDialog } from '@/components/AppDialog';
 import { RestoreLibraryModal } from '@/components/RestoreLibraryModal';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { COLORS } from '@/constants/colors';
 import { useI18n } from '@/hooks/useI18n';
+import * as audio from '@/services/audio/audioService';
+import { clearLocalDatabase } from '@/services/db/database';
+import { clearDownloadedTrackFiles } from '@/services/download/downloadService';
+import { useDownloadStore } from '@/store/useDownloadStore';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
@@ -16,6 +21,26 @@ export function SettingsScreen() {
   const closeSettings = useOverlayStore((s) => s.closeSettings);
   const openFaq = useOverlayStore((s) => s.openFaq);
   const [showRestoreLibrary, setShowRestoreLibrary] = useState(false);
+  const [showClearCache, setShowClearCache] = useState(false);
+  const [clearCacheBusy, setClearCacheBusy] = useState(false);
+  const [clearCacheError, setClearCacheError] = useState<string | null>(null);
+
+  const handleClearCache = async () => {
+    setClearCacheBusy(true);
+    setClearCacheError(null);
+    try {
+      audio.releaseAudio();
+      await clearDownloadedTrackFiles();
+      await clearLocalDatabase();
+      useDownloadStore.getState().clearAll();
+      setShowClearCache(false);
+    } catch (e) {
+      if (__DEV__) console.warn('[Settings] Clear cache failed:', e);
+      setClearCacheError(t('settings.clearCacheError'));
+    } finally {
+      setClearCacheBusy(false);
+    }
+  };
 
   return (
     <ScreenContainer>
@@ -185,6 +210,68 @@ export function SettingsScreen() {
             gap: 8,
           }}
         >
+          <AppIcon name="trash" size={16} color={COLORS.textMuted} />
+          <AppText
+            variant="label"
+            weight="medium"
+            style={{
+              color: COLORS.textSecondary,
+              letterSpacing: 1,
+              fontSize: 11,
+            }}
+          >
+            {t('settings.localSection').toUpperCase()}
+          </AppText>
+        </View>
+
+        <View
+          style={{
+            borderTopWidth: 0.5,
+            borderTopColor: COLORS.border,
+          }}
+        >
+          <Pressable
+            onPress={() => {
+              setClearCacheError(null);
+              setShowClearCache(true);
+            }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 14,
+              borderBottomWidth: 0.5,
+              borderBottomColor: COLORS.divider,
+            }}
+          >
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <AppText
+                variant="label"
+                weight="medium"
+                style={{ color: COLORS.danger }}
+              >
+                {t('settings.clearCache')}
+              </AppText>
+              <AppText
+                variant="caption"
+                style={{ color: COLORS.textMuted, marginTop: 2 }}
+              >
+                {t('settings.clearCacheDesc')}
+              </AppText>
+            </View>
+            <AppIcon name="trash" size={16} color={COLORS.danger} />
+          </Pressable>
+        </View>
+      </View>
+      {}
+      <View style={{ gap: 14, marginTop: 10 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
           <AppIcon name="download" size={16} color={COLORS.textMuted} />
           <AppText
             variant="label"
@@ -281,6 +368,19 @@ export function SettingsScreen() {
       <RestoreLibraryModal
         visible={showRestoreLibrary}
         onClose={() => setShowRestoreLibrary(false)}
+      />
+      <AppDialog
+        visible={showClearCache}
+        title={t('settings.clearCacheTitle')}
+        message={t('settings.clearCacheMessage')}
+        error={clearCacheError}
+        confirmLabel={t('settings.clearCacheConfirm')}
+        cancelLabel={t('common.cancel')}
+        busyLabel={t('settings.clearCacheBusy')}
+        busy={clearCacheBusy}
+        confirmTone="danger"
+        onConfirm={handleClearCache}
+        onClose={() => setShowClearCache(false)}
       />
     </ScreenContainer>
   );

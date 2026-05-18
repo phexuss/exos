@@ -18,10 +18,16 @@ import type { Track } from '@/types/domain';
 type Props = {
   track: Track;
   size?: number;
+  accentColor?: string;
   onDownloaded?: (track: Track, download: DownloadResult) => void;
 };
 
-export function DownloadButton({ track, size = 20, onDownloaded }: Props) {
+export function DownloadButton({
+  track,
+  size = 20,
+  accentColor,
+  onDownloaded,
+}: Props) {
   const { t } = useI18n();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isDownloaded = useDownloadStore((s) => s.downloadedIds.has(track.id));
@@ -63,6 +69,7 @@ export function DownloadButton({ track, size = 20, onDownloaded }: Props) {
   }, [track, status, markTrackDownloaded, onDownloaded, t]);
 
   const indicatorSize = size + 4;
+  const activeColor = accentColor ?? COLORS.accent;
 
   return (
     <>
@@ -95,14 +102,11 @@ export function DownloadButton({ track, size = 20, onDownloaded }: Props) {
                 height: indicatorSize,
                 borderRadius: indicatorSize / 2,
                 borderWidth: 2,
-                borderColor: COLORS.accent,
-                borderTopColor: progress > 0.99 ? COLORS.accent : 'transparent',
-                borderRightColor:
-                  progress > 0.25 ? COLORS.accent : 'transparent',
-                borderBottomColor:
-                  progress > 0.5 ? COLORS.accent : 'transparent',
-                borderLeftColor:
-                  progress > 0.75 ? COLORS.accent : 'transparent',
+                borderColor: activeColor,
+                borderTopColor: progress > 0.99 ? activeColor : 'transparent',
+                borderRightColor: progress > 0.25 ? activeColor : 'transparent',
+                borderBottomColor: progress > 0.5 ? activeColor : 'transparent',
+                borderLeftColor: progress > 0.75 ? activeColor : 'transparent',
                 transform: [{ rotate: '-90deg' }],
               }}
             />
@@ -125,7 +129,7 @@ export function DownloadButton({ track, size = 20, onDownloaded }: Props) {
           <AppIcon
             name={status === 'done' ? 'check' : 'download'}
             size={size}
-            color={status === 'done' ? COLORS.accent : COLORS.textMuted}
+            color={status === 'done' ? activeColor : COLORS.textMuted}
           />
         )}
       </Pressable>
