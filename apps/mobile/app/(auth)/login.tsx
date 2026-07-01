@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppDialog } from '@/components/AppDialog';
 import { AuthTextField } from '@/components/auth/AuthTextField';
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { AppIcon } from '@/components/ui/AppIcon';
@@ -30,6 +31,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [showOfflineWarning, setShowOfflineWarning] = useState(false);
 
   const passwordRef = useRef<RNTextInput>(null);
 
@@ -188,9 +190,35 @@ export default function LoginScreen() {
                 </AppText>
               </AppText>
             </Pressable>
+            <Pressable
+              onPress={() => setShowOfflineWarning(true)}
+              hitSlop={8}
+              style={{ alignItems: 'center', paddingVertical: 8 }}
+            >
+              <AppText
+                variant="caption"
+                style={{ color: COLORS.textMuted, fontSize: 13 }}
+              >
+                {t('auth.orContinueOffline')}
+              </AppText>
+            </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <AppDialog
+        visible={showOfflineWarning}
+        title={t('auth.offlineWarningTitle')}
+        message={t('auth.offlineWarningDesc')}
+        cancelLabel={t('common.cancel')}
+        confirmLabel={t('common.confirm')}
+        onClose={() => setShowOfflineWarning(false)}
+        onConfirm={() => {
+          setShowOfflineWarning(false);
+          useAuthStore.getState().enterOfflineMode();
+          router.replace('/(tabs)' as never);
+        }}
+      />
     </SafeAreaView>
   );
 }

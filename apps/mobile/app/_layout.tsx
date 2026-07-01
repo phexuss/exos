@@ -49,19 +49,20 @@ function useAuthRedirect() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const isHydrated = useAuthStore((s) => s.isHydrated);
+  const isOffline = useAuthStore((s) => s.isOffline);
 
   useEffect(() => {
     if (!isHydrated) return;
 
     const inAuthGroup = (segments[0] as string | undefined) === '(auth)';
 
-    if (!user && !inAuthGroup) {
+    if (!user && !isOffline && !inAuthGroup) {
       useOverlayStore.getState().closeAll();
       router.replace('/(auth)/welcome' as never);
-    } else if (user && inAuthGroup) {
+    } else if ((user || isOffline) && inAuthGroup) {
       router.replace('/(tabs)' as never);
     }
-  }, [user, isHydrated, segments, router]);
+  }, [user, isHydrated, isOffline, segments, router]);
 }
 
 function RootNavigator() {

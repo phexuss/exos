@@ -14,12 +14,14 @@ import { clearDownloadedTrackFiles } from '@/services/download/downloadService';
 import { useDownloadStore } from '@/store/useDownloadStore';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export function SettingsScreen() {
   const { locale, setLocale, t } = useI18n();
   const { dynamicAccent, setDynamicAccent } = useSettingsStore();
   const closeSettings = useOverlayStore((s) => s.closeSettings);
   const openFaq = useOverlayStore((s) => s.openFaq);
+  const user = useAuthStore((s) => s.user);
   const [showRestoreLibrary, setShowRestoreLibrary] = useState(false);
   const [showClearCache, setShowClearCache] = useState(false);
   const [clearCacheBusy, setClearCacheBusy] = useState(false);
@@ -290,10 +292,12 @@ export function SettingsScreen() {
           style={{
             borderTopWidth: 0.5,
             borderTopColor: COLORS.border,
+            opacity: user ? 1 : 0.4,
           }}
         >
           <Pressable
-            onPress={() => setShowRestoreLibrary(true)}
+            onPress={user ? () => setShowRestoreLibrary(true) : undefined}
+            disabled={!user}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -311,7 +315,9 @@ export function SettingsScreen() {
                 variant="caption"
                 style={{ color: COLORS.textMuted, marginTop: 2 }}
               >
-                {t('settings.restoreLibraryDesc')}
+                {user
+                  ? t('settings.restoreLibraryDesc')
+                  : t('settings.cloudRequiresLogin')}
               </AppText>
             </View>
             <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />

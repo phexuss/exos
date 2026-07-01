@@ -21,6 +21,8 @@ let trackPlayerModule: TrackPlayerModule | null = null;
 let trackPlayerApi: TrackPlayerApi | null = null;
 let lastPlaybackUri: string | null = null;
 let lastPlaybackLabel: string | null = null;
+let loadedPlaybackTrackId: string | null = null;
+let pendingPlaybackTrackId: string | null = null;
 
 const SEEK_PROGRESS_FREEZE_MS = 250;
 const MIN_REPLACE_FREEZE_MS = 300;
@@ -66,6 +68,46 @@ function clampRatio(value: number): number {
 function resetTransientPlaybackState() {
   isSeeking = false;
   lastSeekTime = 0;
+}
+
+function currentStoreTrackId(): string | null {
+  return store().getState().currentTrack?.id ?? null;
+}
+
+function isTerminalPlaybackState(state: string): boolean {
+  const trackPlayerModule = loadTrackPlayerModule();
+  if (!trackPlayerModule) return false;
+  const { State } = trackPlayerModule;
+  return (
+    state === State.Paused ||
+    state === State.Stopped ||
+    state === State.Ended ||
+    state === State.None ||
+    state === State.Error
+  );
+}
+
+function shouldIgnorePlaybackStateForCurrentTrack(): boolean {
+  const currentTrackId = currentStoreTrackId();
+  if (!currentTrackId) return false;
+
+  if (
+    pendingPlaybackTrackId === currentTrackId &&
+    loadedPlaybackTrackId !== currentTrackId
+  ) {
+    return true;
+  }
+
+  return Boolean(
+    loadedPlaybackTrackId && loadedPlaybackTrackId !== currentTrackId,
+  );
+}
+
+function loadedTrackIdFrom(
+  playerTrack: PlayerTrack,
+  fallbackUri: string,
+): string {
+  return String(playerTrack.id ?? fallbackUri);
 }
 
 function clearReplaceWatchdog() {
@@ -141,6 +183,7 @@ function bindTrackPlayerEvents() {
 
   trackPlayer.addEventListener(Event.PlaybackState, ({ state }) => {
     if (state === State.Playing) {
+      if (shouldIgnorePlaybackStateForCurrentTrack()) return;
       finishReplace();
       store().setState({ isPlaying: true });
       startPositionTracking();
@@ -165,13 +208,8 @@ function bindTrackPlayerEvents() {
       return;
     }
 
-    if (
-      state === State.Paused ||
-      state === State.Stopped ||
-      state === State.Ended ||
-      state === State.None ||
-      state === State.Error
-    ) {
+    if (isTerminalPlaybackState(state)) {
+      if (shouldIgnorePlaybackStateForCurrentTrack()) return;
       store().setState({ isPlaying: false });
       if (state !== State.Paused) stopPositionTracking();
     }
@@ -179,6 +217,7 @@ function bindTrackPlayerEvents() {
 
   trackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
     if (isReplacing) return;
+    if (shouldIgnorePlaybackStateForCurrentTrack()) return;
 
     const s = store();
     const { repeat } = s.getState();
@@ -196,6 +235,7 @@ function bindTrackPlayerEvents() {
   });
 
   trackPlayer.addEventListener(Event.PlaybackError, (error) => {
+    if (shouldIgnorePlaybackStateForCurrentTrack()) return;
     // Include the URI that was loaded into the player so we can correlate
     // RNTP/ExoPlayer/AVPlayer errors with the resolved stream URL on the
     // server side (see DownloadService.resolveDirectUrl logs).
@@ -368,8 +408,13 @@ async function playSource(
 
   try {
     const trackPlayer = await ensurePlayer();
+    const playerTrack = buildPlayerTrack(uri, options);
+    const nextLoadedTrackId = loadedTrackIdFrom(playerTrack, uri);
     await trackPlayer.reset();
-    await trackPlayer.load(buildPlayerTrack(uri, options));
+    loadedPlaybackTrackId = null;
+    await trackPlayer.load(playerTrack);
+    loadedPlaybackTrackId = nextLoadedTrackId;
+    clearPendingTrackPlayback(nextLoadedTrackId);
     await trackPlayer.play();
     startPositionTracking();
   } catch (error) {
@@ -390,6 +435,24 @@ export function playUrl(
 
 export function playLocalFile(filePath: string): void {
   void playSource(filePath, 'local');
+}
+
+export function prepareTrackPlayback(trackId: string): void {
+  pendingPlaybackTrackId = trackId;
+  resetTransientPlaybackState();
+  stopPositionTracking();
+}
+
+export function clearPendingTrackPlayback(trackId?: string): void {
+  if (!trackId || pendingPlaybackTrackId === trackId) {
+    pendingPlaybackTrackId = null;
+  }
+}
+
+export function hasLoadedTrack(trackId: string): boolean {
+  return (
+    loadedPlaybackTrackId === trackId && pendingPlaybackTrackId !== trackId
+  );
 }
 
 export function pauseAudio(): void {
@@ -450,6 +513,8 @@ export function releaseAudio(): void {
   resetTransientPlaybackState();
   finishReplace();
   lastKnownDuration = 0;
+  loadedPlaybackTrackId = null;
+  pendingPlaybackTrackId = null;
   if (_getStore) {
     try {
       store().setState({

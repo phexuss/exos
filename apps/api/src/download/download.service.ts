@@ -143,6 +143,14 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
       return;
     }
 
+    if (!statSync(configured).isFile()) {
+      this.logger.error(
+        `YTDLP_COOKIES_PATH must point to a file, but got: ${configured}. ` +
+          'Falling back to no-cookies mode.',
+      );
+      return;
+    }
+
     this.resolvedCookiesPath = configured;
     try {
       this.cookieDiagnostics = this.inspectCookiesFile(configured);

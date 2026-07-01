@@ -30,6 +30,7 @@ export const en = {
     topAlbums: 'Top Albums',
     dailyMix: 'Daily Mix',
     becauseYouListened: 'Because you listened to',
+    signInToAccess: 'Sign in to see this section',
   },
   search: {
     placeholder: 'Search tracks, artists...',
@@ -97,6 +98,7 @@ export const en = {
     clearCacheError: 'Could not clear local cache.',
     aboutSection: 'About',
     faq: 'How EXØS works',
+    cloudRequiresLogin: 'Sign in to use cloud backup',
   },
   faq: {
     title: 'How EXØS works',
@@ -204,5 +206,13 @@ export const en = {
     fillAllFields: 'Please fill in all fields',
     passwordTooShort: 'Password must be at least 8 characters',
     invalidEmail: 'Please enter a valid email',
+    continueOffline: 'Continue offline',
+    orContinueOffline: 'or continue without account',
+    offlineWarningTitle: 'Offline mode',
+    offlineWarningDesc:
+      'Without an account, cloud sync, library backup and profile features will be unavailable. You can still search, listen and download music.',
+    offlineProfileTitle: 'Sign in to your account',
+    offlineProfileDesc:
+      'Create an account or sign in to sync your library across devices and access your profile.',
   },
 } as const;

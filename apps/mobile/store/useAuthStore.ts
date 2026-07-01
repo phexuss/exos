@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 
 import { releaseAudio } from '@/services/audio/audioService';
@@ -44,18 +45,37 @@ type AuthState = {
     newPassword: string,
   ) => Promise<void>;
   setUser: (user: AuthUser | null) => void;
+  isOffline: boolean;
+  enterOfflineMode: () => void;
+  exitOfflineMode: () => void;
 };
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isHydrated: false,
   isLoading: false,
+  isOffline: false,
 
   setUser: (user) => set({ user }),
+
+  enterOfflineMode: () => {
+    set({ isOffline: true, isHydrated: true });
+    AsyncStorage.setItem('auth:offlineMode', 'true').catch(() => {});
+  },
+
+  exitOfflineMode: () => {
+    set({ isOffline: false });
+    AsyncStorage.removeItem('auth:offlineMode').catch(() => {});
+  },
 
   checkAuth: async () => {
     set({ isLoading: true });
     try {
+      const offlineRaw = await AsyncStorage.getItem('auth:offlineMode');
+      if (offlineRaw === 'true') {
+        set({ isOffline: true, isHydrated: true, isLoading: false });
+        return;
+      }
       const token = await getAccessToken();
       if (!token) {
         set({ user: null, isHydrated: true, isLoading: false });

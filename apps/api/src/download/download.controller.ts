@@ -71,6 +71,18 @@ export class DownloadController {
   }
 
   @ApiOperation({
+    summary: 'Resolve direct audio URL for query params without streaming',
+  })
+  @ApiOkResponse({
+    description: 'Resolved direct URL to stream/download audio',
+    type: DownloadResponseDto,
+  })
+  @Get('resolve')
+  async resolve(@Query() dto: DownloadDto): Promise<DownloadResponseDto> {
+    return this.downloadService.getDownloadUrl(dto);
+  }
+
+  @ApiOperation({
     summary: 'Stream audio bytes using a short-lived signed ticket',
   })
   @ApiOkResponse({

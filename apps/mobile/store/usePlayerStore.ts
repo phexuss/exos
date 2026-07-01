@@ -148,12 +148,25 @@ function smartPlay(
 function startTrack(track: Track, set: PlayerSet, get: PlayerGet): void {
   const requestId = ++playbackRequestId;
   set({ currentTrack: track, isPlaying: true, progress: 0 });
+  audio.prepareTrackPlayback(track.id);
   smartPlay(track, set, get, requestId);
 }
 
 function resumeCurrentTrack(set: PlayerSet): void {
   set({ isPlaying: true });
   audio.resumeAudio();
+}
+
+function resumeOrRestartTrack(
+  track: Track,
+  set: PlayerSet,
+  get: PlayerGet,
+): void {
+  if (audio.hasLoadedTrack(track.id)) {
+    resumeCurrentTrack(set);
+  } else {
+    startTrack(track, set, get);
+  }
 }
 
 async function playDownloadedOrResolveStream(
@@ -167,7 +180,10 @@ async function playDownloadedOrResolveStream(
     if (downloadedTrack?.filePath) {
       if (!isCurrentPlaybackRequest(requestId, track.id, get)) return;
       updateDownloadedTrackState(track.id, downloadedTrack, set);
-      if (!get().isPlaying) return;
+      if (!get().isPlaying) {
+        audio.clearPendingTrackPlayback(track.id);
+        return;
+      }
       audio.playLocalFile(downloadedTrack.filePath);
       return;
     }
@@ -200,7 +216,10 @@ async function resolveAndPlayStream(
     const streamUrl = `${API_BASE_URL}${API_ENDPOINTS.download}/stream-ticket?${params.toString()}`;
     console.warn(`[Stream] Ticket ready for trackId=${track.id}:`, streamUrl);
     if (!isCurrentPlaybackRequest(requestId, track.id, get)) return;
-    if (!get().isPlaying) return;
+    if (!get().isPlaying) {
+      audio.clearPendingTrackPlayback(track.id);
+      return;
+    }
     set({ isPlaying: true });
     audio.playUrl(streamUrl, { contentType: getStreamContentType(track) });
   } catch (e) {
@@ -209,6 +228,7 @@ async function resolveAndPlayStream(
       e,
     );
     if (!isCurrentPlaybackRequest(requestId, track.id, get)) return;
+    audio.clearPendingTrackPlayback(track.id);
     set({ isPlaying: false });
   }
 }
@@ -233,7 +253,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         void hydrateCurrentTrackDownload(track.id, set, get);
       }
 
-      if (!isPlaying) resumeCurrentTrack(set);
+      if (!isPlaying) {
+        resumeOrRestartTrack(track, set, get);
+      }
       return;
     }
 
@@ -246,8 +268,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   resume: () => {
-    set({ isPlaying: true });
-    audio.resumeAudio();
+    const { currentTrack } = get();
+    if (!currentTrack) return;
+
+    resumeOrRestartTrack(currentTrack, set, get);
   },
 
   togglePlayback: () => {
@@ -255,10 +279,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (!currentTrack) return;
     if (isPlaying) {
       audio.pauseAudio();
-    } else {
-      audio.resumeAudio();
+      set({ isPlaying: false });
+      return;
     }
-    set({ isPlaying: !isPlaying });
+
+    resumeOrRestartTrack(currentTrack, set, get);
   },
 
   setProgress: (value) => {

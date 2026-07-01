@@ -150,6 +150,7 @@ function TrackItemComponent({
               }
             }}
             hitSlop={4}
+            style={{ flexShrink: 1 }}
           >
             <AppText
               variant="caption"

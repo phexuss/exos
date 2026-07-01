@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Jost } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
+import { LenisProvider } from '@/components/providers/LenisProvider';
 
 const jost = Jost({
   subsets: ['latin', 'cyrillic'],
@@ -21,7 +22,9 @@ export default function RootLayout({
 }>) {
   return (
     <html className={cn('h-full', 'antialiased', jost.variable, 'font-sans')}>
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        <LenisProvider>{children}</LenisProvider>
+      </body>
     </html>
   );
 }

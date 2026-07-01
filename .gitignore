@@ -3,6 +3,7 @@ node_modules/
 
 # Package manager
 pnpm-lock.yaml
+!apps/web/pnpm-lock.yaml
 
 # Turborepo
 .turbo/

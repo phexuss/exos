@@ -18,6 +18,7 @@ import { getRecentlyPlayed } from '@/services/db/database';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import type { DeezerAlbum, DeezerArtist } from '@/types/deezer';
 import type { Track } from '@/types/domain';
 
@@ -87,7 +88,7 @@ function RecentCardComponent({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
           <AppText
             variant="caption"
-            style={{ color: COLORS.textMuted, fontSize: 12 }}
+            style={{ color: COLORS.textMuted, fontSize: 12, flexShrink: 1 }}
             numberOfLines={1}
           >
             {track.artist.name}
@@ -348,12 +349,42 @@ function HorizontalSeparator() {
   return <View style={{ width: 14 }} />;
 }
 
+function SignInPromptCard() {
+  const { t } = useI18n();
+  return (
+    <Pressable
+      onPress={() => useOverlayStore.getState().openProfile()}
+      style={{
+        height: 120,
+        borderRadius: 14,
+        borderWidth: 0.5,
+        borderColor: COLORS.border,
+        backgroundColor: COLORS.surfaceMuted,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        paddingHorizontal: 20,
+      }}
+    >
+      <AppIcon name="profile" size={24} color={COLORS.textMuted} />
+      <AppText
+        variant="caption"
+        weight="medium"
+        style={{ color: COLORS.textMuted, textAlign: 'center', fontSize: 13 }}
+      >
+        {t('home.signInToAccess')}
+      </AppText>
+    </Pressable>
+  );
+}
+
 export default function HomeScreen() {
   const { t } = useI18n();
   const play = usePlayerStore((s) => s.play);
   const setQueue = usePlayerStore((s) => s.setQueue);
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const accentColor = useDynamicAccent();
+  const user = useAuthStore((s) => s.user);
   const [recentTracks, setRecentTracks] = useState<Track[]>([]);
   const [chartTracks, setChartTracks] = useState<Track[]>([]);
   const [chartArtists, setChartArtists] = useState<DeezerArtist[]>([]);
@@ -377,6 +408,11 @@ export default function HomeScreen() {
     (async () => {
       const recent = await getRecentlyPlayed(20).catch(() => [] as Track[]);
       setRecentTracks(recent);
+
+      if (!user) {
+        setChartLoading(false);
+        return;
+      }
 
       if (recent[0]) {
         setSimilarLoading(true);
@@ -402,7 +438,7 @@ export default function HomeScreen() {
       setSimilarTracks(similar);
       setSimilarLoading(false);
     })();
-  }, []);
+  }, [user]);
 
   const handlePlay = useCallback(
     (track: Track, queue: Track[]) => {
@@ -582,7 +618,7 @@ export default function HomeScreen() {
         <SectionHeader label={t('home.chartTracks')} />
         {chartLoading ? (
           <TrackSkeletonRow count={3} />
-        ) : (
+        ) : chartTracks.length > 0 ? (
           <FlashList
             data={chartTracks}
             horizontal
@@ -592,6 +628,8 @@ export default function HomeScreen() {
             ItemSeparatorComponent={HorizontalSeparator}
             style={{ height: 218 }}
           />
+        ) : (
+          <SignInPromptCard />
         )}
       </View>
 
@@ -599,7 +637,7 @@ export default function HomeScreen() {
         <SectionHeader label={t('home.topArtists')} />
         {chartLoading ? (
           <ArtistSkeletonRow count={4} />
-        ) : (
+        ) : chartArtists.length > 0 ? (
           <FlashList
             data={chartArtists}
             horizontal
@@ -609,6 +647,8 @@ export default function HomeScreen() {
             ItemSeparatorComponent={HorizontalSeparator}
             style={{ height: 92 }}
           />
+        ) : (
+          <SignInPromptCard />
         )}
       </View>
 
@@ -616,7 +656,7 @@ export default function HomeScreen() {
         <SectionHeader label={t('home.topAlbums')} />
         {chartLoading ? (
           <AlbumSkeletonRow count={3} />
-        ) : (
+        ) : chartAlbums.length > 0 ? (
           <FlashList
             data={chartAlbums}
             horizontal
@@ -626,6 +666,8 @@ export default function HomeScreen() {
             ItemSeparatorComponent={HorizontalSeparator}
             style={{ height: 150 }}
           />
+        ) : (
+          <SignInPromptCard />
         )}
       </View>
     </ScreenContainer>

@@ -31,6 +31,7 @@ export const ru = {
     topAlbums: 'Топ альбомы',
     dailyMix: 'Дейли Микс',
     becauseYouListened: 'Потому что вы слушали',
+    signInToAccess: 'Войдите, чтобы видеть этот раздел',
   },
   search: {
     placeholder: 'Поиск треков, артистов...',
@@ -98,6 +99,7 @@ export const ru = {
     clearCacheError: 'Не удалось очистить локальный кеш.',
     aboutSection: 'О приложении',
     faq: 'Как работает EXØS',
+    cloudRequiresLogin: 'Войдите, чтобы использовать облачную копию',
   },
   faq: {
     title: 'Как работает EXØS',
@@ -206,5 +208,13 @@ export const ru = {
     fillAllFields: 'Заполните все поля',
     passwordTooShort: 'Пароль должен быть от 8 символов',
     invalidEmail: 'Введите корректный email',
+    continueOffline: 'Продолжить оффлайн',
+    orContinueOffline: 'или продолжить без аккаунта',
+    offlineWarningTitle: 'Оффлайн режим',
+    offlineWarningDesc:
+      'Без аккаунта облачная синхронизация, резервное копирование библиотеки и функции профиля будут недоступны. Вы по-прежнему сможете искать, слушать и скачивать музыку.',
+    offlineProfileTitle: 'Войдите в аккаунт',
+    offlineProfileDesc:
+      'Создайте аккаунт или войдите, чтобы синхронизировать библиотеку между устройствами и получить доступ к профилю.',
   },
 } as const;
