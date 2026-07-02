@@ -1,6 +1,7 @@
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TrackItem } from '@/components/TrackItem';

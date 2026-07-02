@@ -1,7 +1,8 @@
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedModal } from '@/components/AnimatedModal';

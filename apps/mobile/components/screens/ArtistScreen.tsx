@@ -3,11 +3,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   ScrollView,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TrackItem } from '@/components/TrackItem';
