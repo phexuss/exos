@@ -13,6 +13,7 @@ import type { SourceKey } from '@/constants/sources';
 import { SPACING } from '@/constants/spacing';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
+import { useGlassBottomInset } from '@/hooks/useGlassBottomInset';
 import { useI18n } from '@/hooks/useI18n';
 import { searchSoundCloud, searchTracks } from '@/services/api/search';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -37,6 +38,7 @@ export default function SearchScreen() {
   const setQueue = usePlayerStore((s) => s.setQueue);
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const accentColor = useDynamicAccent();
+  const glassInset = useGlassBottomInset();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchResults = useCallback(
@@ -226,7 +228,7 @@ export default function SearchScreen() {
         contentContainerStyle={{
           paddingHorizontal: SPACING.lg,
           paddingTop: SPACING.md,
-          paddingBottom: 100,
+          paddingBottom: 100 + glassInset,
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}

@@ -15,6 +15,7 @@ import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
+import { useGlassBottomInset } from '@/hooks/useGlassBottomInset';
 import { useI18n } from '@/hooks/useI18n';
 import {
   addTrackToPlaylist,
@@ -107,6 +108,7 @@ export default function LibraryScreen() {
   const setQueue = usePlayerStore((s) => s.setQueue);
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const accentColor = useDynamicAccent();
+  const glassInset = useGlassBottomInset();
 
   const downloadedIds = useDownloadStore((s) => s.downloadedIds);
   const playlistOverlayId = useOverlayStore((s) => s.playlistId);
@@ -396,7 +398,7 @@ export default function LibraryScreen() {
         contentContainerStyle={{
           paddingHorizontal: SPACING.lg,
           paddingTop: SPACING.md,
-          paddingBottom: selectionMode ? 150 : 100,
+          paddingBottom: (selectionMode ? 150 : 100) + glassInset,
         }}
         showsVerticalScrollIndicator={false}
       />
@@ -416,7 +418,7 @@ export default function LibraryScreen() {
             position: 'absolute',
             left: SPACING.lg,
             right: SPACING.lg,
-            bottom: SPACING.lg,
+            bottom: SPACING.lg + glassInset,
             borderRadius: 18,
             backgroundColor: COLORS.surfaceElevated,
             borderWidth: 0.5,

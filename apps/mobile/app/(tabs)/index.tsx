@@ -547,7 +547,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <ScreenContainer>
+    <ScreenContainer withTabBar>
       <View
         style={{
           flexDirection: 'row',
