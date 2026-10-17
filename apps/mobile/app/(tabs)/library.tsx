@@ -2,16 +2,26 @@ import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  memo,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
+import { GlassSurface } from '@/components/glass/GlassSurface';
 import { TrackActionsSheet } from '@/components/TrackActionsSheet';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { GLASS, GLASS_SPRING } from '@/constants/glass';
 import { SPACING } from '@/constants/spacing';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
@@ -30,6 +40,66 @@ import { useDownloadStore } from '@/store/useDownloadStore';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import type { Track } from '@/types/domain';
+
+type SelectionBarProps = {
+  glass: boolean;
+  bottom: number;
+  children: ReactNode;
+};
+
+function SelectionBar({ glass, bottom, children }: SelectionBarProps) {
+  const rowStyle = {
+    height: 60,
+    paddingHorizontal: 10,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 10,
+  };
+
+  if (glass) {
+    return (
+      <Animated.View
+        entering={FadeInDown.springify()
+          .damping(GLASS_SPRING.snappy.damping)
+          .stiffness(GLASS_SPRING.snappy.stiffness)}
+        exiting={FadeOutDown.duration(180)}
+        style={{
+          position: 'absolute',
+          left: SPACING.lg,
+          right: SPACING.lg,
+          bottom,
+        }}
+      >
+        <GlassSurface
+          floating
+          variant="regular"
+          style={{ borderRadius: GLASS.radius.capsule }}
+          contentStyle={rowStyle}
+        >
+          {children}
+        </GlassSurface>
+      </Animated.View>
+    );
+  }
+
+  return (
+    <View
+      style={{
+        ...rowStyle,
+        position: 'absolute',
+        left: SPACING.lg,
+        right: SPACING.lg,
+        bottom,
+        borderRadius: 18,
+        backgroundColor: COLORS.surfaceElevated,
+        borderWidth: 0.5,
+        borderColor: COLORS.border,
+      }}
+    >
+      {children}
+    </View>
+  );
+}
 
 type PlaylistCardProps = {
   id: string;
@@ -420,23 +490,7 @@ export default function LibraryScreen() {
         }}
       />
       {selectionMode ? (
-        <View
-          style={{
-            position: 'absolute',
-            left: SPACING.lg,
-            right: SPACING.lg,
-            bottom: SPACING.lg + glassInset,
-            borderRadius: 18,
-            backgroundColor: COLORS.surfaceElevated,
-            borderWidth: 0.5,
-            borderColor: COLORS.border,
-            height: 60,
-            paddingHorizontal: 10,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 10,
-          }}
-        >
+        <SelectionBar glass={glassMode} bottom={SPACING.lg + glassInset}>
           <Pressable
             onPress={clearSelection}
             hitSlop={10}
@@ -519,7 +573,7 @@ export default function LibraryScreen() {
           >
             <AppIcon name="trash" size={18} color={COLORS.danger} />
           </Pressable>
-        </View>
+        </SelectionBar>
       ) : null}
 
       <AnimatedModal
