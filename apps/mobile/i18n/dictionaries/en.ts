@@ -81,6 +81,9 @@ export const en = {
     dynamicAccent: 'Dynamic accent color',
     dynamicAccentDesc:
       'Tint the player with the dominant color from the album cover',
+    glassMode: 'Glass mode',
+    glassModeDesc:
+      'Translucent frosted interface with fluid animations. Experimental — restart the app if something looks off',
     cloudSection: 'Cloud backup',
     restoreLibrary: 'Restore library',
     restoreLibraryDesc: 'Show backed-up downloads and save them again',

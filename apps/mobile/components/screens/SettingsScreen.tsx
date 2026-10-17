@@ -18,7 +18,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 export function SettingsScreen() {
   const { locale, setLocale, t } = useI18n();
-  const { dynamicAccent, setDynamicAccent } = useSettingsStore();
+  const { dynamicAccent, setDynamicAccent, glassMode, setGlassMode } =
+    useSettingsStore();
   const closeSettings = useOverlayStore((s) => s.closeSettings);
   const openFaq = useOverlayStore((s) => s.openFaq);
   const user = useAuthStore((s) => s.user);
@@ -194,6 +195,37 @@ export function SettingsScreen() {
             <Switch
               value={dynamicAccent}
               onValueChange={setDynamicAccent}
+              trackColor={{
+                false: COLORS.surfaceMuted,
+                true: COLORS.accent,
+              }}
+              thumbColor={COLORS.textPrimary}
+            />
+          </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 14,
+              borderBottomWidth: 0.5,
+              borderBottomColor: COLORS.divider,
+            }}
+          >
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <AppText variant="label" weight="medium">
+                {t('settings.glassMode')}
+              </AppText>
+              <AppText
+                variant="caption"
+                style={{ color: COLORS.textMuted, marginTop: 2 }}
+              >
+                {t('settings.glassModeDesc')}
+              </AppText>
+            </View>
+            <Switch
+              value={glassMode}
+              onValueChange={setGlassMode}
               trackColor={{
                 false: COLORS.surfaceMuted,
                 true: COLORS.accent,
