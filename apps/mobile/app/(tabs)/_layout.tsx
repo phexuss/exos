@@ -5,10 +5,12 @@ import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { GlassTabBar } from '@/components/glass/GlassTabBar';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import type { IconName } from '@/components/ui/AppIcon';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { COLORS } from '@/constants/colors';
+import { useGlassMode } from '@/hooks/useGlassMode';
 
 const TAB_ICONS: Record<string, IconName> = {
   index: 'home',
@@ -85,9 +87,17 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 }
 
 export default function TabLayout() {
+  const glassMode = useGlassMode();
+
   return (
     <Tabs
-      tabBar={(props) => <CustomTabBar {...props} />}
+      tabBar={(props) =>
+        glassMode ? (
+          <GlassTabBar {...props} icons={TAB_ICONS} />
+        ) : (
+          <CustomTabBar {...props} />
+        )
+      }
       screenOptions={{
         headerShown: false,
         animation: 'fade',
