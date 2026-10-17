@@ -1,7 +1,14 @@
-import { useState } from 'react';
-import { Pressable, Switch, View } from 'react-native';
+import { type ReactNode, useState } from 'react';
+import {
+  Pressable,
+  type StyleProp,
+  Switch,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 import { AppDialog } from '@/components/AppDialog';
+import { GlassSurface } from '@/components/glass/GlassSurface';
 import { RestoreLibraryModal } from '@/components/RestoreLibraryModal';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
@@ -15,6 +22,35 @@ import { useDownloadStore } from '@/store/useDownloadStore';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAuthStore } from '@/store/useAuthStore';
+
+type SettingsGroupProps = {
+  glass: boolean;
+  style?: StyleProp<ViewStyle>;
+  children: ReactNode;
+};
+
+function SettingsGroup({ glass, style, children }: SettingsGroupProps) {
+  if (glass) {
+    return (
+      <GlassSurface
+        blur={false}
+        variant="regular"
+        style={[{ borderRadius: 22 }, style]}
+        contentStyle={{ paddingHorizontal: 16 }}
+      >
+        {children}
+      </GlassSurface>
+    );
+  }
+
+  return (
+    <View
+      style={[{ borderTopWidth: 0.5, borderTopColor: COLORS.border }, style]}
+    >
+      {children}
+    </View>
+  );
+}
 
 export function SettingsScreen() {
   const { locale, setLocale, t } = useI18n();
@@ -96,12 +132,7 @@ export function SettingsScreen() {
           </AppText>
         </View>
 
-        <View
-          style={{
-            borderTopWidth: 0.5,
-            borderTopColor: COLORS.border,
-          }}
-        >
+        <SettingsGroup glass={glassMode}>
           <Pressable
             onPress={() => setLocale('en')}
             style={{
@@ -139,7 +170,7 @@ export function SettingsScreen() {
               <AppIcon name="check" size={16} color={COLORS.accent} />
             ) : null}
           </Pressable>
-        </View>
+        </SettingsGroup>
       </View>
 
       {}
@@ -165,12 +196,7 @@ export function SettingsScreen() {
           </AppText>
         </View>
 
-        <View
-          style={{
-            borderTopWidth: 0.5,
-            borderTopColor: COLORS.border,
-          }}
-        >
+        <SettingsGroup glass={glassMode}>
           <View
             style={{
               flexDirection: 'row',
@@ -233,7 +259,7 @@ export function SettingsScreen() {
               thumbColor={COLORS.textPrimary}
             />
           </View>
-        </View>
+        </SettingsGroup>
       </View>
       {}
       <View style={{ gap: 14, marginTop: 10 }}>
@@ -258,12 +284,7 @@ export function SettingsScreen() {
           </AppText>
         </View>
 
-        <View
-          style={{
-            borderTopWidth: 0.5,
-            borderTopColor: COLORS.border,
-          }}
-        >
+        <SettingsGroup glass={glassMode}>
           <Pressable
             onPress={() => {
               setClearCacheError(null);
@@ -295,7 +316,7 @@ export function SettingsScreen() {
             </View>
             <AppIcon name="trash" size={16} color={COLORS.danger} />
           </Pressable>
-        </View>
+        </SettingsGroup>
       </View>
       {}
       <View style={{ gap: 14, marginTop: 10 }}>
@@ -320,13 +341,7 @@ export function SettingsScreen() {
           </AppText>
         </View>
 
-        <View
-          style={{
-            borderTopWidth: 0.5,
-            borderTopColor: COLORS.border,
-            opacity: user ? 1 : 0.4,
-          }}
-        >
+        <SettingsGroup glass={glassMode} style={{ opacity: user ? 1 : 0.4 }}>
           <Pressable
             onPress={user ? () => setShowRestoreLibrary(true) : undefined}
             disabled={!user}
@@ -354,7 +369,7 @@ export function SettingsScreen() {
             </View>
             <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
           </Pressable>
-        </View>
+        </SettingsGroup>
       </View>
       {}
       <View style={{ gap: 14, marginTop: 10 }}>
@@ -379,12 +394,7 @@ export function SettingsScreen() {
           </AppText>
         </View>
 
-        <View
-          style={{
-            borderTopWidth: 0.5,
-            borderTopColor: COLORS.border,
-          }}
-        >
+        <SettingsGroup glass={glassMode}>
           <Pressable
             onPress={openFaq}
             style={{
@@ -401,7 +411,7 @@ export function SettingsScreen() {
             </AppText>
             <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
           </Pressable>
-        </View>
+        </SettingsGroup>
       </View>
       <RestoreLibraryModal
         visible={showRestoreLibrary}
