@@ -40,10 +40,10 @@ export const GLASS = {
 
 /** Spring presets tuned to feel like iOS UIKit springs. */
 export const GLASS_SPRING = {
-  /** Snappy, slight overshoot — selection bubbles, toggles. */
-  snappy: { damping: 18, stiffness: 260, mass: 0.9 },
-  /** Soft, no visible bounce — sheets, large surfaces. */
-  smooth: { damping: 26, stiffness: 220, mass: 1 },
+  /** Snappy, slight overshoot — selection bubbles, toggles. ~290ms to settle. */
+  snappy: { damping: 24, stiffness: 360, mass: 0.9 },
+  /** Presentations — sheets, overlays, cards. ~180ms to settle, barely any overshoot. */
+  smooth: { damping: 30, stiffness: 380, mass: 1 },
   /** Press feedback — fast in, gentle settle. */
   press: { damping: 15, stiffness: 400, mass: 0.6 },
 } as const;

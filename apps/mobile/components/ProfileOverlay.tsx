@@ -5,7 +5,10 @@ import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
-import { glassPresentEntering } from '@/components/glass/transitions';
+import {
+  glassPresentEntering,
+  glassPresentExiting,
+} from '@/components/glass/transitions';
 import { ProfileScreen } from '@/components/screens/ProfileScreen';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
@@ -172,7 +175,7 @@ export function ProfileOverlay() {
           ? glassPresentEntering()
           : SlideInDown.duration(350).damping(28)
       }
-      exiting={SlideOutDown.duration(300)}
+      exiting={glassMode ? glassPresentExiting() : SlideOutDown.duration(300)}
       style={{
         position: 'absolute',
         top: 0,

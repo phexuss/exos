@@ -2,7 +2,10 @@ import { useEffect } from 'react';
 import { BackHandler } from 'react-native';
 import Animated, { SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
-import { glassPushEntering } from '@/components/glass/transitions';
+import {
+  glassPushEntering,
+  glassPushExiting,
+} from '@/components/glass/transitions';
 import { SettingsScreen } from '@/components/screens/SettingsScreen';
 import { COLORS } from '@/constants/colors';
 import { useGlassMode } from '@/hooks/useGlassMode';
@@ -29,7 +32,7 @@ export function SettingsOverlay() {
   return (
     <Animated.View
       entering={glassMode ? glassPushEntering() : SlideInRight.duration(280)}
-      exiting={SlideOutRight.duration(240)}
+      exiting={glassMode ? glassPushExiting() : SlideOutRight.duration(240)}
       style={{
         position: 'absolute',
         top: 0,

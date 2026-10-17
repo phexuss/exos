@@ -18,6 +18,10 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassSurface } from '@/components/glass/GlassSurface';
+import {
+  glassPresentEntering,
+  glassPresentExiting,
+} from '@/components/glass/transitions';
 import { GLASS, GLASS_SPRING } from '@/constants/glass';
 import { useGlassMode } from '@/hooks/useGlassMode';
 
@@ -142,16 +146,14 @@ export function AnimatedModal({
 
   const contentEntering = glassMode
     ? isSheet
-      ? SlideInDown.springify()
-          .damping(GLASS_SPRING.smooth.damping)
-          .stiffness(GLASS_SPRING.smooth.stiffness)
+      ? glassPresentEntering()
       : glassDialogEntering
     : isSheet
       ? SlideInDown.duration(240)
       : FadeIn.duration(ENTER_MS);
   const contentExiting = glassMode
     ? isSheet
-      ? SlideOutDown.duration(exitDuration)
+      ? glassPresentExiting()
       : glassDialogExiting
     : isSheet
       ? SlideOutDown.duration(exitDuration)

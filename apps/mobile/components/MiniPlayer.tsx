@@ -203,7 +203,8 @@ export function MiniPlayer() {
       <Animated.View
         entering={FadeInDown.springify()
           .damping(GLASS_SPRING.smooth.damping)
-          .stiffness(GLASS_SPRING.smooth.stiffness)}
+          .stiffness(GLASS_SPRING.smooth.stiffness)
+          .mass(GLASS_SPRING.smooth.mass)}
         exiting={FadeOutDown.duration(200)}
         style={{ marginHorizontal: 12, marginBottom: 8 }}
       >

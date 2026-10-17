@@ -2,9 +2,12 @@ import { useEffect } from 'react';
 import { BackHandler } from 'react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { GlassArtworkBackdrop } from '@/components/glass/GlassArtworkBackdrop';
+import {
+  glassPresentEntering,
+  glassPresentExiting,
+} from '@/components/glass/transitions';
 import PlayerScreen from '@/components/PlayerScreen';
 import { COLORS } from '@/constants/colors';
-import { GLASS_SPRING } from '@/constants/glass';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -32,12 +35,10 @@ export function PlayerOverlay() {
     <Animated.View
       entering={
         glassMode
-          ? SlideInDown.springify()
-              .damping(GLASS_SPRING.smooth.damping)
-              .stiffness(GLASS_SPRING.smooth.stiffness)
+          ? glassPresentEntering()
           : SlideInDown.duration(350).damping(28)
       }
-      exiting={SlideOutDown.duration(300)}
+      exiting={glassMode ? glassPresentExiting() : SlideOutDown.duration(300)}
       style={{
         position: 'absolute',
         top: 0,
