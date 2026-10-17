@@ -6,10 +6,12 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
 import { COLORS } from '@/constants/colors';
+import { GLASS_SPRING } from '@/constants/glass';
 
 type SeekBarProps = {
   progress: number;
@@ -19,11 +21,18 @@ type SeekBarProps = {
   onSeekEnd?: () => void;
   onScrub?: (value: number | null) => void;
   accentColor?: string;
+  /**
+   * iOS 26-style scrubber: no thumb, a translucent track that swells while
+   * it's being dragged.
+   */
+  glass?: boolean;
 };
 
 const TRACK_HEIGHT = 4;
 const THUMB_SIZE = 14;
 const HIT_SLOP = 16;
+const GLASS_TRACK_HEIGHT = 6;
+const GLASS_TRACK_ACTIVE_HEIGHT = 14;
 
 export function SeekBar({
   progress,
@@ -33,11 +42,18 @@ export function SeekBar({
   onSeekEnd,
   onScrub,
   accentColor,
+  glass = false,
 }: SeekBarProps) {
+  const restHeight = glass ? GLASS_TRACK_HEIGHT : TRACK_HEIGHT;
   const width = useSharedValue(0);
   const position = useSharedValue(0);
   const isScrubbing = useSharedValue(false);
   const thumbScale = useSharedValue(1);
+  const trackHeight = useSharedValue(restHeight);
+
+  useEffect(() => {
+    trackHeight.value = restHeight;
+  }, [restHeight, trackHeight]);
 
   useEffect(() => {
     const target = progress * width.value;
@@ -69,6 +85,12 @@ export function SeekBar({
       cancelAnimation(position);
       position.value = x;
       thumbScale.value = withTiming(1.6, { duration: 120 });
+      if (glass) {
+        trackHeight.value = withSpring(
+          GLASS_TRACK_ACTIVE_HEIGHT,
+          GLASS_SPRING.snappy,
+        );
+      }
       if (onSeekStart) runOnJS(onSeekStart)();
       if (w > 0) runOnJS(jsScrub)(x / w);
     })
@@ -82,6 +104,7 @@ export function SeekBar({
     .onEnd(() => {
       'worklet';
       thumbScale.value = withTiming(1, { duration: 200 });
+      trackHeight.value = withSpring(restHeight, GLASS_SPRING.smooth);
       const w = width.value;
       if (w > 0) runOnJS(onSeek)(position.value / w);
       runOnJS(jsScrub)(null);
@@ -93,6 +116,7 @@ export function SeekBar({
       if (success) return;
 
       thumbScale.value = withTiming(1, { duration: 200 });
+      trackHeight.value = withSpring(restHeight, GLASS_SPRING.smooth);
       isScrubbing.value = false;
       runOnJS(jsScrub)(null);
       if (onSeekEnd) runOnJS(onSeekEnd)();
@@ -120,6 +144,11 @@ export function SeekBar({
     };
   });
 
+  const trackStyle = useAnimatedStyle(() => ({
+    height: trackHeight.value,
+    borderRadius: trackHeight.value / 2,
+  }));
+
   const thumbStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: position.value - THUMB_SIZE / 2 },
@@ -141,13 +170,16 @@ export function SeekBar({
           }
         }}
       >
-        <View
-          style={{
-            height: TRACK_HEIGHT,
-            borderRadius: TRACK_HEIGHT / 2,
-            backgroundColor: COLORS.divider,
-            overflow: 'hidden',
-          }}
+        <Animated.View
+          style={[
+            {
+              backgroundColor: glass
+                ? 'rgba(255,255,255,0.22)'
+                : COLORS.divider,
+              overflow: 'hidden',
+            },
+            trackStyle,
+          ]}
         >
           <Animated.View
             style={[
@@ -155,26 +187,30 @@ export function SeekBar({
                 position: 'absolute',
                 left: 0,
                 right: 0,
-                height: TRACK_HEIGHT,
-                borderRadius: TRACK_HEIGHT / 2,
-                backgroundColor: accentColor ?? COLORS.accent,
+                top: 0,
+                bottom: 0,
+                backgroundColor: glass
+                  ? COLORS.textPrimary
+                  : (accentColor ?? COLORS.accent),
               },
               fillStyle,
             ]}
           />
-        </View>
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              width: THUMB_SIZE,
-              height: THUMB_SIZE,
-              borderRadius: THUMB_SIZE / 2,
-              backgroundColor: COLORS.textPrimary,
-            },
-            thumbStyle,
-          ]}
-        />
+        </Animated.View>
+        {glass ? null : (
+          <Animated.View
+            style={[
+              {
+                position: 'absolute',
+                width: THUMB_SIZE,
+                height: THUMB_SIZE,
+                borderRadius: THUMB_SIZE / 2,
+                backgroundColor: COLORS.textPrimary,
+              },
+              thumbStyle,
+            ]}
+          />
+        )}
       </View>
     </GestureDetector>
   );

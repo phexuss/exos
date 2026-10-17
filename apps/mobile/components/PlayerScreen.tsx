@@ -419,6 +419,7 @@ export default function PlayerScreen() {
               onSeekEnd={stopSeeking}
               onScrub={setScrubRatio}
               accentColor={accentColor}
+              glass={glassMode}
             />
             <View
               style={{
