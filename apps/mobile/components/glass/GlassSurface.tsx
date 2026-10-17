@@ -24,6 +24,12 @@ type GlassSurfaceProps = {
   floating?: boolean;
   /** Draws the top specular highlight. On by default. */
   highlight?: boolean;
+  /**
+   * Native backdrop blur. Turn off for many surfaces inside scrolling content
+   * over a static backdrop — the tint alone reads as frosted and is far
+   * cheaper on Android.
+   */
+  blur?: boolean;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
 };
@@ -40,6 +46,7 @@ export function GlassSurface({
   intensity,
   floating,
   highlight = true,
+  blur = true,
   style,
   contentStyle,
 }: GlassSurfaceProps) {
@@ -59,13 +66,15 @@ export function GlassSurface({
         floating ? { flexGrow: 1 } : undefined,
       ]}
     >
-      <BlurView
-        pointerEvents="none"
-        intensity={intensity ?? GLASS.blur[variant]}
-        tint={Platform.OS === 'ios' ? IOS_TINT[variant] : 'dark'}
-        experimentalBlurMethod="dimezisBlurView"
-        style={StyleSheet.absoluteFill}
-      />
+      {blur ? (
+        <BlurView
+          pointerEvents="none"
+          intensity={intensity ?? GLASS.blur[variant]}
+          tint={Platform.OS === 'ios' ? IOS_TINT[variant] : 'dark'}
+          experimentalBlurMethod="dimezisBlurView"
+          style={StyleSheet.absoluteFill}
+        />
+      ) : null}
       <View
         pointerEvents="none"
         style={[
