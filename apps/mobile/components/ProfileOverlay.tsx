@@ -4,11 +4,14 @@ import { BackHandler, Pressable, View } from 'react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
+import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
+import { glassPresentEntering } from '@/components/glass/transitions';
 import { ProfileScreen } from '@/components/screens/ProfileScreen';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useOverlayStore } from '@/store/useOverlayStore';
@@ -108,7 +111,11 @@ function OfflineProfilePrompt() {
         </View>
 
         <View style={{ gap: 6, alignItems: 'center' }}>
-          <AppText variant="title" weight="bold" style={{ textAlign: 'center' }}>
+          <AppText
+            variant="title"
+            weight="bold"
+            style={{ textAlign: 'center' }}
+          >
             {t('auth.offlineProfileTitle')}
           </AppText>
           <AppText
@@ -139,6 +146,7 @@ function OfflineProfilePrompt() {
 }
 
 export function ProfileOverlay() {
+  const glassMode = useGlassMode();
   const isProfileOpen = useOverlayStore((s) => s.isProfileOpen);
   const isSettingsOpen = useOverlayStore((s) => s.isSettingsOpen);
   const closeProfile = useOverlayStore((s) => s.closeProfile);
@@ -159,7 +167,11 @@ export function ProfileOverlay() {
 
   return (
     <Animated.View
-      entering={SlideInDown.duration(350).damping(28)}
+      entering={
+        glassMode
+          ? glassPresentEntering()
+          : SlideInDown.duration(350).damping(28)
+      }
       exiting={SlideOutDown.duration(300)}
       style={{
         position: 'absolute',
@@ -171,6 +183,7 @@ export function ProfileOverlay() {
         backgroundColor: COLORS.background,
       }}
     >
+      {glassMode ? <GlassAmbientBackground /> : null}
       {user ? <ProfileScreen /> : <OfflineProfilePrompt />}
     </Animated.View>
   );

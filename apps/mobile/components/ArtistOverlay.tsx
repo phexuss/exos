@@ -2,13 +2,16 @@ import { useEffect } from 'react';
 import { BackHandler, View } from 'react-native';
 import Animated, { SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { glassPushEntering } from '@/components/glass/transitions';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { AlbumScreen } from '@/components/screens/AlbumScreen';
 import { ArtistScreen } from '@/components/screens/ArtistScreen';
 import { COLORS } from '@/constants/colors';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useOverlayStore } from '@/store/useOverlayStore';
 
 export function ArtistOverlay() {
+  const glassMode = useGlassMode();
   const artistId = useOverlayStore((s) => s.artistId);
   const albumId = useOverlayStore((s) => s.albumId);
   const albumTitle = useOverlayStore((s) => s.albumTitle);
@@ -35,7 +38,7 @@ export function ArtistOverlay() {
 
   return (
     <Animated.View
-      entering={SlideInRight.duration(280)}
+      entering={glassMode ? glassPushEntering() : SlideInRight.duration(280)}
       exiting={SlideOutRight.duration(240)}
       style={{
         position: 'absolute',

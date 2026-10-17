@@ -1,12 +1,15 @@
 import { useEffect } from 'react';
 import { BackHandler } from 'react-native';
 import Animated, { SlideInRight, SlideOutRight } from 'react-native-reanimated';
-
+import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
+import { glassPushEntering } from '@/components/glass/transitions';
 import { FaqScreen } from '@/components/screens/FaqScreen';
 import { COLORS } from '@/constants/colors';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useOverlayStore } from '@/store/useOverlayStore';
 
 export function FaqOverlay() {
+  const glassMode = useGlassMode();
   const isFaqOpen = useOverlayStore((s) => s.isFaqOpen);
   const closeFaq = useOverlayStore((s) => s.closeFaq);
 
@@ -25,7 +28,7 @@ export function FaqOverlay() {
 
   return (
     <Animated.View
-      entering={SlideInRight.duration(280)}
+      entering={glassMode ? glassPushEntering() : SlideInRight.duration(280)}
       exiting={SlideOutRight.duration(240)}
       style={{
         position: 'absolute',
@@ -37,6 +40,7 @@ export function FaqOverlay() {
         backgroundColor: COLORS.background,
       }}
     >
+      {glassMode ? <GlassAmbientBackground /> : null}
       <FaqScreen onDismiss={closeFaq} />
     </Animated.View>
   );

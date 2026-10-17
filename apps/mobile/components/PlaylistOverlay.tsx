@@ -2,13 +2,15 @@ import { useEffect } from 'react';
 import { BackHandler, View } from 'react-native';
 import Animated, { SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { glassPushEntering } from '@/components/glass/transitions';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { PlaylistScreen } from '@/components/screens/PlaylistScreen';
 import { COLORS } from '@/constants/colors';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useOverlayStore } from '@/store/useOverlayStore';
 
 export function PlaylistOverlay() {
+  const glassMode = useGlassMode();
   const playlistId = useOverlayStore((s) => s.playlistId);
   const closePlaylist = useOverlayStore((s) => s.closePlaylist);
   const insets = useSafeAreaInsets();
@@ -28,7 +30,7 @@ export function PlaylistOverlay() {
 
   return (
     <Animated.View
-      entering={SlideInRight.duration(280)}
+      entering={glassMode ? glassPushEntering() : SlideInRight.duration(280)}
       exiting={SlideOutRight.duration(240)}
       style={{
         position: 'absolute',

@@ -8,6 +8,7 @@ import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { SOURCES } from '@/constants/sources';
 import { SPACING } from '@/constants/spacing';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 
 type SourceCardProps = {
@@ -156,9 +157,15 @@ type FaqScreenProps = {
 
 export function FaqScreen({ onDismiss }: FaqScreenProps) {
   const { t } = useI18n();
+  const glassMode = useGlassMode();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: glassMode ? 'transparent' : COLORS.background,
+      }}
+    >
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
