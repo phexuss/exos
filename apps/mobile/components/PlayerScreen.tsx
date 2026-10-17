@@ -1,17 +1,23 @@
 import { FlashList } from '@shopify/flash-list';
-import { useCallback, useState } from 'react';
-import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
+import { useCallback, useEffect, useState } from 'react';
+import { Platform, Pressable, View } from 'react-native';
 import Animated, {
   FadeIn,
   FadeOut,
   SlideInDown,
   SlideOutDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  ZoomIn,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { DownloadButton } from '@/components/DownloadButton';
+import { GlassIconButton } from '@/components/glass/GlassIconButton';
+import { GlassSurface } from '@/components/glass/GlassSurface';
 import { LyricsView } from '@/components/LyricsView';
 import { SeekBar } from '@/components/SeekBar';
 import { SourceBadge } from '@/components/SourceBadge';
@@ -20,7 +26,9 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
+import { GLASS_SPRING } from '@/constants/glass';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import * as audio from '@/services/audio/audioService';
 import { useOverlayStore } from '@/store/useOverlayStore';
@@ -28,6 +36,7 @@ import { usePlayerStore } from '@/store/usePlayerStore';
 import type { Track } from '@/types/domain';
 
 type QueueOverlayProps = {
+  glassMode: boolean;
   currentTrack: Track;
   queue: Track[];
   onClose: () => void;
@@ -35,6 +44,7 @@ type QueueOverlayProps = {
 };
 
 function QueueOverlay({
+  glassMode,
   currentTrack,
   queue,
   onClose,
@@ -51,13 +61,27 @@ function QueueOverlay({
         right: 0,
         bottom: 0,
         zIndex: 10,
-        backgroundColor: COLORS.background,
+        backgroundColor: glassMode ? 'transparent' : COLORS.background,
       }}
     >
+      {glassMode ? (
+        <GlassSurface
+          variant="thick"
+          highlight={false}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            borderRadius: 0,
+          }}
+        />
+      ) : null}
       <View
         style={{
           flex: 1,
-          backgroundColor: COLORS.background,
+          backgroundColor: glassMode ? 'transparent' : COLORS.background,
           paddingHorizontal: 24,
         }}
       >
@@ -99,7 +123,7 @@ function QueueOverlay({
           style={{
             paddingVertical: 8,
             paddingHorizontal: 12,
-            borderRadius: 10,
+            borderRadius: glassMode ? 16 : 10,
             backgroundColor: COLORS.accentSubtle,
             marginBottom: 16,
           }}
@@ -159,6 +183,8 @@ export default function PlayerScreen() {
   const play = usePlayerStore((s) => s.play);
   const closePlayer = usePlayerStore((s) => s.closePlayer);
   const accentColor = useDynamicAccent();
+  const glassMode = useGlassMode();
+  const artScale = useSharedValue(1);
   const startSeeking = audio.startSeeking;
   const stopSeeking = audio.stopSeeking;
 
@@ -168,6 +194,18 @@ export default function PlayerScreen() {
     (currentTrack ? parseDuration(currentTrack.duration) : 0);
   const displayedRatio = scrubRatio ?? progress;
   const displayedCurrentTimeSec = displayedRatio * (totalDurationSec || 0);
+
+  useEffect(() => {
+    // Apple Music-style: the artwork recedes while paused.
+    artScale.value = withSpring(
+      glassMode && !isPlaying ? 0.84 : 1,
+      GLASS_SPRING.smooth,
+    );
+  }, [glassMode, isPlaying, artScale]);
+
+  const artStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: artScale.value }],
+  }));
 
   const handleSeek = useCallback(
     (value: number) => {
@@ -204,7 +242,7 @@ export default function PlayerScreen() {
     <SafeAreaView
       style={{
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: glassMode ? 'transparent' : COLORS.background,
       }}
     >
       <View style={{ flex: 1, paddingHorizontal: 24 }}>
@@ -216,27 +254,58 @@ export default function PlayerScreen() {
             paddingVertical: 12,
           }}
         >
-          <Pressable onPress={() => closePlayer()} hitSlop={12}>
-            <AppIcon name="chevron-down" size={24} color={COLORS.textMuted} />
-          </Pressable>
+          {glassMode ? (
+            <GlassIconButton
+              icon="chevron-down"
+              iconSize={22}
+              onPress={() => closePlayer()}
+            />
+          ) : (
+            <Pressable onPress={() => closePlayer()} hitSlop={12}>
+              <AppIcon name="chevron-down" size={24} color={COLORS.textMuted} />
+            </Pressable>
+          )}
           <AppText
             variant="caption"
             weight="medium"
-            style={{ color: COLORS.textMuted, letterSpacing: 1, fontSize: 10 }}
+            style={{
+              color: glassMode ? COLORS.textSecondary : COLORS.textMuted,
+              letterSpacing: 1,
+              fontSize: 10,
+            }}
           >
             {t('player.title').toUpperCase()}
           </AppText>
-          <Pressable onPress={() => setShowQueue(true)} hitSlop={12}>
-            <AppIcon name="queue" size={22} color={COLORS.textMuted} />
-          </Pressable>
+          {glassMode ? (
+            <GlassIconButton
+              icon="queue"
+              iconSize={19}
+              onPress={() => setShowQueue(true)}
+            />
+          ) : (
+            <Pressable onPress={() => setShowQueue(true)} hitSlop={12}>
+              <AppIcon name="queue" size={22} color={COLORS.textMuted} />
+            </Pressable>
+          )}
         </View>
 
         <View style={{ flex: 1, justifyContent: 'center', gap: 24 }}>
-          <View
-            style={{
-              aspectRatio: 1,
-              width: '100%',
-            }}
+          <Animated.View
+            style={[
+              {
+                aspectRatio: 1,
+                width: '100%',
+              },
+              glassMode && Platform.OS === 'ios'
+                ? {
+                    shadowColor: '#000',
+                    shadowOpacity: 0.45,
+                    shadowRadius: 30,
+                    shadowOffset: { width: 0, height: 18 },
+                  }
+                : undefined,
+              artStyle,
+            ]}
           >
             <Animated.View
               key={showLyrics ? 'lyrics' : 'art'}
@@ -261,15 +330,20 @@ export default function PlayerScreen() {
                   source={{ uri: currentTrack.coverUrl }}
                   style={{
                     flex: 1,
-                    borderRadius: 16,
+                    borderRadius: glassMode ? 22 : 16,
                   }}
                   resizeMode="cover"
+                  transition={glassMode ? 400 : undefined}
                 />
               ) : (
-                <Skeleton width="100%" height="100%" radius={16} />
+                <Skeleton
+                  width="100%"
+                  height="100%"
+                  radius={glassMode ? 22 : 16}
+                />
               )}
             </Animated.View>
-          </View>
+          </Animated.View>
 
           <View style={{ gap: 6 }}>
             <View
@@ -403,27 +477,57 @@ export default function PlayerScreen() {
                 justifyContent: 'center',
               }}
             >
-              <AppIcon name="previous" size={24} color={COLORS.textPrimary} />
-            </AnimatedPressable>
-
-            <AnimatedPressable
-              scaleValue={0.98}
-              onPress={togglePlayback}
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: COLORS.textPrimary,
-              }}
-            >
               <AppIcon
-                name={isPlaying ? 'pause' : 'play'}
-                size={28}
-                color={COLORS.background}
+                name="previous"
+                size={glassMode ? 32 : 24}
+                color={COLORS.textPrimary}
               />
             </AnimatedPressable>
+
+            {glassMode ? (
+              <AnimatedPressable
+                scaleValue={0.82}
+                onPress={togglePlayback}
+                style={{
+                  width: 76,
+                  height: 76,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Animated.View
+                  key={isPlaying ? 'pause' : 'play'}
+                  entering={ZoomIn.springify()
+                    .damping(GLASS_SPRING.snappy.damping)
+                    .stiffness(GLASS_SPRING.snappy.stiffness)}
+                >
+                  <AppIcon
+                    name={isPlaying ? 'pause' : 'play'}
+                    size={46}
+                    color={COLORS.textPrimary}
+                  />
+                </Animated.View>
+              </AnimatedPressable>
+            ) : (
+              <AnimatedPressable
+                scaleValue={0.98}
+                onPress={togglePlayback}
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: COLORS.textPrimary,
+                }}
+              >
+                <AppIcon
+                  name={isPlaying ? 'pause' : 'play'}
+                  size={28}
+                  color={COLORS.background}
+                />
+              </AnimatedPressable>
+            )}
 
             <AnimatedPressable
               scaleValue={0.9}
@@ -436,7 +540,11 @@ export default function PlayerScreen() {
                 justifyContent: 'center',
               }}
             >
-              <AppIcon name="next" size={24} color={COLORS.textPrimary} />
+              <AppIcon
+                name="next"
+                size={glassMode ? 32 : 24}
+                color={COLORS.textPrimary}
+              />
             </AnimatedPressable>
 
             <Pressable
@@ -461,6 +569,7 @@ export default function PlayerScreen() {
 
       {showQueue ? (
         <QueueOverlay
+          glassMode={glassMode}
           currentTrack={currentTrack}
           queue={queue}
           onClose={() => setShowQueue(false)}
