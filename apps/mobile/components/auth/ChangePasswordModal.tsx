@@ -7,6 +7,7 @@ import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 
 type ChangePasswordModalProps = {
@@ -21,6 +22,7 @@ export function ChangePasswordModal({
   onSubmit,
 }: ChangePasswordModalProps) {
   const { t } = useI18n();
+  const glassMode = useGlassMode();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -75,7 +77,8 @@ export function ChangePasswordModal({
       >
         <View
           style={{
-            backgroundColor: COLORS.surface,
+            // In Glass mode AnimatedModal supplies the frosted surface.
+            backgroundColor: glassMode ? 'transparent' : COLORS.surface,
             borderRadius: 16,
             padding: SPACING.xxl,
           }}

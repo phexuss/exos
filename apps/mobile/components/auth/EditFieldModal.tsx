@@ -7,6 +7,7 @@ import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 
 type EditFieldModalProps = {
@@ -35,6 +36,7 @@ export function EditFieldModal({
   onSubmit,
 }: EditFieldModalProps) {
   const { t } = useI18n();
+  const glassMode = useGlassMode();
   const [value, setValue] = useState(initialValue);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -77,7 +79,8 @@ export function EditFieldModal({
       >
         <View
           style={{
-            backgroundColor: COLORS.surface,
+            // In Glass mode AnimatedModal supplies the frosted surface.
+            backgroundColor: glassMode ? 'transparent' : COLORS.surface,
             borderRadius: 16,
             padding: SPACING.xxl,
             gap: SPACING.lg,
