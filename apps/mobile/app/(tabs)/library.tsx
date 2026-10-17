@@ -1,9 +1,9 @@
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
-import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
@@ -16,6 +16,7 @@ import { SPACING } from '@/constants/spacing';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassBottomInset } from '@/hooks/useGlassBottomInset';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import {
   addTrackToPlaylist,
@@ -109,6 +110,7 @@ export default function LibraryScreen() {
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const accentColor = useDynamicAccent();
   const glassInset = useGlassBottomInset();
+  const glassMode = useGlassMode();
 
   const downloadedIds = useDownloadStore((s) => s.downloadedIds);
   const playlistOverlayId = useOverlayStore((s) => s.playlistId);
@@ -378,7 +380,12 @@ export default function LibraryScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: glassMode ? 'transparent' : COLORS.background,
+      }}
+    >
       <FlashList
         data={tracks}
         keyExtractor={keyExtractor}

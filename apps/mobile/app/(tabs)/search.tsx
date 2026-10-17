@@ -14,6 +14,7 @@ import { SPACING } from '@/constants/spacing';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassBottomInset } from '@/hooks/useGlassBottomInset';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import { searchSoundCloud, searchTracks } from '@/services/api/search';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -39,6 +40,7 @@ export default function SearchScreen() {
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const accentColor = useDynamicAccent();
   const glassInset = useGlassBottomInset();
+  const glassMode = useGlassMode();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchResults = useCallback(
@@ -216,7 +218,12 @@ export default function SearchScreen() {
   ) : null;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: glassMode ? 'transparent' : COLORS.background,
+      }}
+    >
       <FlashList
         data={filteredResults}
         keyExtractor={keyExtractor}

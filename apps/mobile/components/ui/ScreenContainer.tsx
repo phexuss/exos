@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
 import { useGlassBottomInset } from '@/hooks/useGlassBottomInset';
+import { useGlassMode } from '@/hooks/useGlassMode';
 
 type ScreenContainerProps = {
   children: ReactNode;
@@ -19,6 +20,7 @@ export function ScreenContainer({
   withTabBar = false,
 }: ScreenContainerProps) {
   const glassInset = useGlassBottomInset();
+  const glassMode = useGlassMode();
   const content = (
     <View
       style={{
@@ -34,7 +36,12 @@ export function ScreenContainer({
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: glassMode ? 'transparent' : COLORS.background,
+      }}
+    >
       {scrollable ? (
         <ScrollView
           style={{ flex: 1 }}

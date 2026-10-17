@@ -5,6 +5,7 @@ import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
 import { GlassTabBar } from '@/components/glass/GlassTabBar';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import type { IconName } from '@/components/ui/AppIcon';
@@ -90,22 +91,28 @@ export default function TabLayout() {
   const glassMode = useGlassMode();
 
   return (
-    <Tabs
-      tabBar={(props) =>
-        glassMode ? (
-          <GlassTabBar {...props} icons={TAB_ICONS} />
-        ) : (
-          <CustomTabBar {...props} />
-        )
-      }
-      screenOptions={{
-        headerShown: false,
-        animation: 'fade',
-      }}
-    >
-      <Tabs.Screen name="index" />
-      <Tabs.Screen name="search" />
-      <Tabs.Screen name="library" />
-    </Tabs>
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      {glassMode ? <GlassAmbientBackground /> : null}
+      <Tabs
+        tabBar={(props) =>
+          glassMode ? (
+            <GlassTabBar {...props} icons={TAB_ICONS} />
+          ) : (
+            <CustomTabBar {...props} />
+          )
+        }
+        screenOptions={{
+          headerShown: false,
+          animation: 'fade',
+          sceneStyle: glassMode
+            ? { backgroundColor: 'transparent' }
+            : undefined,
+        }}
+      >
+        <Tabs.Screen name="index" />
+        <Tabs.Screen name="search" />
+        <Tabs.Screen name="library" />
+      </Tabs>
+    </View>
   );
 }
