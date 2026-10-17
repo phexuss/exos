@@ -1,14 +1,23 @@
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GlassSurface } from '@/components/glass/GlassSurface';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { SourcePill } from '@/components/ui/SourcePill';
 import { COLORS } from '@/constants/colors';
+import { GLASS } from '@/constants/glass';
 import type { SourceKey } from '@/constants/sources';
 import { SPACING } from '@/constants/spacing';
 import { FONT_FAMILY } from '@/constants/typography';
@@ -22,6 +31,51 @@ import type { Track } from '@/types/domain';
 
 const SOURCE_KEYS: SourceKey[] = ['deezer', 'soundcloud'];
 const DEBOUNCE_MS = 500;
+
+type SearchFieldProps = {
+  glassMode: boolean;
+  children: ReactNode;
+};
+
+function SearchField({ glassMode, children }: SearchFieldProps) {
+  const rowStyle = {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+  };
+
+  if (glassMode) {
+    return (
+      <GlassSurface
+        variant="thin"
+        style={{ borderRadius: GLASS.radius.capsule }}
+        contentStyle={{
+          ...rowStyle,
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+        }}
+      >
+        {children}
+      </GlassSurface>
+    );
+  }
+
+  return (
+    <View
+      style={{
+        ...rowStyle,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderWidth: 0.5,
+        borderColor: COLORS.border,
+        borderRadius: 8,
+        backgroundColor: COLORS.surface,
+      }}
+    >
+      {children}
+    </View>
+  );
+}
 
 function TrackSeparator() {
   return <View style={{ height: 12 }} />;
@@ -110,19 +164,7 @@ export default function SearchScreen() {
           {t('common.search')}
         </AppText>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-            borderWidth: 0.5,
-            borderColor: COLORS.border,
-            borderRadius: 8,
-            backgroundColor: COLORS.surface,
-          }}
-        >
+        <SearchField glassMode={glassMode}>
           <AppIcon name="search" size={16} color={COLORS.textMuted} />
           <TextInput
             placeholder={t('search.placeholder')}
@@ -137,7 +179,7 @@ export default function SearchScreen() {
               padding: 0,
             }}
           />
-        </View>
+        </SearchField>
 
         <View
           style={{
@@ -154,11 +196,17 @@ export default function SearchScreen() {
                 borderRadius: 999,
                 borderWidth: 0.5,
                 borderColor:
-                  selectedSource === 'all' ? COLORS.accent : COLORS.border,
+                  selectedSource === 'all'
+                    ? COLORS.accent
+                    : glassMode
+                      ? GLASS.rim
+                      : COLORS.border,
                 backgroundColor:
                   selectedSource === 'all'
                     ? 'rgba(99, 102, 241, 0.12)'
-                    : 'transparent',
+                    : glassMode
+                      ? GLASS.innerGlow
+                      : 'transparent',
               }}
             >
               <AppText
@@ -179,6 +227,7 @@ export default function SearchScreen() {
               <SourcePill
                 source={source}
                 selected={selectedSource === source}
+                glass={glassMode}
               />
             </Pressable>
           ))}
