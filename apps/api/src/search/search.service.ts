@@ -1,6 +1,7 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import type { Cache } from 'cache-manager';
+import { CACHE_TTL_MS } from 'src/common/cache-ttl';
 import { DeezerService } from 'src/providers/deezer/deezer.service';
 import {
   DeezerChartResponse,
@@ -101,6 +102,21 @@ export class SearchService {
     artist: string,
     title: string,
   ): Promise<DeezerTrack | null> {
+    const cacheKey = `deezer:match:${artist}:${title}`.toLowerCase();
+    const cached = await this.cacheManager.get<{ track: DeezerTrack | null }>(
+      cacheKey,
+    );
+    if (cached) return cached.track;
+
+    const track = await this.searchDeezerMatch(artist, title);
+    await this.cacheManager.set(cacheKey, { track }, CACHE_TTL_MS.deezerMatch);
+    return track;
+  }
+
+  private async searchDeezerMatch(
+    artist: string,
+    title: string,
+  ): Promise<DeezerTrack | null> {
     const queries = this.buildDeezerQueries(artist, title);
     const seenQueries = new Set<string>();
 
@@ -149,7 +165,7 @@ export class SearchService {
     if (cached) return cached;
 
     const result = await this.deezerService.getChart();
-    await this.cacheManager.set(cacheKey, result, 3600);
+    await this.cacheManager.set(cacheKey, result, CACHE_TTL_MS.chart);
 
     return result;
   }
@@ -207,7 +223,7 @@ export class SearchService {
       })
       .slice(0, MAX_SIMILAR_RESULTS);
 
-    await this.cacheManager.set(cacheKey, results, 3600);
+    await this.cacheManager.set(cacheKey, results, CACHE_TTL_MS.similar);
     return results;
   }
 

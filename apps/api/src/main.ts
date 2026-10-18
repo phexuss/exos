@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import compression from 'compression';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
@@ -60,6 +61,15 @@ async function bootstrap() {
   app.set('trust proxy', 1);
 
   app.use(helmet({ contentSecurityPolicy: false }));
+  // Gzip JSON (Deezer payloads shrink several times). Audio routes are
+  // skipped: the bytes are already compressed and Range responses need
+  // their exact Content-Length.
+  app.use(
+    compression({
+      filter: (req, res) =>
+        !req.path.startsWith('/api/download') && compression.filter(req, res),
+    }),
+  );
 
   app.enableShutdownHooks();
 

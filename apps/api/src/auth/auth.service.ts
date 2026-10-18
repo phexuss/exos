@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { AuthPayloadDto } from 'src/auth/dto/auth.dto';
+import { SessionCacheService } from 'src/auth/session-cache.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ResendService } from 'src/resend/resend.service';
 import { UserService } from 'src/user/user.service';
@@ -51,6 +52,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly prismaService: PrismaService,
     private readonly resendService: ResendService,
+    private readonly sessionCache: SessionCacheService,
   ) {}
 
   private get accessSecret(): string {
@@ -269,6 +271,7 @@ export class AuthService {
 
     if (session.expiresAt.getTime() <= Date.now()) {
       await this.prismaService.session.delete({ where: { id: session.id } });
+      this.sessionCache.forgetSession(session.id);
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -318,6 +321,7 @@ export class AuthService {
         userId: payload.sub,
       },
     });
+    this.sessionCache.forgetSession(payload.sessionId);
   }
 
   async validateUser(dto: AuthPayloadDto): Promise<string> {
@@ -350,6 +354,7 @@ export class AuthService {
     });
 
     await this.prismaService.session.deleteMany({ where: { userId } });
+    this.sessionCache.forgetUser(userId);
   }
 
   async requestPasswordReset(email: string): Promise<void> {
@@ -458,6 +463,7 @@ export class AuthService {
       }),
       this.prismaService.session.deleteMany({ where: { userId: user.id } }),
     ]);
+    this.sessionCache.forgetUser(user.id);
   }
 
   async sendVerificationEmail(userId: string, email: string): Promise<void> {

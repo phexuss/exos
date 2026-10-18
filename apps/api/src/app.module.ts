@@ -1,18 +1,22 @@
 import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import type { Redis } from 'ioredis';
 import Joi from 'joi';
+import Keyv from 'keyv';
 import { AlbumsModule } from './albums/albums.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ArtistsModule } from './artists/artists.module';
 import { AuthModule } from './auth/auth.module';
+import { CACHE_TTL_MS } from './common/cache-ttl';
 import { DownloadModule } from './download/download.module';
 import { LibraryModule } from './library/library.module';
 import { LyricsModule } from './lyrics/lyrics.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProvidersModule } from './providers/providers.module';
-import { RedisModule } from './redis/redis.module';
+import { REDIS_CLIENT, RedisModule } from './redis/redis.module';
+import { RedisCacheStore } from './redis/redis-cache.store';
 import { ResendModule } from './resend/resend.module';
 import { SearchModule } from './search/search.module';
 import { TracksModule } from './tracks/tracks.module';
@@ -56,11 +60,12 @@ import { UserModule } from './user/user.module';
     RedisModule,
     CacheModule.registerAsync({
       isGlobal: true,
-      useFactory: () => ({
-        store: require('cache-manager-ioredis'),
-        url: process.env.REDIS_URL,
-
-        ttl: 60 * 60 * 24,
+      inject: [REDIS_CLIENT],
+      useFactory: (redis: Redis) => ({
+        stores: [
+          new Keyv({ store: new RedisCacheStore(redis), namespace: 'cache' }),
+        ],
+        ttl: CACHE_TTL_MS.default,
       }),
     }),
     PrismaModule,

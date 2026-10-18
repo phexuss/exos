@@ -1,5 +1,16 @@
-import { Body, Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
+import {
+  ApiAcceptedResponse,
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiOkResponse,
@@ -52,6 +63,16 @@ export class DownloadController {
       dto,
       req.user as AuthStatusResponseDto,
     );
+  }
+
+  @ApiOperation({
+    summary: 'Warm the stream URL cache for a track that will play next',
+  })
+  @ApiAcceptedResponse({ description: 'Prefetch scheduled (best-effort)' })
+  @Post('prefetch')
+  @HttpCode(HttpStatus.ACCEPTED)
+  prefetch(@Body() dto: DownloadDto): void {
+    this.downloadService.prefetchStream(dto);
   }
 
   @ApiOperation({

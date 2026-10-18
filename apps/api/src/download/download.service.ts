@@ -27,6 +27,15 @@ const YTDLP_BIN = '/usr/bin/yt-dlp';
 const ALLOWED_DIRECT_URL_HOSTS = ['soundcloud.com', 'youtube.com', 'youtu.be'];
 const DOWNLOAD_TICKET_TTL_MS = 2 * 60 * 1000;
 /**
+ * Stream tickets are reused by the player for every Range request (seeks,
+ * reconnects) for as long as the track plays, so they must outlive the
+ * track plus any pause.
+ */
+const STREAM_TICKET_TTL_MS = 3 * 60 * 60 * 1000;
+/** How long a request waits for a free yt-dlp slot before giving up. */
+const YTDLP_SLOT_WAIT_MS = 15 * 1000;
+const YTDLP_MAX_WAITERS = 20;
+/**
  * How long a yt-dlp-resolved direct URL stays in Redis. Most CDNs sign URLs
  * for hours (googlevideo ~6h, sndcdn ~1h), so 30 minutes is a safe window
  * that avoids stale URLs while still amortising yt-dlp cost across many
@@ -63,6 +72,14 @@ class StreamUpstreamError extends Error {
   }
 }
 
+/** A background prefetch found no free yt-dlp slot and was dropped. */
+class PrefetchSkippedError extends Error {
+  constructor() {
+    super('No free yt-dlp slot for prefetch');
+    this.name = 'PrefetchSkippedError';
+  }
+}
+
 type DownloadTicketPayload = DownloadDto & {
   exp: number;
   sub: string;
@@ -84,6 +101,7 @@ type CookieDiagnostics = {
 export class DownloadService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(DownloadService.name);
   private activeYtdlpProcesses = 0;
+  private readonly ytdlpWaiters: Array<() => void> = [];
   /**
    * Cached on boot via `onModuleInit`. We don't re-check `existsSync` on
    * every request — the file is mounted statically, and an `fs.stat` per
@@ -278,19 +296,61 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
     );
   }
 
-  private reserveYtdlpProcess(): () => void {
-    if (this.activeYtdlpProcesses >= this.maxConcurrentYtdlpProcesses) {
-      throw new ServiceUnavailableException('Too many concurrent downloads');
-    }
-
-    this.activeYtdlpProcesses += 1;
+  private createYtdlpRelease(): () => void {
     let released = false;
 
     return () => {
       if (released) return;
       released = true;
+      // Hand the slot straight to the next waiter so a new caller can't
+      // grab it in between and push us over the cap.
+      const next = this.ytdlpWaiters.shift();
+      if (next) {
+        next();
+        return;
+      }
       this.activeYtdlpProcesses = Math.max(0, this.activeYtdlpProcesses - 1);
     };
+  }
+
+  private tryReserveYtdlpProcess(): (() => void) | null {
+    if (this.activeYtdlpProcesses >= this.maxConcurrentYtdlpProcesses) {
+      return null;
+    }
+
+    this.activeYtdlpProcesses += 1;
+    return this.createYtdlpRelease();
+  }
+
+  /**
+   * Waits up to {@link YTDLP_SLOT_WAIT_MS} for a free yt-dlp slot instead of
+   * failing immediately, so short bursts (skipping through a queue) queue up
+   * rather than surfacing 503s.
+   */
+  private async reserveYtdlpProcess(): Promise<() => void> {
+    const release = this.tryReserveYtdlpProcess();
+    if (release) return release;
+
+    if (this.ytdlpWaiters.length >= YTDLP_MAX_WAITERS) {
+      throw new ServiceUnavailableException('Too many concurrent downloads');
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const waiter = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(() => {
+        const index = this.ytdlpWaiters.indexOf(waiter);
+        if (index >= 0) this.ytdlpWaiters.splice(index, 1);
+        reject(
+          new ServiceUnavailableException('Too many concurrent downloads'),
+        );
+      }, YTDLP_SLOT_WAIT_MS);
+      this.ytdlpWaiters.push(waiter);
+    });
+
+    return this.createYtdlpRelease();
   }
 
   private base64UrlEncode(value: string): string {
@@ -465,12 +525,17 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
     dto: DownloadDto,
     user: { sub: string; sessionId: string },
   ): { token: string; expiresAt: number } {
-    const expiresAt = Date.now() + DOWNLOAD_TICKET_TTL_MS;
+    const mode = dto.mode ?? StreamMode.DOWNLOAD;
+    const expiresAt =
+      Date.now() +
+      (mode === StreamMode.STREAM
+        ? STREAM_TICKET_TTL_MS
+        : DOWNLOAD_TICKET_TTL_MS);
     const payload: DownloadTicketPayload = {
       query: dto.query,
       isrc: dto.isrc,
       format: dto.format,
-      mode: dto.mode ?? StreamMode.DOWNLOAD,
+      mode,
       exp: expiresAt,
       sub: user.sub,
       sessionId: user.sessionId,
@@ -532,10 +597,18 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
    * Single source of truth for `yt-dlp --get-url`. Honours the global
    * concurrency cap and the configured cookies file.
    */
-  private async resolveDirectUrl(dto: DownloadDto): Promise<string> {
+  private async resolveDirectUrl(
+    dto: DownloadDto,
+    options: { background?: boolean } = {},
+  ): Promise<string> {
     const source = this.resolveSource(dto);
     await this.assertNoRecentYoutubeBotCheck(source);
-    const release = this.reserveYtdlpProcess();
+    // Background prefetches never wait for a slot: they must not delay or
+    // crowd out tracks someone is actually trying to play.
+    const release = options.background
+      ? this.tryReserveYtdlpProcess()
+      : await this.reserveYtdlpProcess();
+    if (!release) throw new PrefetchSkippedError();
 
     try {
       const mode = dto.mode ?? StreamMode.DOWNLOAD;
@@ -757,7 +830,10 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
     }
   }
 
-  private async getOrResolveDirectUrl(dto: DownloadDto): Promise<{
+  private async getOrResolveDirectUrl(
+    dto: DownloadDto,
+    options: { background?: boolean } = {},
+  ): Promise<{
     url: string;
     cacheHit: boolean;
     cacheKey: string;
@@ -770,11 +846,17 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
 
     const pending = this.pendingDirectUrlResolves.get(cacheKey);
     if (pending) {
-      const url = await pending;
-      return { url, cacheHit: false, cacheKey };
+      try {
+        const url = await pending;
+        return { url, cacheHit: false, cacheKey };
+      } catch (e: unknown) {
+        // A dropped prefetch must not fail the real playback request that
+        // happened to join it; resolve on our own instead.
+        if (!(e instanceof PrefetchSkippedError)) throw e;
+      }
     }
 
-    const pendingResolve = this.resolveDirectUrl(dto)
+    const pendingResolve = this.resolveDirectUrl(dto, options)
       .then(async (url) => {
         await this.cacheDirectUrl(cacheKey, url);
         return url;
@@ -834,6 +916,24 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
     }
 
     return upstreamContentType;
+  }
+
+  /**
+   * Warms the direct-URL cache for a track the client expects to play next,
+   * so starting it later skips the multi-second yt-dlp resolve. Runs in the
+   * background and only when a yt-dlp slot is free right now.
+   */
+  prefetchStream(dto: DownloadDto): void {
+    const streamDto: DownloadDto = { ...dto, mode: StreamMode.STREAM };
+    void this.getOrResolveDirectUrl(streamDto, { background: true }).catch(
+      (e: unknown) => {
+        this.logger.debug(
+          `Prefetch skipped for query=${dto.query}: ${
+            e instanceof Error ? e.message : String(e)
+          }`,
+        );
+      },
+    );
   }
 
   /**
@@ -945,7 +1045,7 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
       upstreamHeaders.Range = range;
     }
 
-    this.logger.warn(
+    this.logger.debug(
       `Proxy stream start host=${host} range=${range ?? 'none'} cacheHit=${cacheHit}`,
     );
 
@@ -981,7 +1081,7 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
       const upstreamContentLength = fetchResponse.headers.get('content-length');
       const upstreamContentRange = fetchResponse.headers.get('content-range');
       const upstreamAcceptRanges = fetchResponse.headers.get('accept-ranges');
-      this.logger.warn(
+      this.logger.debug(
         `Proxy stream upstream host=${host} status=${fetchResponse.status} ` +
           `contentType=${upstreamContentType ?? 'none'} ` +
           `contentLength=${upstreamContentLength ?? 'none'} ` +
@@ -1151,7 +1251,12 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
       args.push('-x', '--audio-format', audioFormat);
     }
 
-    const release = this.reserveYtdlpProcess();
+    const release = await this.reserveYtdlpProcess();
+    if (res.destroyed || res.socket?.destroyed) {
+      // Client gave up while we were waiting for a slot.
+      release();
+      return;
+    }
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'no-store');
 
