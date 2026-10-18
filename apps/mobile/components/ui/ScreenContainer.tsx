@@ -37,6 +37,8 @@ export function ScreenContainer({
 
   return (
     <SafeAreaView
+      // The tab bar owns the bottom inset on tab screens; overlays own both.
+      edges={withTabBar ? ['top'] : ['top', 'bottom']}
       style={{
         flex: 1,
         backgroundColor: glassMode ? 'transparent' : COLORS.background,

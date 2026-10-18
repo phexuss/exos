@@ -451,6 +451,7 @@ export default function LibraryScreen() {
 
   return (
     <SafeAreaView
+      edges={['top']}
       style={{
         flex: 1,
         backgroundColor: glassMode ? 'transparent' : COLORS.background,
