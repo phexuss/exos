@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { useEffect } from 'react';
-import { BackHandler, Pressable, View } from 'react-native';
+import { BackHandler, View } from 'react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
@@ -12,6 +13,7 @@ import {
 import { ProfileScreen } from '@/components/screens/ProfileScreen';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
 import { useGlassMode } from '@/hooks/useGlassMode';
@@ -41,52 +43,23 @@ function OfflineProfilePrompt() {
   };
 
   return (
-    <View
+    <SafeAreaView
+      edges={['top', 'bottom']}
       style={{
         flex: 1,
         paddingHorizontal: SPACING.xxl,
-        paddingTop: SPACING.lg,
       }}
     >
-      {/* Header */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+      <ScreenHeader
+        title={t('common.profile')}
+        leading="close"
+        onLeadingPress={closeProfile}
+        trailing={{
+          icon: 'settings',
+          onPress: openSettings,
+          accessibilityLabel: t('common.settings'),
         }}
-      >
-        <Pressable
-          onPress={closeProfile}
-          hitSlop={12}
-          style={{
-            width: 36,
-            height: 36,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <AppIcon name="chevron-down" size={22} color={COLORS.textMuted} />
-        </Pressable>
-        <AppText variant="label" weight="bold">
-          {t('common.profile')}
-        </AppText>
-        <Pressable
-          onPress={openSettings}
-          hitSlop={8}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 0.5,
-            borderColor: COLORS.border,
-          }}
-        >
-          <AppIcon name="settings" size={18} color={COLORS.textMuted} />
-        </Pressable>
-      </View>
+      />
 
       {/* Content */}
       <View
@@ -144,7 +117,7 @@ function OfflineProfilePrompt() {
           />
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
