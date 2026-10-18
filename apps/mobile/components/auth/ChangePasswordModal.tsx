@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, View } from 'react-native';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { AuthTextField } from '@/components/auth/AuthTextField';
@@ -72,9 +72,7 @@ export function ChangePasswordModal({
       onBackdropPress={onClose}
       backdropStyle={{ paddingHorizontal: SPACING.xxl }}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAvoidingView behavior="padding">
         <View
           style={{
             // In Glass mode AnimatedModal supplies the frosted surface.
