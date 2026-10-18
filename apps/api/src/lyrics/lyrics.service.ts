@@ -3,6 +3,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Cache } from 'cache-manager';
 import { firstValueFrom } from 'rxjs';
+import { CACHE_TTL_MS } from 'src/common/cache-ttl';
 import { LRCLibResponse } from 'src/lyrics/lyrics.types';
 
 @Injectable()
@@ -33,7 +34,7 @@ export class LyricsService {
           },
         }),
       );
-      await this.cacheManager.set(cacheKey, data);
+      await this.cacheManager.set(cacheKey, data, CACHE_TTL_MS.lyrics);
       return data;
     } catch (e: unknown) {
       const status =
@@ -68,7 +69,7 @@ export class LyricsService {
         this.logger.debug(
           `Lyrics via /search for "${normalizedArtist} - ${normalizedTrack}"`,
         );
-        await this.cacheManager.set(cacheKey, best);
+        await this.cacheManager.set(cacheKey, best, CACHE_TTL_MS.lyrics);
         return best;
       }
     } catch (e: unknown) {
@@ -79,7 +80,7 @@ export class LyricsService {
       `No lyrics found for "${normalizedArtist} - ${normalizedTrack}"`,
     );
     const empty = { syncedLyrics: null, plainLyrics: null };
-    await this.cacheManager.set(cacheKey, empty);
+    await this.cacheManager.set(cacheKey, empty, CACHE_TTL_MS.lyricsMissing);
     return empty;
   }
 }

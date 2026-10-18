@@ -4,6 +4,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Cache } from 'cache-manager';
 import { firstValueFrom } from 'rxjs';
+import { CACHE_TTL_MS } from 'src/common/cache-ttl';
 import type { LastfmSimilarResponse, LastfmSimilarTrack } from './lastfm.types';
 
 @Injectable()
@@ -65,7 +66,7 @@ export class LastfmService {
       const raw = data.similartracks?.track ?? [];
       const tracks = Array.isArray(raw) ? raw : [raw];
 
-      await this.cacheManager.set(cacheKey, tracks, 86400);
+      await this.cacheManager.set(cacheKey, tracks, CACHE_TTL_MS.lastfmSimilar);
       return tracks;
     } catch (error) {
       this.logger.warn(

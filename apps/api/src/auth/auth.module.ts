@@ -10,6 +10,7 @@ import { UserModule } from 'src/user/user.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthRateLimitService } from './auth-rate-limit.service';
+import { SessionCacheService } from './session-cache.service';
 
 type TokenExpiry =
   | `${number}`
@@ -36,6 +37,7 @@ type TokenExpiry =
   providers: [
     AuthService,
     AuthRateLimitService,
+    SessionCacheService,
     JwtStrategy,
     {
       provide: APP_GUARD,

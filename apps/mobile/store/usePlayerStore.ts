@@ -150,6 +150,27 @@ function startTrack(track: Track, set: PlayerSet, get: PlayerGet): void {
   set({ currentTrack: track, isPlaying: true, progress: 0 });
   audio.prepareTrackPlayback(track.id);
   smartPlay(track, set, get, requestId);
+  prefetchNextTrack(get);
+}
+
+/**
+ * Asks the server to resolve the next queued track's stream URL ahead of
+ * time, so skipping to it starts without the yt-dlp delay. Best-effort.
+ */
+function prefetchNextTrack(get: PlayerGet): void {
+  const { queue, currentTrack, shuffle, repeat } = get();
+  if (!currentTrack || shuffle || repeat === 'one' || queue.length < 2) return;
+
+  const idx = queue.findIndex((t) => t.id === currentTrack.id);
+  if (idx < 0) return;
+  const next = queue[(idx + 1) % queue.length];
+  if (!next || next.id === currentTrack.id || next.filePath) return;
+
+  apiPost(`${API_ENDPOINTS.download}/prefetch`, {
+    query: getStreamQuery(next),
+    format: 'm4a',
+    mode: 'stream',
+  }).catch(() => {});
 }
 
 function resumeCurrentTrack(set: PlayerSet): void {
