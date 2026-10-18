@@ -23,6 +23,7 @@ import {
   glassPresentExiting,
 } from '@/components/glass/transitions';
 import { GLASS, GLASS_SPRING } from '@/constants/glass';
+import { LAYOUT } from '@/constants/layout';
 import { useGlassMode } from '@/hooks/useGlassMode';
 
 type AnimatedModalVariant = 'center' | 'sheet';
@@ -162,6 +163,22 @@ export function AnimatedModal({
   let content: ReactNode = children;
   let animatedContentStyle: StyleProp<ViewStyle> = contentStyle;
 
+  if (!glassMode && isSheet) {
+    // Never trust a hardcoded bottom padding: gesture nav, 3-button nav and
+    // the iOS home indicator all differ. Keep the caller's padding as a
+    // minimum and clear the real system inset.
+    const requested = StyleSheet.flatten(contentStyle)?.paddingBottom;
+    animatedContentStyle = [
+      contentStyle,
+      {
+        paddingBottom: Math.max(
+          typeof requested === 'number' ? requested : 0,
+          insets.bottom + LAYOUT.sheetBottomGap,
+        ),
+      },
+    ];
+  }
+
   if (glassMode) {
     const { outer, inner } = splitGlassStyle(contentStyle);
     animatedContentStyle = isSheet
@@ -203,7 +220,10 @@ export function AnimatedModal({
       visible={mounted}
       transparent
       animationType="none"
-      statusBarTranslucent={glassMode}
+      // Draw edge-to-edge like the rest of the app (Android 15+ default);
+      // layout then accounts for system bars via safe-area insets.
+      statusBarTranslucent
+      navigationBarTranslucent
       onRequestClose={onRequestClose}
     >
       {visible ? (
