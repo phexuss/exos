@@ -31,7 +31,7 @@ export default function LanguageSwitcher() {
       <DropdownMenuContent
         align="end"
         sideOffset={12}
-        className="w-36 p-1.5 rounded-2xl bg-[#121212]/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/80 animate-in fade-in zoom-in-95"
+        className="w-36 p-1.5 rounded-2xl bg-[#121212]/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/80 animate-in fade-in zoom-in-95 glass:glass-surface glass:rounded-3xl"
       >
         {[
           { code: 'ru', label: 'Русский' },

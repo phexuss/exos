@@ -31,7 +31,7 @@ export default function FaqAccordion() {
           <motion.div key={key} variants={revealItemVariants}>
             <AccordionItem
               value={key}
-              className="group relative border border-[rgba(255,255,255,0.08)] rounded-2xl bg-card transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1 overflow-hidden"
+              className="group relative border border-[rgba(255,255,255,0.08)] rounded-2xl bg-card transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1 overflow-hidden glass:glass-surface glass:rounded-3xl glass:hover:border-primary/50"
             >
               <AccordionTrigger className="px-5 sm:px-6 lg:px-8 py-4 sm:py-5 lg:py-6 text-base sm:text-lg md:text-xl font-medium tracking-tight text-foreground hover:no-underline transition-colors group-data-[state=open]:text-primary">
                 <span className="text-left">{t(`${key}.question`)}</span>
