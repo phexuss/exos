@@ -5,7 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DeezerIcon } from '@/components/icons/DeezerIcon';
 import { SoundCloudIcon } from '@/components/icons/SoundCloudIcon';
 import { AppText } from '@/components/ui/AppText';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS } from '@/constants/colors';
+import { LAYOUT } from '@/constants/layout';
 import { SOURCES } from '@/constants/sources';
 import { SPACING } from '@/constants/spacing';
 import { useGlassMode } from '@/hooks/useGlassMode';
@@ -166,6 +168,11 @@ export function FaqScreen({ onDismiss }: FaqScreenProps) {
         backgroundColor: glassMode ? 'transparent' : COLORS.background,
       }}
     >
+      <ScreenHeader
+        leading="back"
+        onLeadingPress={onDismiss}
+        gutter={LAYOUT.gutter}
+      />
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
