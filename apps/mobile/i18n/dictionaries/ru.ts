@@ -131,6 +131,8 @@ export const ru = {
   },
   player: {
     title: 'Сейчас играет',
+    queue: 'Очередь',
+    nextUp: 'Далее',
     source: 'Источник',
     quality: 'Качество',
   },

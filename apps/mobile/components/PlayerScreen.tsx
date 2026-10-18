@@ -16,7 +16,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { DownloadButton } from '@/components/DownloadButton';
-import { GlassIconButton } from '@/components/glass/GlassIconButton';
 import { GlassSurface } from '@/components/glass/GlassSurface';
 import { LyricsView } from '@/components/LyricsView';
 import { SeekBar } from '@/components/SeekBar';
@@ -24,9 +23,11 @@ import { SourceBadge } from '@/components/SourceBadge';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
 import { GLASS_SPRING } from '@/constants/glass';
+import { LAYOUT } from '@/constants/layout';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
@@ -50,6 +51,8 @@ function QueueOverlay({
   onClose,
   onPlay,
 }: QueueOverlayProps) {
+  const { t } = useI18n();
+
   return (
     <Animated.View
       entering={SlideInDown.duration(350).damping(28)}
@@ -90,20 +93,22 @@ function QueueOverlay({
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            paddingVertical: 12,
+            height: LAYOUT.headerHeight,
           }}
         >
-          <Pressable onPress={onClose} hitSlop={12}>
-            <AppIcon name="chevron-down" size={24} color={COLORS.textMuted} />
-          </Pressable>
+          <HeaderIconButton
+            icon="chevron-down"
+            onPress={onClose}
+            accessibilityLabel={t('common.close')}
+          />
           <AppText
             variant="caption"
             weight="medium"
             style={{ color: COLORS.textMuted, letterSpacing: 1, fontSize: 10 }}
           >
-            QUEUE
+            {t('player.queue').toUpperCase()}
           </AppText>
-          <View style={{ width: 24 }} />
+          <View style={{ width: LAYOUT.iconButton }} />
         </View>
 
         <AppText
@@ -117,7 +122,7 @@ function QueueOverlay({
             marginTop: 8,
           }}
         >
-          NOW PLAYING
+          {t('player.title').toUpperCase()}
         </AppText>
         <View
           style={{
@@ -149,7 +154,7 @@ function QueueOverlay({
             marginBottom: 8,
           }}
         >
-          NEXT UP · {queue.length} TRACKS
+          {t('player.nextUp').toUpperCase()} · {queue.length}
         </AppText>
         <FlashList
           data={queue}
@@ -251,20 +256,14 @@ export default function PlayerScreen() {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            paddingVertical: 12,
+            height: LAYOUT.headerHeight,
           }}
         >
-          {glassMode ? (
-            <GlassIconButton
-              icon="chevron-down"
-              iconSize={22}
-              onPress={() => closePlayer()}
-            />
-          ) : (
-            <Pressable onPress={() => closePlayer()} hitSlop={12}>
-              <AppIcon name="chevron-down" size={24} color={COLORS.textMuted} />
-            </Pressable>
-          )}
+          <HeaderIconButton
+            icon="chevron-down"
+            onPress={() => closePlayer()}
+            accessibilityLabel={t('common.close')}
+          />
           <AppText
             variant="caption"
             weight="medium"
@@ -276,17 +275,11 @@ export default function PlayerScreen() {
           >
             {t('player.title').toUpperCase()}
           </AppText>
-          {glassMode ? (
-            <GlassIconButton
-              icon="queue"
-              iconSize={19}
-              onPress={() => setShowQueue(true)}
-            />
-          ) : (
-            <Pressable onPress={() => setShowQueue(true)} hitSlop={12}>
-              <AppIcon name="queue" size={22} color={COLORS.textMuted} />
-            </Pressable>
-          )}
+          <HeaderIconButton
+            icon="queue"
+            onPress={() => setShowQueue(true)}
+            accessibilityLabel={t('player.queue')}
+          />
         </View>
 
         <View style={{ flex: 1, justifyContent: 'center', gap: 24 }}>

@@ -130,6 +130,8 @@ export const en = {
   },
   player: {
     title: 'Now Playing',
+    queue: 'Queue',
+    nextUp: 'Next up',
     source: 'Source',
     quality: 'Quality',
   },
