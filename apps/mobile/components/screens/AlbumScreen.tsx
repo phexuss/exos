@@ -1,13 +1,15 @@
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS } from '@/constants/colors';
+import { LAYOUT } from '@/constants/layout';
 import { type AlbumDetail, getAlbumDetail } from '@/services/api/albums';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -104,30 +106,13 @@ export function AlbumScreen({ id, titleHint }: Props) {
   }
 
   const ListHeader = (
-    <View style={{ gap: 16, alignItems: 'center', paddingVertical: 16 }}>
-      {}
-      <View
-        style={{
-          width: '100%',
-          flexDirection: 'row',
-          paddingHorizontal: 16,
-        }}
-      >
-        <Pressable
-          onPress={closeAlbum}
-          hitSlop={12}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: COLORS.surfaceMuted,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <AppIcon name="chevron-down" size={20} color={COLORS.textMuted} />
-        </Pressable>
-      </View>
+    <View style={{ gap: 16, alignItems: 'center', paddingBottom: 16 }}>
+      <ScreenHeader
+        leading="back"
+        onLeadingPress={closeAlbum}
+        gutter={LAYOUT.gutter}
+        style={{ alignSelf: 'stretch' }}
+      />
 
       {}
       {album.coverUrl ? (
