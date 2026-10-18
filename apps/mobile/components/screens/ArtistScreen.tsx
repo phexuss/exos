@@ -1,19 +1,20 @@
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  View,
-} from 'react-native';
-import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
 import { COLORS } from '@/constants/colors';
+import { LAYOUT } from '@/constants/layout';
+import { useI18n } from '@/hooks/useI18n';
 import {
   getArtist,
   getArtistAlbums,
@@ -89,6 +90,7 @@ type Props = {
 };
 
 export function ArtistScreen({ id }: Props) {
+  const { t } = useI18n();
   const [artist, setArtist] = useState<ArtistDetails | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [albums, setAlbums] = useState<ArtistAlbum[]>([]);
@@ -98,6 +100,7 @@ export function ArtistScreen({ id }: Props) {
   const setQueue = usePlayerStore((s) => s.setQueue);
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const closeArtist = useOverlayStore((s) => s.closeArtist);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     let cancelled = false;
@@ -205,24 +208,28 @@ export function ArtistScreen({ id }: Props) {
               borderBottomRightRadius: 24,
             }}
           />
-          {}
-          <Pressable
-            onPress={closeArtist}
-            hitSlop={12}
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(0,0,0,0.55)', 'transparent']}
             style={{
               position: 'absolute',
-              top: 12,
-              left: 16,
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: 'rgba(0,0,0,0.45)',
-              alignItems: 'center',
-              justifyContent: 'center',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: insets.top + 64,
             }}
-          >
-            <AppIcon name="chevron-down" size={20} color="#fff" />
-          </Pressable>
+          />
+          <HeaderIconButton
+            icon="chevron-left"
+            tone="overlay"
+            onPress={closeArtist}
+            accessibilityLabel={t('common.back')}
+            style={{
+              position: 'absolute',
+              top: insets.top + (LAYOUT.headerHeight - LAYOUT.iconButton) / 2,
+              left: LAYOUT.gutter,
+            }}
+          />
         </View>
 
         <View style={{ alignItems: 'center', gap: 6, marginTop: -40 }}>
