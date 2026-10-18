@@ -3,9 +3,19 @@ import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import {
   type DeezerChartResponse,
+  type DeezerErrorResponse,
   type DeezerSearchResponse,
   type DeezerTrackFull,
 } from 'src/providers/deezer/deezer.types';
+
+const DEEZER_QUOTA_ERROR_CODE = 4;
+
+export class DeezerQuotaError extends Error {
+  constructor() {
+    super('Deezer quota exceeded');
+    this.name = 'DeezerQuotaError';
+  }
+}
 
 @Injectable()
 export class DeezerService {
@@ -26,6 +36,26 @@ export class DeezerService {
     const { data } = await firstValueFrom(
       this.httpService.get<DeezerTrackFull>(`${this.BASE_URL}/track/${id}`),
     );
+    return data;
+  }
+
+  /**
+   * Exact lookup by ISRC. Deezer answers 200 with an `error` body when the
+   * code is unknown (code 800) or the quota is spent (code 4), so the body
+   * is inspected instead of the status.
+   */
+  async getTrackByIsrc(isrc: string): Promise<DeezerTrackFull | null> {
+    const { data } = await firstValueFrom(
+      this.httpService.get<DeezerTrackFull | DeezerErrorResponse>(
+        `${this.BASE_URL}/track/isrc:${encodeURIComponent(isrc)}`,
+      ),
+    );
+    if ('error' in data) {
+      if (data.error.code === DEEZER_QUOTA_ERROR_CODE) {
+        throw new DeezerQuotaError();
+      }
+      return null;
+    }
     return data;
   }
 

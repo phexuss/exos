@@ -135,6 +135,14 @@ export class SearchService {
     return null;
   }
 
+  /** Cached artist + title lookup with the same fuzzy check as similar tracks. */
+  matchDeezerTrack(artist: string, title: string): Promise<DeezerTrack | null> {
+    return this.findDeezerTrack(
+      this.normalizeInput(artist),
+      this.normalizeInput(title),
+    );
+  }
+
   private toMatchPercent(match: number | string): number {
     const value = typeof match === 'number' ? match : Number.parseFloat(match);
     if (!Number.isFinite(value)) return 0;

@@ -7,6 +7,7 @@ export const CACHE_TTL_MS = {
   similar: HOUR_MS,
   lastfmSimilar: 24 * HOUR_MS,
   deezerMatch: 24 * HOUR_MS,
+  deezerIsrc: 30 * 24 * HOUR_MS,
   lyrics: 7 * 24 * HOUR_MS,
   lyricsMissing: 6 * HOUR_MS,
 } as const;

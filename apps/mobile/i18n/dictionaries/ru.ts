@@ -109,6 +109,8 @@ export const ru = {
     restoreLibraryTitle: 'Восстановление библиотеки',
     restoreLibraryEmpty: 'В облаке пока нет треков',
     restoreLibraryError: 'Не удалось загрузить облачную библиотеку.',
+    importSpotify: 'Импорт из Spotify',
+    importSpotifyDesc: 'Скачать плейлисты и любимые треки из Spotify',
     localSection: 'Локальное хранилище',
     clearCache: 'Очистить локальный кеш',
     clearCacheDesc:
@@ -122,6 +124,30 @@ export const ru = {
     aboutSection: 'О приложении',
     faq: 'Как работает EXØS',
     cloudRequiresLogin: 'Войдите, чтобы использовать облачную копию',
+  },
+  spotify: {
+    title: 'Импорт из Spotify',
+    subtitle: 'Скачать твои плейлисты и любимые треки',
+    connectedAs: 'Подключено: {name}',
+    connect: 'Подключить Spotify',
+    connectHint:
+      'Войди в Spotify, и EXØS найдёт твои плейлисты и лайки. Треки скачаются через обычную загрузку, а Spotify только подскажет, что качать.',
+    connectError: 'Не удалось подключить Spotify. Попробуй ещё раз.',
+    disconnect: 'Отключить Spotify',
+    notConfigured: 'Импорт из Spotify пока не настроен на сервере.',
+    loadError: 'Не удалось загрузить данные из Spotify.',
+    forbidden:
+      'Spotify не пустил этот аккаунт. Добавь его в Users Management своего приложения на developer.spotify.com.',
+    liked: 'Любимые треки',
+    likedPlaylistName: 'Spotify · Любимые',
+    notReadable: 'Spotify отдаёт треки только своих и совместных плейлистов',
+    import: 'Импорт',
+    importing: 'Импортирую...',
+    importDone: 'Импорт завершён',
+    importCancelled: 'Импорт остановлен',
+    importError: 'Импорт прервался. Запусти снова, скачанное не потеряется.',
+    importStats:
+      'Скачано {downloaded} · уже были {skipped} · ошибок {failed} · не найдено {unmatched}',
   },
   faq: {
     title: 'Как работает EXØS',

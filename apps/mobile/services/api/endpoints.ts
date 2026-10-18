@@ -7,4 +7,5 @@ export const API_ENDPOINTS = {
   download: '/download',
   lyrics: '/lyrics',
   library: '/library',
+  spotify: '/spotify',
 } as const;

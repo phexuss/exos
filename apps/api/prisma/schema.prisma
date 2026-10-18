@@ -22,6 +22,7 @@ model User {
   recentlyPlayed UserRecentlyPlayed[]
   sessions       Session[]
   codes          VerificationCode[]
+  spotify        SpotifyConnection?
 }
 
 model VerificationCode {
@@ -90,4 +91,16 @@ model Session {
   device           String?
   expiresAt        DateTime
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SpotifyConnection {
+  userId        String   @id
+  spotifyUserId String
+  displayName   String?
+  /// AES-256-GCM encrypted refresh token (iv.tag.ciphertext, base64url).
+  refreshToken  String
+  scope         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

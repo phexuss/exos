@@ -19,6 +19,7 @@ import { REDIS_CLIENT, RedisModule } from './redis/redis.module';
 import { RedisCacheStore } from './redis/redis-cache.store';
 import { ResendModule } from './resend/resend.module';
 import { SearchModule } from './search/search.module';
+import { SpotifyModule } from './spotify/spotify.module';
 import { TracksModule } from './tracks/tracks.module';
 import { UserModule } from './user/user.module';
 
@@ -55,6 +56,11 @@ import { UserModule } from './user/user.module';
         RESEND_TEST_ENDPOINT_ENABLED: Joi.boolean().default(false),
 
         YTDLP_COOKIES_PATH: Joi.string().optional(),
+
+        SPOTIFY_CLIENT_ID: Joi.string().optional().allow(''),
+        SPOTIFY_CLIENT_SECRET: Joi.string().optional().allow(''),
+        SPOTIFY_REDIRECT_URI: Joi.string().uri().optional().allow(''),
+        SPOTIFY_APP_REDIRECT_URI: Joi.string().default('exos://spotify-auth'),
       }),
     }),
     RedisModule,
@@ -76,6 +82,7 @@ import { UserModule } from './user/user.module';
     AlbumsModule,
     LyricsModule,
     LibraryModule,
+    SpotifyModule,
     DownloadModule,
     UserModule,
     ResendModule,
