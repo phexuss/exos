@@ -30,7 +30,7 @@ permissions:
   contents: write
 
 env:
-  EXPO_PUBLIC_API_URL: https://api.phexuss.dev/api
+  EXPO_PUBLIC_API_URL: https://exos-api.phexuss.dev/api
   # Real devices only; drop x86/x86_64 to halve build time and APK size.
   ARCHITECTURES: arm64-v8a,armeabi-v7a
 
