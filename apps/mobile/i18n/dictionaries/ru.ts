@@ -43,6 +43,7 @@ export const ru = {
   },
   library: {
     title: 'Библиотека',
+    editPlaylist: 'Редактировать плейлист',
     playlists: 'Плейлисты',
     likedTracks: 'Избранные треки',
     savedTracks: 'Сохранённые треки',

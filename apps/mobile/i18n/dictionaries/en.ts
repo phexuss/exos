@@ -42,6 +42,7 @@ export const en = {
   },
   library: {
     title: 'Library',
+    editPlaylist: 'Edit playlist',
     playlists: 'Playlists',
     likedTracks: 'Liked Tracks',
     savedTracks: 'Saved Tracks',

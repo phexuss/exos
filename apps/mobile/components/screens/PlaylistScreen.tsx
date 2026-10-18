@@ -1,8 +1,8 @@
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
-import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
@@ -11,10 +11,13 @@ import { TrackActionsSheet } from '@/components/TrackActionsSheet';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
+import { LAYOUT } from '@/constants/layout';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
+import { useI18n } from '@/hooks/useI18n';
 import {
   deletePlaylist,
   getPlaylists,
@@ -33,6 +36,7 @@ type PlaylistScreenProps = {
 };
 
 export function PlaylistScreen({ id }: PlaylistScreenProps) {
+  const { t } = useI18n();
   const play = usePlayerStore((s) => s.play);
   const setQueue = usePlayerStore((s) => s.setQueue);
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
@@ -188,30 +192,17 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
       style={{ flex: 1, backgroundColor: COLORS.background }}
       edges={['top']}
     >
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 16,
-          paddingVertical: 12,
+      <ScreenHeader
+        title={playlist.name}
+        leading="back"
+        onLeadingPress={closePlaylist}
+        trailing={{
+          icon: 'settings',
+          onPress: openEditModal,
+          accessibilityLabel: t('library.editPlaylist'),
         }}
-      >
-        <Pressable onPress={closePlaylist} hitSlop={12}>
-          <AppIcon name="chevron-right" size={24} color={COLORS.textMuted} />
-        </Pressable>
-        <AppText
-          variant="body"
-          weight="bold"
-          numberOfLines={1}
-          style={{ flex: 1, textAlign: 'center', marginHorizontal: 12 }}
-        >
-          {playlist.name}
-        </AppText>
-        <Pressable onPress={openEditModal} hitSlop={12}>
-          <AppIcon name="settings" size={20} color={COLORS.textMuted} />
-        </Pressable>
-      </View>
+        gutter={LAYOUT.gutter}
+      />
 
       <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
         <AppText variant="caption" style={{ color: COLORS.textMuted }}>
