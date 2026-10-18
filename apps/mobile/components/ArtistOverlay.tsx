@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BackHandler, View } from 'react-native';
 import Animated, { SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
 import {
   glassPushEntering,
   glassPushExiting,
@@ -53,15 +54,20 @@ export function ArtistOverlay() {
         backgroundColor: COLORS.background,
       }}
     >
+      {glassMode ? <GlassAmbientBackground /> : null}
       {artistId ? <ArtistScreen id={artistId} /> : null}
 
       {}
       {albumId && (
         <Animated.View
           entering={
-            artistId ? SlideInRight.duration(260) : SlideInRight.duration(280)
+            glassMode
+              ? glassPushEntering()
+              : artistId
+                ? SlideInRight.duration(260)
+                : SlideInRight.duration(280)
           }
-          exiting={SlideOutRight.duration(220)}
+          exiting={glassMode ? glassPushExiting() : SlideOutRight.duration(220)}
           style={{
             position: 'absolute',
             top: 0,
@@ -71,6 +77,8 @@ export function ArtistOverlay() {
             backgroundColor: COLORS.background,
           }}
         >
+          {/* Opaque glow of its own so the artist page doesn't show through. */}
+          {glassMode ? <GlassAmbientBackground /> : null}
           <AlbumScreen id={albumId} titleHint={albumTitle ?? undefined} />
         </Animated.View>
       )}

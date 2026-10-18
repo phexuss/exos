@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -19,9 +19,13 @@ type GlassArtworkBackdropProps = {
 
 const DRIFT_MS = 18000;
 
+// On Android every frame of the drift makes each native blur on screen
+// re-capture and re-blur its whole source view, so the backdrop stays still.
+const DRIFT_ENABLED = Platform.OS !== 'android';
+
 /**
  * Full-bleed, heavily blurred album art that slowly drifts and breathes —
- * the living backdrop the player's glass sits on.
+ * the living backdrop the player's glass sits on. Static on Android.
  */
 export function GlassArtworkBackdrop({
   coverUrl,
@@ -30,6 +34,7 @@ export function GlassArtworkBackdrop({
   const drift = useSharedValue(0);
 
   useEffect(() => {
+    if (!DRIFT_ENABLED) return;
     drift.value = withRepeat(
       withTiming(1, { duration: DRIFT_MS, easing: Easing.inOut(Easing.sin) }),
       -1,

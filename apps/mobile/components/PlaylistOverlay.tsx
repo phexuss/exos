@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BackHandler, View } from 'react-native';
 import Animated, { SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
 import {
   glassPushEntering,
   glassPushExiting,
@@ -45,6 +46,7 @@ export function PlaylistOverlay() {
         backgroundColor: COLORS.background,
       }}
     >
+      {glassMode ? <GlassAmbientBackground /> : null}
       <PlaylistScreen id={playlistId} />
       <View
         style={{

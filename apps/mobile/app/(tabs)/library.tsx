@@ -15,14 +15,15 @@ import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
+import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
 import { GlassSurface } from '@/components/glass/GlassSurface';
 import { TrackActionsSheet } from '@/components/TrackActionsSheet';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
-import { LAYOUT } from '@/constants/layout';
 import { GLASS, GLASS_SPRING } from '@/constants/glass';
+import { LAYOUT } from '@/constants/layout';
 import { SPACING } from '@/constants/spacing';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
@@ -459,6 +460,7 @@ export default function LibraryScreen() {
         backgroundColor: glassMode ? 'transparent' : COLORS.background,
       }}
     >
+      {glassMode ? <GlassAmbientBackground /> : null}
       <FlashList
         data={tracks}
         keyExtractor={keyExtractor}

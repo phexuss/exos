@@ -17,6 +17,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { DownloadButton } from '@/components/DownloadButton';
 import { GlassSurface } from '@/components/glass/GlassSurface';
+import {
+  glassPresentEntering,
+  glassPresentExiting,
+} from '@/components/glass/transitions';
 import { LyricsView } from '@/components/LyricsView';
 import { SeekBar } from '@/components/SeekBar';
 import { SourceBadge } from '@/components/SourceBadge';
@@ -26,7 +30,7 @@ import { AppText } from '@/components/ui/AppText';
 import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
-import { GLASS_SPRING } from '@/constants/glass';
+import { GLASS_SPRING, SECONDARY_BLUR } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassMode } from '@/hooks/useGlassMode';
@@ -55,8 +59,8 @@ function QueueOverlay({
 
   return (
     <Animated.View
-      entering={SlideInDown.duration(350).damping(28)}
-      exiting={SlideOutDown.duration(300)}
+      entering={glassMode ? glassPresentEntering() : SlideInDown.duration(350)}
+      exiting={glassMode ? glassPresentExiting() : SlideOutDown.duration(300)}
       style={{
         position: 'absolute',
         top: 0,
@@ -71,6 +75,7 @@ function QueueOverlay({
         <GlassSurface
           variant="thick"
           highlight={false}
+          blur={SECONDARY_BLUR}
           style={{
             position: 'absolute',
             top: 0,

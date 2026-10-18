@@ -10,6 +10,7 @@ import { AppText } from '@/components/ui/AppText';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS } from '@/constants/colors';
 import { LAYOUT } from '@/constants/layout';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import { type AlbumDetail, getAlbumDetail } from '@/services/api/albums';
 import { useOverlayStore } from '@/store/useOverlayStore';
@@ -23,6 +24,9 @@ type Props = {
 
 export function AlbumScreen({ id, titleHint }: Props) {
   const { t, tn } = useI18n();
+  const glassMode = useGlassMode();
+  // Glass mode: the overlay draws the ambient glow behind this screen.
+  const background = glassMode ? 'transparent' : COLORS.background;
   const [album, setAlbum] = useState<AlbumDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -80,7 +84,7 @@ export function AlbumScreen({ id, titleHint }: Props) {
       <SafeAreaView
         style={{
           flex: 1,
-          backgroundColor: COLORS.background,
+          backgroundColor: background,
           alignItems: 'center',
           justifyContent: 'center',
         }}
@@ -95,7 +99,7 @@ export function AlbumScreen({ id, titleHint }: Props) {
       <SafeAreaView
         style={{
           flex: 1,
-          backgroundColor: COLORS.background,
+          backgroundColor: background,
           alignItems: 'center',
           justifyContent: 'center',
         }}
@@ -165,7 +169,7 @@ export function AlbumScreen({ id, titleHint }: Props) {
   return (
     <SafeAreaView
       edges={['top', 'bottom']}
-      style={{ flex: 1, backgroundColor: COLORS.background }}
+      style={{ flex: 1, backgroundColor: background }}
     >
       <FlashList
         data={album.tracks}

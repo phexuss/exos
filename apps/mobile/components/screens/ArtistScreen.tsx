@@ -14,6 +14,7 @@ import { AppText } from '@/components/ui/AppText';
 import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
 import { COLORS } from '@/constants/colors';
 import { LAYOUT } from '@/constants/layout';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import {
   getArtist,
@@ -91,6 +92,9 @@ type Props = {
 
 export function ArtistScreen({ id }: Props) {
   const { t } = useI18n();
+  const glassMode = useGlassMode();
+  // Glass mode: the overlay draws the ambient glow behind this screen.
+  const background = glassMode ? 'transparent' : COLORS.background;
   const [artist, setArtist] = useState<ArtistDetails | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [albums, setAlbums] = useState<ArtistAlbum[]>([]);
@@ -154,7 +158,7 @@ export function ArtistScreen({ id }: Props) {
       <SafeAreaView
         style={{
           flex: 1,
-          backgroundColor: COLORS.background,
+          backgroundColor: background,
           alignItems: 'center',
           justifyContent: 'center',
         }}
@@ -169,7 +173,7 @@ export function ArtistScreen({ id }: Props) {
       <SafeAreaView
         style={{
           flex: 1,
-          backgroundColor: COLORS.background,
+          backgroundColor: background,
           alignItems: 'center',
           justifyContent: 'center',
         }}
@@ -197,7 +201,10 @@ export function ArtistScreen({ id }: Props) {
             resizeMode="cover"
           />
           <LinearGradient
-            colors={['transparent', COLORS.background]}
+            colors={[
+              'transparent',
+              glassMode ? 'rgba(0,0,0,0.35)' : COLORS.background,
+            ]}
             style={{
               position: 'absolute',
               bottom: 0,
@@ -303,7 +310,7 @@ export function ArtistScreen({ id }: Props) {
   return (
     <SafeAreaView
       edges={['bottom']}
-      style={{ flex: 1, backgroundColor: COLORS.background }}
+      style={{ flex: 1, backgroundColor: background }}
     >
       <FlashList
         data={tracks}

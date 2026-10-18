@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
 import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
 import { useGlassBottomInset } from '@/hooks/useGlassBottomInset';
@@ -44,6 +45,9 @@ export function ScreenContainer({
         backgroundColor: glassMode ? 'transparent' : COLORS.background,
       }}
     >
+      {/* Tab screens draw their own glow: on Android native blur only sees
+          content inside the same navigation screen. Overlays bring their own. */}
+      {glassMode && withTabBar ? <GlassAmbientBackground /> : null}
       {scrollable ? (
         <ScrollView
           style={{ flex: 1 }}

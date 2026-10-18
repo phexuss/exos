@@ -59,7 +59,8 @@ export function GlassSurface({
         {
           borderRadius: radius,
           overflow: 'hidden',
-          borderWidth: StyleSheet.hairlineWidth,
+          // A square surface is a full-screen layer: no rim along the screen edge.
+          borderWidth: radius !== 0 ? StyleSheet.hairlineWidth : 0,
           borderColor: GLASS.rim,
         },
         floating ? undefined : style,

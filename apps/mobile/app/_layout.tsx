@@ -21,6 +21,7 @@ import { getDownloadedTracks } from '@/services/db/database';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useDownloadStore } from '@/store/useDownloadStore';
 import { useOverlayStore } from '@/store/useOverlayStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 const EXOS_THEME = {
   dark: true,
@@ -89,6 +90,9 @@ export default function RootLayout() {
     'Jost-Black': require('@/assets/fonts/Jost-Black.ttf'),
   });
   const isHydrated = useAuthStore((s) => s.isHydrated);
+  // Glass mode changes the whole chrome; rendering before it loads flashes
+  // the classic UI for users who turned it on.
+  const settingsHydrated = useSettingsStore((s) => s._hydrated);
 
   useEffect(() => {
     SplashScreen.preventAutoHideAsync();
@@ -108,12 +112,12 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (fontsLoaded && isHydrated) {
+    if (fontsLoaded && isHydrated && settingsHydrated) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, isHydrated]);
+  }, [fontsLoaded, isHydrated, settingsHydrated]);
 
-  if (!fontsLoaded || !isHydrated) {
+  if (!fontsLoaded || !isHydrated || !settingsHydrated) {
     return null;
   }
 
