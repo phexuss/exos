@@ -26,7 +26,7 @@ export default function SourceCard({ source }: SourceCardProps) {
   return (
     <article
       className={`
-        group relative h-full overflow-hidden flex flex-col gap-4 rounded-2xl border border-white/5 bg-[#161616]/80 backdrop-blur-md px-5 py-5 sm:px-7 sm:py-6 transition-all duration-500 hover:-translate-y-1 hover:border-white/10 ${
+        group relative h-full overflow-hidden flex flex-col gap-4 rounded-2xl border border-white/5 bg-[#161616]/80 backdrop-blur-md px-5 py-5 sm:px-7 sm:py-6 transition-all duration-500 hover:-translate-y-1 hover:border-white/10 glass:glass-surface glass:rounded-3xl glass:hover:border-white/30 ${
           isDeezer
             ? 'hover:shadow-[0_0_30px_-10px_rgba(99,102,241,0.25)]'
             : 'hover:shadow-[0_0_30px_-10px_rgba(249,115,22,0.25)]'

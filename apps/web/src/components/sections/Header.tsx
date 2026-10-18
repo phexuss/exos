@@ -7,6 +7,7 @@ import {
   NavigationMenuList,
 } from '@/components/ui/navigation-menu';
 import { Link } from '@/i18n/navigation';
+import { GlassModeToggle } from '../glass/GlassModeToggle';
 import LanguageSwitcher from '../shared/LanguageSwitcher';
 
 export function Header() {
@@ -14,7 +15,7 @@ export function Header() {
 
   return (
     <motion.header
-      className="sticky top-0 z-50 backdrop-blur-md"
+      className="sticky top-0 z-50 backdrop-blur-md transition-[padding] duration-500 glass:bg-linear-to-b glass:from-background/90 glass:to-transparent glass:px-3 glass:pt-3 glass:pb-3 glass:backdrop-blur-none sm:glass:px-6"
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{
@@ -25,7 +26,7 @@ export function Header() {
     >
       <nav
         aria-label="Main navigation"
-        className="flex items-center justify-between max-w-275 mx-auto px-4 sm:px-6 py-3"
+        className="flex items-center justify-between max-w-275 mx-auto px-4 sm:px-6 py-3 border border-transparent transition-all duration-500 glass:glass-surface glass:rounded-full glass:py-2 glass:pl-5 glass:pr-3 sm:glass:pl-6"
       >
         <Link
           href="#"
@@ -66,6 +67,9 @@ export function Header() {
               >
                 {t('download')}
               </Link>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <GlassModeToggle />
             </NavigationMenuItem>
             <NavigationMenuItem>
               <LanguageSwitcher />

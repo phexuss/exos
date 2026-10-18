@@ -27,7 +27,7 @@ export default async function HomePage({ params }: Props) {
         <Sources />
         <CustomSeparator />
         <Faq />
-        <footer className="border-t">
+        <footer className="border-t transition-colors duration-500 glass:border-white/10 glass:bg-black/20 glass:backdrop-blur-xl">
           <Footer />
         </footer>
       </main>

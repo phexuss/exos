@@ -24,7 +24,7 @@ export const HeroScreens = () => {
           }}
           transition={{ duration: 0.8, delay: 0.2 }}
           viewport={{ once: true }}
-          className="absolute z-10 w-60 rounded-[2rem] border-4 border-neutral-800 shadow-[0_0px_50px_-15px_rgba(129,140,248,0.15)] overflow-hidden bg-black"
+          className="absolute z-10 w-60 rounded-[2rem] border-4 border-neutral-800 transition-colors duration-500 glass:border-white/20 shadow-[0_0px_50px_-15px_rgba(129,140,248,0.15)] overflow-hidden bg-black"
         >
           <Image
             src="/player.jpg"
@@ -49,7 +49,7 @@ export const HeroScreens = () => {
           }}
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
-          className="absolute z-20 w-63.75 rounded-[2rem] border-4 border-neutral-900 shadow-[0_20px_60px_-15px_rgba(129,140,248,0.2)] overflow-hidden bg-black"
+          className="absolute z-20 w-63.75 rounded-[2rem] border-4 border-neutral-900 transition-colors duration-500 glass:border-white/25 shadow-[0_20px_60px_-15px_rgba(129,140,248,0.2)] overflow-hidden bg-black"
         >
           <Image
             src="/image.png"
