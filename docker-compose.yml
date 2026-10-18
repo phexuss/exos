@@ -1,12 +1,33 @@
+# Production API. Secrets live in .env.production next to this file
+# (see apps/api/.env.example).
+#
+#   docker compose up -d --build          # build and start
+#   docker compose run --rm migrate       # apply Prisma migrations
 services:
   api:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./apps/api
+      target: runtime
+    image: exos-api
     env_file:
       - .env.production
     ports:
       - "3000:3000"
     volumes:
-      - ./cookies.txt:/app/cookies.txt
+      # Point YTDLP_COOKIES_PATH at /app/cookies.txt to use it.
+      - ./cookies.txt:/app/cookies.txt:ro
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  migrate:
+    build:
+      context: ./apps/api
+      target: migrate
+    image: exos-api-migrate
+    env_file:
+      - .env.production
+    profiles: ["tools"]
