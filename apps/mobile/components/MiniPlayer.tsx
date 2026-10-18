@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useEffect } from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import Animated, {
   Easing,
   FadeInDown,
@@ -23,7 +23,17 @@ import { useGlassMode } from '@/hooks/useGlassMode';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 
-export function MiniPlayer() {
+type MiniPlayerProps = {
+  /** Glass mode only: native backdrop blur. Off while an overlay covers it. */
+  blur?: boolean;
+};
+
+// Progress is polled every 250 ms; easing each step keeps the bar animating
+// nonstop during playback, which on Android makes every native blur on screen
+// re-render each frame. In Glass mode there it jumps per poll instead.
+const ANIMATE_PROGRESS = Platform.OS !== 'android';
+
+export function MiniPlayer({ blur = true }: MiniPlayerProps) {
   const currentTrack = usePlayerStore((s) => s.currentTrack);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const progress = usePlayerStore((s) => s.progress);
@@ -33,11 +43,16 @@ export function MiniPlayer() {
   const progressWidth = useSharedValue(Math.max(progress * 100, 0.5));
 
   useEffect(() => {
-    progressWidth.value = withTiming(Math.max(progress * 100, 0.5), {
+    const width = Math.max(progress * 100, 0.5);
+    if (glassMode && !ANIMATE_PROGRESS) {
+      progressWidth.value = width;
+      return;
+    }
+    progressWidth.value = withTiming(width, {
       duration: 250,
       easing: Easing.linear,
     });
-  }, [progress, progressWidth]);
+  }, [progress, progressWidth, glassMode]);
 
   const progressStyle = useAnimatedStyle(() => ({
     width: `${progressWidth.value}%`,
@@ -93,9 +108,9 @@ export function MiniPlayer() {
       ) : (
         <View
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 6,
+            width: glassMode ? 42 : 36,
+            height: glassMode ? 42 : 36,
+            borderRadius: glassMode ? 12 : 6,
             backgroundColor: COLORS.surfaceMuted,
             alignItems: 'center',
             justifyContent: 'center',
@@ -212,6 +227,7 @@ export function MiniPlayer() {
           <GlassSurface
             floating
             variant="regular"
+            blur={blur}
             style={{ borderRadius: GLASS.radius.card }}
           >
             {row}

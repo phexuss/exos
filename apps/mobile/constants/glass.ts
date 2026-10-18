@@ -38,6 +38,15 @@ export const GLASS = {
   },
 } as const;
 
+/**
+ * Whether secondary glass (icon buttons, sheets and dialogs over the blurred
+ * modal backdrop, full-screen layers over an already blurred backdrop) gets
+ * its own native blur. On Android every native blur re-captures and re-blurs
+ * its whole source view on each frame anything on screen changes, so those
+ * surfaces use the tint alone there; it reads the same over blurred content.
+ */
+export const SECONDARY_BLUR = Platform.OS !== 'android';
+
 /** Spring presets tuned to feel like iOS UIKit springs. */
 export const GLASS_SPRING = {
   /** Snappy, slight overshoot — selection bubbles, toggles. ~290ms to settle. */

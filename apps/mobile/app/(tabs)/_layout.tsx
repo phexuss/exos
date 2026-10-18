@@ -5,7 +5,6 @@ import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
-import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
 import { GlassTabBar } from '@/components/glass/GlassTabBar';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import type { IconName } from '@/components/ui/AppIcon';
@@ -92,7 +91,6 @@ export default function TabLayout() {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-      {glassMode ? <GlassAmbientBackground /> : null}
       <Tabs
         tabBar={(props) =>
           glassMode ? (

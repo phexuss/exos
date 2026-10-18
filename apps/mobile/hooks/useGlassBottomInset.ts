@@ -7,7 +7,8 @@ import {
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { usePlayerStore } from '@/store/usePlayerStore';
 
-const GLASS_MINI_PLAYER_HEIGHT = 70;
+// 42 px cover + 2 × 9 px padding + 8 px gap above the tab bar.
+const GLASS_MINI_PLAYER_HEIGHT = 68;
 
 /**
  * Extra bottom space a tab screen needs in Glass mode, where the tab bar and

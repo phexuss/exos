@@ -18,6 +18,7 @@ import type { IconName } from '@/components/ui/AppIcon';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { COLORS } from '@/constants/colors';
 import { GLASS, GLASS_SPRING } from '@/constants/glass';
+import { useTabChromeCovered } from '@/hooks/useTabChromeCovered';
 
 export const GLASS_TAB_BAR_HEIGHT = 62;
 export const GLASS_TAB_BAR_MARGIN = 10;
@@ -78,6 +79,7 @@ function GlassTab({ icon, focused, onPress, onLongPress }: GlassTabProps) {
  */
 export function GlassTabBar({ state, navigation, icons }: GlassTabBarProps) {
   const insets = useSafeAreaInsets();
+  const covered = useTabChromeCovered();
   const tabCount = state.routes.length;
   const rowWidth = useSharedValue(0);
   const position = useSharedValue(state.index);
@@ -114,10 +116,11 @@ export function GlassTabBar({ state, navigation, icons }: GlassTabBarProps) {
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']}
         style={StyleSheet.absoluteFill}
       />
-      <MiniPlayer />
+      <MiniPlayer blur={!covered} />
       <GlassSurface
         floating
         variant="regular"
+        blur={!covered}
         style={{
           marginHorizontal: 20,
           marginBottom: Math.max(insets.bottom, GLASS_TAB_BAR_MARGIN),

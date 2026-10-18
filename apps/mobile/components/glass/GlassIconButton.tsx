@@ -5,7 +5,7 @@ import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { GlassSurface } from '@/components/glass/GlassSurface';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { COLORS } from '@/constants/colors';
-import { GLASS, type GlassVariant } from '@/constants/glass';
+import { GLASS, type GlassVariant, SECONDARY_BLUR } from '@/constants/glass';
 
 type GlassIconButtonProps = {
   icon: ComponentProps<typeof AppIcon>['name'];
@@ -40,6 +40,7 @@ export function GlassIconButton({
     >
       <GlassSurface
         variant={variant}
+        blur={SECONDARY_BLUR}
         style={{
           width: size,
           height: size,

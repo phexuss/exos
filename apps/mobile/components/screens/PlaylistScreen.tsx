@@ -17,6 +17,7 @@ import { COLORS } from '@/constants/colors';
 import { LAYOUT } from '@/constants/layout';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import {
   deletePlaylist,
@@ -37,6 +38,9 @@ type PlaylistScreenProps = {
 
 export function PlaylistScreen({ id }: PlaylistScreenProps) {
   const { t, tn } = useI18n();
+  const glassMode = useGlassMode();
+  // Glass mode: the overlay draws the ambient glow behind this screen.
+  const background = glassMode ? 'transparent' : COLORS.background;
   const play = usePlayerStore((s) => s.play);
   const setQueue = usePlayerStore((s) => s.setQueue);
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
@@ -177,7 +181,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
 
   if (!playlist) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: background }}>
         <View style={{ paddingHorizontal: 20, paddingTop: 60, gap: 12 }}>
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} width="100%" height={56} />
@@ -189,7 +193,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: COLORS.background }}
+      style={{ flex: 1, backgroundColor: background }}
       edges={['top']}
     >
       <ScreenHeader

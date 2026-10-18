@@ -22,7 +22,7 @@ import {
   glassPresentEntering,
   glassPresentExiting,
 } from '@/components/glass/transitions';
-import { GLASS, GLASS_SPRING } from '@/constants/glass';
+import { GLASS, GLASS_SPRING, SECONDARY_BLUR } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
 import { useGlassMode } from '@/hooks/useGlassMode';
 
@@ -181,6 +181,7 @@ export function AnimatedModal({
 
   if (glassMode) {
     const { outer, inner } = splitGlassStyle(contentStyle);
+    const requestedPadding = inner.paddingBottom;
     animatedContentStyle = isSheet
       ? [
           outer,
@@ -194,6 +195,9 @@ export function AnimatedModal({
       <GlassSurface
         floating
         variant="thick"
+        // The backdrop behind is already blurred. On Android a blur inside the
+        // modal's own window can't track the sheet as it slides in.
+        blur={SECONDARY_BLUR}
         style={[
           {
             borderRadius: isSheet ? GLASS.radius.sheet : GLASS.radius.dialog,
@@ -205,8 +209,16 @@ export function AnimatedModal({
         ]}
         contentStyle={[
           inner,
-          // The floating sheet already clears the home indicator.
-          isSheet ? { paddingBottom: 16 } : undefined,
+          // The floating sheet already clears the home indicator; keep any
+          // larger padding the caller asked for.
+          isSheet
+            ? {
+                paddingBottom: Math.max(
+                  typeof requestedPadding === 'number' ? requestedPadding : 0,
+                  16,
+                ),
+              }
+            : undefined,
           outer.height !== undefined ? { flex: 1 } : { flexShrink: 1 },
         ]}
       >

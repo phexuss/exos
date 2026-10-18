@@ -10,6 +10,7 @@ import {
 import { Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
 import { GlassSurface } from '@/components/glass/GlassSurface';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
@@ -17,8 +18,8 @@ import { AppText } from '@/components/ui/AppText';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { SourcePill } from '@/components/ui/SourcePill';
 import { COLORS } from '@/constants/colors';
-import { LAYOUT } from '@/constants/layout';
 import { GLASS } from '@/constants/glass';
+import { LAYOUT } from '@/constants/layout';
 import type { SourceKey } from '@/constants/sources';
 import { SPACING } from '@/constants/spacing';
 import { FONT_FAMILY } from '@/constants/typography';
@@ -276,6 +277,7 @@ export default function SearchScreen() {
         backgroundColor: glassMode ? 'transparent' : COLORS.background,
       }}
     >
+      {glassMode ? <GlassAmbientBackground /> : null}
       <FlashList
         data={filteredResults}
         keyExtractor={keyExtractor}
