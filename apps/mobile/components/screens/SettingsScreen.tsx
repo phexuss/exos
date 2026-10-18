@@ -13,6 +13,7 @@ import { RestoreLibraryModal } from '@/components/RestoreLibraryModal';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS } from '@/constants/colors';
 import { useI18n } from '@/hooks/useI18n';
 import * as audio from '@/services/audio/audioService';
@@ -83,31 +84,11 @@ export function SettingsScreen() {
 
   return (
     <ScreenContainer>
-      {}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Pressable
-          onPress={closeSettings}
-          hitSlop={12}
-          style={{
-            width: 36,
-            height: 36,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <AppIcon name="chevron-right" size={22} color={COLORS.textMuted} />
-        </Pressable>
-        <AppText variant="label" weight="bold">
-          {t('settings.title')}
-        </AppText>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader
+        title={t('settings.title')}
+        leading="back"
+        onLeadingPress={closeSettings}
+      />
 
       {}
       <View style={{ gap: 14, marginTop: 8 }}>
