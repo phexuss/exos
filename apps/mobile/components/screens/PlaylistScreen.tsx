@@ -36,7 +36,7 @@ type PlaylistScreenProps = {
 };
 
 export function PlaylistScreen({ id }: PlaylistScreenProps) {
-  const { t } = useI18n();
+  const { t, tn } = useI18n();
   const play = usePlayerStore((s) => s.play);
   const setQueue = usePlayerStore((s) => s.setQueue);
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
@@ -114,11 +114,11 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
       load();
     } catch (error) {
       if (__DEV__) console.warn('[Playlist] Remove track failed:', error);
-      setRemoveError('Could not remove track from playlist.');
+      setRemoveError(t('playlist.removeError'));
     } finally {
       setRemovingTrack(false);
     }
-  }, [selectedTrack, id, removingTrack, load]);
+  }, [selectedTrack, id, removingTrack, load, t]);
 
   const openEditModal = useCallback(() => {
     if (!playlist) return;
@@ -157,11 +157,11 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
       closePlaylist();
     } catch (error) {
       if (__DEV__) console.warn('[Playlist] Delete failed:', error);
-      setDeleteError('Could not delete playlist.');
+      setDeleteError(t('playlist.deleteError'));
     } finally {
       setDeletingPlaylist(false);
     }
-  }, [id, playlist, deletingPlaylist, closePlaylist]);
+  }, [id, playlist, deletingPlaylist, closePlaylist, t]);
 
   const pickCoverFromGallery = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -206,7 +206,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
 
       <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
         <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-          {tracks.length} tracks
+          {tn('tracks', tracks.length)}
         </AppText>
       </View>
 
@@ -228,7 +228,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
           >
             <AppIcon name="music" size={32} color={COLORS.textMuted} />
             <AppText variant="body" style={{ color: COLORS.textMuted }}>
-              No tracks in this playlist
+              {t('playlist.empty')}
             </AppText>
           </View>
         }
@@ -243,7 +243,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
         }}
         onDeleted={load}
         extraAction={{
-          label: 'Remove from Playlist',
+          label: t('playlist.removeTrack'),
           icon: 'close',
           color: '#EF4444',
           onPress: handleRemoveFromPlaylist,
@@ -252,16 +252,16 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
 
       <AppDialog
         visible={showRemoveConfirm}
-        title="Remove from playlist?"
+        title={t('playlist.removeTitle')}
         message={
           selectedTrack
-            ? `Remove "${selectedTrack.title}" from this playlist?`
+            ? t('playlist.removeMessage', { title: selectedTrack.title })
             : null
         }
         error={removeError}
-        cancelLabel="Cancel"
-        confirmLabel="Remove"
-        busyLabel="Removing..."
+        cancelLabel={t('common.cancel')}
+        confirmLabel={t('common.remove')}
+        busyLabel={t('common.removing')}
         confirmTone="danger"
         busy={removingTrack}
         onClose={() => setShowRemoveConfirm(false)}
@@ -281,7 +281,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
         }}
       >
         <AppText variant="title" weight="bold" style={{ textAlign: 'center' }}>
-          Edit Playlist
+          {t('library.editPlaylist')}
         </AppText>
 
         <Pressable
@@ -320,18 +320,17 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
                   fontSize: 10,
                 }}
               >
-                Add Cover
+                {t('playlist.addCover')}
               </AppText>
             </View>
           )}
         </Pressable>
 
         <TextInput
-
           maxFontSizeMultiplier={LAYOUT.maxFontScale}
           value={editName}
           onChangeText={setEditName}
-          placeholder="Playlist name"
+          placeholder={t('library.playlistName')}
           placeholderTextColor={COLORS.textMuted}
           autoFocus
           style={{
@@ -362,7 +361,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
             weight="medium"
             style={{ color: COLORS.danger }}
           >
-            Delete Playlist
+            {t('playlist.deletePlaylist')}
           </AppText>
         </Pressable>
 
@@ -382,7 +381,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
               weight="medium"
               style={{ color: COLORS.textSecondary }}
             >
-              Cancel
+              {t('common.cancel')}
             </AppText>
           </Pressable>
           <Pressable
@@ -396,7 +395,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
             }}
           >
             <AppText variant="body" weight="medium" style={{ color: '#fff' }}>
-              Save
+              {t('common.save')}
             </AppText>
           </Pressable>
         </View>
@@ -404,12 +403,12 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
 
       <AppDialog
         visible={showDeleteConfirm}
-        title="Delete playlist?"
-        message={`Delete "${playlist.name}"? Tracks will stay downloaded.`}
+        title={t('playlist.deleteTitle')}
+        message={t('playlist.deleteMessage', { name: playlist.name })}
         error={deleteError}
-        cancelLabel="Cancel"
-        confirmLabel="Delete"
-        busyLabel="Deleting..."
+        cancelLabel={t('common.cancel')}
+        confirmLabel={t('common.delete')}
+        busyLabel={t('common.deleting')}
         confirmTone="danger"
         busy={deletingPlaylist}
         onClose={() => setShowDeleteConfirm(false)}
