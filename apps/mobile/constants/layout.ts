@@ -20,6 +20,11 @@ export const LAYOUT = {
   minTouch: 44,
   /** Extra breathing room above the home indicator / nav bar in sheets. */
   sheetBottomGap: 12,
+  /**
+   * Cap for system font scaling. Text still grows for accessibility, but
+   * large One UI / Android font sizes can't blow up fixed-size cards.
+   */
+  maxFontScale: 1.3,
 } as const;
 
 /** hitSlop that grows a visual `size` button to the minimum touch target. */

@@ -3,6 +3,7 @@ import { type TextInput as RNTextInput, TextInput, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { LAYOUT } from '@/constants/layout';
 import { FONT_FAMILY } from '@/constants/typography';
 
 type AuthTextFieldProps = {
@@ -62,6 +63,7 @@ export const AuthTextField = forwardRef<RNTextInput, AuthTextFieldProps>(
           </AppText>
         ) : null}
         <TextInput
+          maxFontSizeMultiplier={LAYOUT.maxFontScale}
           ref={ref}
           value={value}
           onChangeText={onChangeText}

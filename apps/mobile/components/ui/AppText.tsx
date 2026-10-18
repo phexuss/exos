@@ -2,6 +2,7 @@ import type { TextProps, TextStyle } from 'react-native';
 import { Text } from 'react-native';
 
 import { COLORS } from '@/constants/colors';
+import { LAYOUT } from '@/constants/layout';
 import {
   FONT_FAMILY,
   TEXT_VARIANTS,
@@ -25,6 +26,7 @@ export function AppText({
 }: AppTextProps) {
   return (
     <Text
+      maxFontSizeMultiplier={LAYOUT.maxFontScale}
       {...props}
       style={[
         TEXT_VARIANTS[variant],

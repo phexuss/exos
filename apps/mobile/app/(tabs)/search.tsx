@@ -17,6 +17,7 @@ import { AppText } from '@/components/ui/AppText';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { SourcePill } from '@/components/ui/SourcePill';
 import { COLORS } from '@/constants/colors';
+import { LAYOUT } from '@/constants/layout';
 import { GLASS } from '@/constants/glass';
 import type { SourceKey } from '@/constants/sources';
 import { SPACING } from '@/constants/spacing';
@@ -167,6 +168,7 @@ export default function SearchScreen() {
         <SearchField glassMode={glassMode}>
           <AppIcon name="search" size={16} color={COLORS.textMuted} />
           <TextInput
+            maxFontSizeMultiplier={LAYOUT.maxFontScale}
             placeholder={t('search.placeholder')}
             placeholderTextColor={COLORS.textMuted}
             value={query}

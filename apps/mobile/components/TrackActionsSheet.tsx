@@ -6,6 +6,7 @@ import { AnimatedModal } from '@/components/AnimatedModal';
 import { AppIcon, type IconName } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { LAYOUT } from '@/constants/layout';
 import { FONT_FAMILY } from '@/constants/typography';
 import {
   addTrackToPlaylist,
@@ -204,6 +205,7 @@ export function TrackActionsSheet({
       ) : showCreate ? (
         <View style={{ padding: 20, gap: 12 }}>
           <TextInput
+            maxFontSizeMultiplier={LAYOUT.maxFontScale}
             placeholder="Playlist name"
             placeholderTextColor={COLORS.textMuted}
             value={newName}

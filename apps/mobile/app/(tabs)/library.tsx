@@ -21,6 +21,7 @@ import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { LAYOUT } from '@/constants/layout';
 import { GLASS, GLASS_SPRING } from '@/constants/glass';
 import { SPACING } from '@/constants/spacing';
 import { FONT_FAMILY } from '@/constants/typography';
@@ -697,6 +698,7 @@ export default function LibraryScreen() {
         {showBulkCreatePlaylist ? (
           <View style={{ padding: 20, gap: 12 }}>
             <TextInput
+              maxFontSizeMultiplier={LAYOUT.maxFontScale}
               placeholder="Playlist name"
               placeholderTextColor={COLORS.textMuted}
               value={bulkPlaylistName}

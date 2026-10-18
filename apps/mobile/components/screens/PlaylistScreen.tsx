@@ -327,6 +327,8 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
         </Pressable>
 
         <TextInput
+
+          maxFontSizeMultiplier={LAYOUT.maxFontScale}
           value={editName}
           onChangeText={setEditName}
           placeholder="Playlist name"

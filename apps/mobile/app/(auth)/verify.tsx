@@ -14,6 +14,7 @@ import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { LAYOUT } from '@/constants/layout';
 import { SPACING } from '@/constants/spacing';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useI18n } from '@/hooks/useI18n';
@@ -197,6 +198,7 @@ export default function VerifyScreen() {
           >
             {Array.from({ length: CODE_LENGTH }).map((_, i) => (
               <TextInput
+                maxFontSizeMultiplier={LAYOUT.maxFontScale}
                 // biome-ignore lint/suspicious/noArrayIndexKey: digit position is stable
                 key={i}
                 ref={(el) => {
