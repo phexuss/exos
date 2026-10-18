@@ -29,9 +29,11 @@ export function AnimatedPressable({
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
 
+  // .get()/.set() instead of .value: the React Compiler (enabled in app.json)
+  // can't see through property writes on hook results and skips the component.
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
+    transform: [{ scale: scale.get() }],
+    opacity: opacity.get(),
   }));
 
   return (
@@ -40,19 +42,19 @@ export function AnimatedPressable({
         if (glassMode) {
           // Glass surfaces should squish, not dim — dimming a blur reads as
           // a rendering glitch rather than feedback.
-          scale.value = withSpring(scaleValue, GLASS_SPRING.press);
+          scale.set(withSpring(scaleValue, GLASS_SPRING.press));
         } else {
-          scale.value = withTiming(scaleValue, { duration: 120 });
-          opacity.value = withTiming(0.7, { duration: 120 });
+          scale.set(withTiming(scaleValue, { duration: 120 }));
+          opacity.set(withTiming(0.7, { duration: 120 }));
         }
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
         if (glassMode) {
-          scale.value = withSpring(1, GLASS_SPRING.snappy);
+          scale.set(withSpring(1, GLASS_SPRING.snappy));
         } else {
-          scale.value = withTiming(1, { duration: 200 });
-          opacity.value = withTiming(1, { duration: 200 });
+          scale.set(withTiming(1, { duration: 200 }));
+          opacity.set(withTiming(1, { duration: 200 }));
         }
         onPressOut?.(e);
       }}

@@ -41,6 +41,12 @@ const EXOS_THEME = {
   },
 };
 
+// Must run before the first render: from an effect the native splash can
+// already be gone, which flashes an empty screen on cold start.
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+export { ScreenErrorFallback as ErrorBoundary } from '@/components/ScreenErrorFallback';
+
 export const unstable_settings = {
   anchor: '(tabs)',
 };
@@ -95,7 +101,6 @@ export default function RootLayout() {
   const settingsHydrated = useSettingsStore((s) => s._hydrated);
 
   useEffect(() => {
-    SplashScreen.preventAutoHideAsync();
     getDownloadedTracks()
       .then((tracks) => {
         useDownloadStore.getState().setDownloadedIds(tracks.map((t) => t.id));

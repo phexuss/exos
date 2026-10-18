@@ -125,13 +125,26 @@ function thumbHashToAverageHex(hash: Uint8Array): string | null {
   return rgbToHex(clamp01(r) * 255, clamp01(g) * 255, clamp01(b) * 255);
 }
 
-async function extractColor(url: string): Promise<string | null> {
+async function extractColorUncached(url: string): Promise<string | null> {
   try {
     const thumbhash = await Image.generateThumbhashAsync(url);
     return thumbHashToAverageHex(base64ToBytes(thumbhash));
   } catch {
     return null;
   }
+}
+
+// Several components call this hook at once (mini player, player, backdrop,
+// home); share one native thumbhash job per cover instead of one each.
+const inFlight = new Map<string, Promise<string | null>>();
+
+function extractColor(url: string): Promise<string | null> {
+  let job = inFlight.get(url);
+  if (!job) {
+    job = extractColorUncached(url).finally(() => inFlight.delete(url));
+    inFlight.set(url, job);
+  }
+  return job;
 }
 
 export function useDynamicAccent(): string {

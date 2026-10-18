@@ -12,6 +12,10 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { COLORS } from '@/constants/colors';
 import { useGlassMode } from '@/hooks/useGlassMode';
 
+// A screen that throws while rendering shows a retry button here instead of
+// unmounting the whole app (the player and overlays stay up).
+export { ScreenErrorFallback as ErrorBoundary } from '@/components/ScreenErrorFallback';
+
 const TAB_ICONS: Record<string, IconName> = {
   index: 'home',
   search: 'search',

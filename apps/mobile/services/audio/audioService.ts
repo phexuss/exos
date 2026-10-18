@@ -1,3 +1,4 @@
+import { NativeModules } from 'react-native';
 import type { Track as PlayerTrack } from 'react-native-track-player';
 
 type TrackPlayerModule = typeof import('react-native-track-player');
@@ -147,8 +148,20 @@ function warnAudioError(message: string, error: unknown): void {
   console.warn(message, error);
 }
 
+let trackPlayerMissingWarned = false;
+
 function loadTrackPlayerModule(): TrackPlayerModule | null {
   if (trackPlayerModule && trackPlayerApi) return trackPlayerModule;
+
+  // Requiring the JS package without its native module (Expo Go) throws
+  // while the package initializes, so don't even try.
+  if (!NativeModules.TrackPlayerModule) {
+    if (!trackPlayerMissingWarned) {
+      trackPlayerMissingWarned = true;
+      console.warn('[Audio] TrackPlayer native module is not in this build');
+    }
+    return null;
+  }
 
   try {
     const mod = require('react-native-track-player') as TrackPlayerModule & {

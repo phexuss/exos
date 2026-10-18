@@ -198,7 +198,7 @@ export function ArtistScreen({ id }: Props) {
               borderBottomLeftRadius: 24,
               borderBottomRightRadius: 24,
             }}
-            resizeMode="cover"
+            contentFit="cover"
           />
           <LinearGradient
             colors={[

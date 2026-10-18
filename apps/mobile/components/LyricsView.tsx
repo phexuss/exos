@@ -10,6 +10,8 @@ import { AnimatedModal } from '@/components/AnimatedModal';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { useI18n } from '@/hooks/useI18n';
+import * as audio from '@/services/audio/audioService';
+import { usePlayerStore } from '@/store/usePlayerStore';
 
 type LyricLine = { time: number; text: string };
 
@@ -155,7 +157,7 @@ const SyncedLine = memo(SyncedLineComponent);
 type LyricsViewProps = {
   syncedLyrics?: string;
   plainLyrics?: string;
-  progress: number;
+  /** Fallback when the player hasn't reported a duration yet. */
   duration: number;
   onSeekToTime?: (seconds: number) => void;
   accentColor?: string;
@@ -164,7 +166,6 @@ type LyricsViewProps = {
 export function LyricsView({
   syncedLyrics,
   plainLyrics,
-  progress,
   duration,
   onSeekToTime,
   accentColor,
@@ -191,15 +192,16 @@ export function LyricsView({
     [accentColor],
   );
 
-  const currentTime = progress * duration;
-
-  const currentLineIndex = useMemo(() => {
+  // Select the active line rather than the raw progress: progress ticks every
+  // 250 ms, the line changes every few seconds, and only then do we re-render.
+  const currentLineIndex = usePlayerStore((s) => {
     if (!parsedLines) return -1;
+    const currentTime = s.progress * (audio.getDuration() || duration);
     for (let i = parsedLines.length - 1; i >= 0; i--) {
       if (currentTime >= parsedLines[i].time) return i;
     }
     return -1;
-  }, [parsedLines, currentTime]);
+  });
 
   const handleMeasure = useCallback((index: number, height: number) => {
     lineHeights.current[index] = height + GAP;
