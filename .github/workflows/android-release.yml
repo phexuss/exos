@@ -98,8 +98,12 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # metro.config.js also resolves from the monorepo root node_modules; Metro
+      # fails to start if that folder is missing.
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund
+        run: |
+          npm ci --no-audit --no-fund
+          mkdir -p ../../node_modules
 
       # The root pnpm workspace applies this via patchedDependencies; npm does not.
       - name: Patch react-native-track-player
