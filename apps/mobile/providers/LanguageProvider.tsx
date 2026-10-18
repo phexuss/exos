@@ -14,12 +14,21 @@ import {
   STORAGE_KEY,
   SUPPORTED_LOCALES,
 } from '@/constants/i18n';
-import { getTranslation, type TranslationPath } from '@/i18n';
+import {
+  type CountKey,
+  getCountTranslation,
+  getTranslation,
+  interpolate,
+  type TranslationParams,
+  type TranslationPath,
+} from '@/i18n';
 
 type LanguageContextValue = {
   locale: Locale;
   setLocale: (nextLocale: Locale) => void;
-  t: (key: TranslationPath) => string;
+  t: (key: TranslationPath, params?: TranslationParams) => string;
+  /** Pluralized count, e.g. `tn('tracks', 3)` → "3 трека". */
+  tn: (key: CountKey, count: number) => string;
 };
 
 export const LanguageContext = createContext<LanguageContextValue | undefined>(
@@ -58,7 +67,13 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
   }, []);
 
   const t = useCallback(
-    (key: TranslationPath) => getTranslation(locale, key),
+    (key: TranslationPath, params?: TranslationParams) =>
+      interpolate(getTranslation(locale, key), params),
+    [locale],
+  );
+
+  const tn = useCallback(
+    (key: CountKey, count: number) => getCountTranslation(locale, key, count),
     [locale],
   );
 
@@ -67,8 +82,9 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
       locale,
       setLocale,
       t,
+      tn,
     }),
-    [locale, setLocale, t],
+    [locale, setLocale, t, tn],
   );
 
   return (
