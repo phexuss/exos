@@ -11,8 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
-import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
 import { COLORS } from '@/constants/colors';
 import { LAYOUT } from '@/constants/layout';
 import { SPACING } from '@/constants/spacing';
@@ -156,18 +156,11 @@ export default function VerifyScreen() {
           }}
           keyboardShouldPersistTaps="handled"
         >
-          <Pressable
+          <HeaderIconButton
+            icon="chevron-left"
             onPress={() => router.back()}
-            hitSlop={12}
-            style={{
-              width: 36,
-              height: 36,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <AppIcon name="chevron-right" size={20} color={COLORS.textMuted} />
-          </Pressable>
+            accessibilityLabel={t('common.back')}
+          />
 
           <View style={{ marginTop: SPACING.xxl, gap: 6 }}>
             <AppText variant="display" weight="bold">
