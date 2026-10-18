@@ -79,6 +79,10 @@ export interface DeezerTrackFull {
   type: 'track';
 }
 
+export interface DeezerErrorResponse {
+  error: { type: string; message: string; code: number };
+}
+
 export interface DeezerSearchResponse {
   data: DeezerTrack[];
   total: number;

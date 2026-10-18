@@ -10,6 +10,7 @@ import {
 import { AppDialog } from '@/components/AppDialog';
 import { GlassSurface } from '@/components/glass/GlassSurface';
 import { RestoreLibraryModal } from '@/components/RestoreLibraryModal';
+import { SpotifyImportModal } from '@/components/SpotifyImportModal';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -19,10 +20,10 @@ import { useI18n } from '@/hooks/useI18n';
 import * as audio from '@/services/audio/audioService';
 import { clearLocalDatabase } from '@/services/db/database';
 import { clearDownloadedTrackFiles } from '@/services/download/downloadService';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useDownloadStore } from '@/store/useDownloadStore';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { useAuthStore } from '@/store/useAuthStore';
 
 type SettingsGroupProps = {
   glass: boolean;
@@ -61,6 +62,7 @@ export function SettingsScreen() {
   const openFaq = useOverlayStore((s) => s.openFaq);
   const user = useAuthStore((s) => s.user);
   const [showRestoreLibrary, setShowRestoreLibrary] = useState(false);
+  const [showSpotifyImport, setShowSpotifyImport] = useState(false);
   const [showClearCache, setShowClearCache] = useState(false);
   const [clearCacheBusy, setClearCacheBusy] = useState(false);
   const [clearCacheError, setClearCacheError] = useState<string | null>(null);
@@ -350,6 +352,33 @@ export function SettingsScreen() {
             </View>
             <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
           </Pressable>
+          <Pressable
+            onPress={user ? () => setShowSpotifyImport(true) : undefined}
+            disabled={!user}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 14,
+              borderBottomWidth: 0.5,
+              borderBottomColor: COLORS.divider,
+            }}
+          >
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <AppText variant="label" weight="medium">
+                {t('settings.importSpotify')}
+              </AppText>
+              <AppText
+                variant="caption"
+                style={{ color: COLORS.textMuted, marginTop: 2 }}
+              >
+                {user
+                  ? t('settings.importSpotifyDesc')
+                  : t('settings.cloudRequiresLogin')}
+              </AppText>
+            </View>
+            <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
+          </Pressable>
         </SettingsGroup>
       </View>
       {}
@@ -397,6 +426,10 @@ export function SettingsScreen() {
       <RestoreLibraryModal
         visible={showRestoreLibrary}
         onClose={() => setShowRestoreLibrary(false)}
+      />
+      <SpotifyImportModal
+        visible={showSpotifyImport}
+        onClose={() => setShowSpotifyImport(false)}
       />
       <AppDialog
         visible={showClearCache}

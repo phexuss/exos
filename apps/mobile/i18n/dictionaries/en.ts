@@ -109,6 +109,8 @@ export const en = {
     restoreLibraryTitle: 'Restore library',
     restoreLibraryEmpty: 'No backed-up tracks yet',
     restoreLibraryError: 'Could not load your cloud library.',
+    importSpotify: 'Import from Spotify',
+    importSpotifyDesc: 'Download playlists and liked songs from Spotify',
     localSection: 'Local storage',
     clearCache: 'Clear local cache',
     clearCacheDesc: 'Delete downloaded files, local playlists and play history',
@@ -121,6 +123,32 @@ export const en = {
     aboutSection: 'About',
     faq: 'How EXØS works',
     cloudRequiresLogin: 'Sign in to use cloud backup',
+  },
+  spotify: {
+    title: 'Import from Spotify',
+    subtitle: 'Download your playlists and liked songs',
+    connectedAs: 'Connected: {name}',
+    connect: 'Connect Spotify',
+    connectHint:
+      'Sign in to Spotify and EXØS will find your playlists and liked songs. Tracks download through the regular downloader; Spotify only tells it what to fetch.',
+    connectError: 'Could not connect Spotify. Please try again.',
+    disconnect: 'Disconnect Spotify',
+    notConfigured: 'Spotify import is not set up on the server yet.',
+    loadError: 'Could not load your Spotify library.',
+    forbidden:
+      'Spotify refused this account. Add it under Users Management of your app on developer.spotify.com.',
+    liked: 'Liked Songs',
+    likedPlaylistName: 'Spotify · Liked',
+    notReadable:
+      'Spotify only shares tracks of your own and collaborative playlists',
+    import: 'Import',
+    importing: 'Importing...',
+    importDone: 'Import finished',
+    importCancelled: 'Import stopped',
+    importError:
+      'Import stopped on an error. Run it again; downloaded tracks are kept.',
+    importStats:
+      'Downloaded {downloaded} · already had {skipped} · failed {failed} · not found {unmatched}',
   },
   faq: {
     title: 'How EXØS works',
