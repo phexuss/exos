@@ -115,6 +115,7 @@ function PlaylistCardComponent({
   coverUrl,
   trackCount,
 }: PlaylistCardProps) {
+  const { tn } = useI18n();
   const handlePress = useCallback(() => {
     useOverlayStore.getState().openPlaylist(id);
   }, [id]);
@@ -162,7 +163,7 @@ function PlaylistCardComponent({
           marginTop: -6,
         }}
       >
-        {trackCount} tracks
+        {tn('tracks', trackCount)}
       </AppText>
     </Pressable>
   );
@@ -175,7 +176,7 @@ function TrackSeparator() {
 }
 
 export default function LibraryScreen() {
-  const { t } = useI18n();
+  const { t, tn } = useI18n();
   const play = usePlayerStore((s) => s.play);
   const setQueue = usePlayerStore((s) => s.setQueue);
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
@@ -402,7 +403,7 @@ export default function LibraryScreen() {
           >
             <AppIcon name="playlist" size={24} color={COLORS.textMuted} />
             <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-              Long press a track to create
+              {t('library.longPressHint')}
             </AppText>
           </View>
         ) : (
@@ -438,7 +439,7 @@ export default function LibraryScreen() {
             fontSize: 11,
           }}
         >
-          DOWNLOADED
+          {t('library.downloadedSection').toUpperCase()}
         </AppText>
         <AppText
           variant="caption"
@@ -469,7 +470,7 @@ export default function LibraryScreen() {
           <View style={{ paddingVertical: 40, alignItems: 'center', gap: 8 }}>
             <AppIcon name="download" size={28} color={COLORS.textMuted} />
             <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-              No downloads yet
+              {t('library.noDownloads')}
             </AppText>
           </View>
         }
@@ -507,14 +508,14 @@ export default function LibraryScreen() {
           </Pressable>
           <View style={{ flex: 1, minWidth: 0 }}>
             <AppText variant="body" weight="bold" numberOfLines={1}>
-              {selectedCount} selected
+              {tn('selected', selectedCount)}
             </AppText>
             <AppText
               variant="caption"
               numberOfLines={1}
               style={{ color: COLORS.textMuted, fontSize: 11 }}
             >
-              Downloaded tracks
+              {t('library.downloadedTracks')}
             </AppText>
           </View>
           {selectedCount === 1 ? (
@@ -534,7 +535,7 @@ export default function LibraryScreen() {
             >
               <AppIcon name="playlist" size={18} color={COLORS.textPrimary} />
               <AppText variant="caption" weight="medium">
-                More
+                {t('library.more')}
               </AppText>
             </Pressable>
           ) : null}
@@ -555,7 +556,7 @@ export default function LibraryScreen() {
             >
               <AppIcon name="playlist" size={18} color={COLORS.textPrimary} />
               <AppText variant="caption" weight="medium">
-                Playlist
+                {t('library.playlistAction')}
               </AppText>
             </Pressable>
           ) : null}
@@ -600,13 +601,15 @@ export default function LibraryScreen() {
       >
         <View style={{ gap: 8 }}>
           <AppText variant="title" weight="bold">
-            Delete downloads?
+            {t('library.deleteDownloadsTitle')}
           </AppText>
           <AppText
             variant="body"
             style={{ color: COLORS.textSecondary, lineHeight: 22 }}
           >
-            Remove {selectedCount} selected tracks from this device.
+            {t('library.deleteDownloadsMessage', {
+              selected: tn('selectedTracks', selectedCount),
+            })}
           </AppText>
         </View>
         <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -623,7 +626,7 @@ export default function LibraryScreen() {
             }}
           >
             <AppText variant="body" weight="medium">
-              Cancel
+              {t('common.cancel')}
             </AppText>
           </Pressable>
           <Pressable
@@ -645,7 +648,7 @@ export default function LibraryScreen() {
               weight="medium"
               style={{ color: COLORS.danger }}
             >
-              {deletingSelection ? 'Deleting...' : 'Delete'}
+              {deletingSelection ? t('common.deleting') : t('common.delete')}
             </AppText>
           </Pressable>
         </View>
@@ -688,10 +691,10 @@ export default function LibraryScreen() {
 
         <View style={{ paddingHorizontal: 20, paddingBottom: 10, gap: 4 }}>
           <AppText variant="title" weight="bold">
-            Add to playlist
+            {t('library.addToPlaylist')}
           </AppText>
           <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-            {selectedCount} selected tracks
+            {tn('selectedTracks', selectedCount)}
           </AppText>
         </View>
 
@@ -699,7 +702,7 @@ export default function LibraryScreen() {
           <View style={{ padding: 20, gap: 12 }}>
             <TextInput
               maxFontSizeMultiplier={LAYOUT.maxFontScale}
-              placeholder="Playlist name"
+              placeholder={t('library.playlistName')}
               placeholderTextColor={COLORS.textMuted}
               value={bulkPlaylistName}
               onChangeText={setBulkPlaylistName}
@@ -728,7 +731,9 @@ export default function LibraryScreen() {
               }}
             >
               <AppText variant="body" weight="medium" style={{ color: '#fff' }}>
-                {addingSelection ? 'Adding...' : 'Create & Add'}
+                {addingSelection
+                  ? t('common.adding')
+                  : t('library.createAndAdd')}
               </AppText>
             </Pressable>
           </View>
@@ -762,7 +767,7 @@ export default function LibraryScreen() {
                 </AppText>
               </View>
               <AppText variant="body" weight="medium">
-                New Playlist
+                {t('library.newPlaylist')}
               </AppText>
             </Pressable>
             {playlists.map((playlist) => (
@@ -800,7 +805,7 @@ export default function LibraryScreen() {
                     variant="caption"
                     style={{ color: COLORS.textMuted }}
                   >
-                    {playlist.track_count} tracks
+                    {tn('tracks', playlist.track_count)}
                   </AppText>
                 </View>
               </Pressable>
