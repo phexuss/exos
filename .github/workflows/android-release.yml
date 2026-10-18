@@ -1,0 +1,189 @@
+name: Android APK
+
+# Pull requests that touch the app: build a test APK (artifact only, no release).
+# Version bump in apps/mobile/app.json on main, or a manual run: build a signed
+# APK and publish it as a GitHub release under tag v<expo.version>.
+#
+# Release signing reads these repository secrets:
+#   ANDROID_KEYSTORE_BASE64   keystore file, base64-encoded
+#   ANDROID_KEYSTORE_PASSWORD keystore password
+#   ANDROID_KEY_ALIAS         key alias inside the keystore
+#   ANDROID_KEY_PASSWORD      key password
+on:
+  pull_request:
+    paths:
+      - apps/mobile/**
+      - patches/**
+      - .github/workflows/android-release.yml
+      - .github/scripts/release-notes.sh
+  push:
+    branches: [main]
+    paths:
+      - apps/mobile/app.json
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: write
+
+env:
+  EXPO_PUBLIC_API_URL: https://api.phexuss.dev/api
+  # Real devices only; drop x86/x86_64 to halve build time and APK size.
+  ARCHITECTURES: arm64-v8a,armeabi-v7a
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version
+        id: version
+        run: |
+          version=$(node -p "require('./app.json').expo.version")
+          code=$(node -p "require('./app.json').expo.android?.versionCode ?? ''")
+          if [ -z "$code" ]; then
+            # 1.2.3 -> 1002003 (the pre-release suffix is ignored)
+            code=$(node -p "const [a,b,c]='$version'.split('-')[0].split('.').map(Number); a*1e6+b*1e3+(c||0)")
+          fi
+          tag="v$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "apk=exos-$tag.apk" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" != "pull_request" ] && git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "Tag $tag already exists, bump expo.version in apps/mobile/app.json to release."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$version versionCode=$code tag=$tag"
+
+      - name: Check signing secrets
+        if: steps.version.outputs.release == 'true'
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for name in KEYSTORE STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Signing secret for $name is missing. See the workflow header for the list of secrets."
+              exit 1
+            fi
+          done
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # metro.config.js also resolves from the monorepo root node_modules; Metro
+      # fails to start if that folder is missing.
+      - name: Install dependencies
+        run: |
+          npm ci --no-audit --no-fund
+          mkdir -p ../../node_modules
+
+      # The root pnpm workspace applies this via patchedDependencies; npm does not.
+      - name: Patch react-native-track-player
+        run: patch -p1 --forward -d node_modules/react-native-track-player < ../../patches/react-native-track-player@4.1.2.patch
+
+      - name: Expo prebuild
+        run: npx expo prebuild --platform android --no-install
+        env:
+          CI: 1
+
+      - name: Set versionCode
+        run: |
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ steps.version.outputs.code }}/" android/app/build.gradle
+          grep -E "versionCode|versionName" android/app/build.gradle
+
+      - name: Prepare keystore
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ks="$RUNNER_TEMP/release.keystore"
+          if [ -n "$KEYSTORE" ]; then
+            echo "$KEYSTORE" | base64 -d > "$ks"
+          else
+            # PR builds without secrets: throwaway key, same signing path.
+            STORE_PASSWORD=ci-password KEY_PASSWORD=ci-password KEY_ALIAS=ci
+            keytool -genkeypair -v -keystore "$ks" -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 1 \
+              -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" -dname "CN=EXOS CI" >/dev/null
+            echo "::warning::No signing secrets, the APK is signed with a throwaway key."
+          fi
+          {
+            echo "KS_FILE=$ks"
+            echo "KS_STORE_PASSWORD=$STORE_PASSWORD"
+            echo "KS_KEY_ALIAS=$KEY_ALIAS"
+            echo "KS_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Build release APK
+        working-directory: apps/mobile/android
+        run: |
+          ./gradlew assembleRelease --no-daemon \
+            -PreactNativeArchitectures="$ARCHITECTURES" \
+            -Pandroid.injected.signing.store.file="$KS_FILE" \
+            -Pandroid.injected.signing.store.password="$KS_STORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KS_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KS_KEY_PASSWORD"
+
+      - name: Verify signature
+        run: |
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$apksigner" verify --print-certs "$apk" | tee "$RUNNER_TEMP/certs.txt"
+          expected=$(keytool -exportcert -keystore "$KS_FILE" -storepass "$KS_STORE_PASSWORD" -alias "$KS_KEY_ALIAS" | sha256sum | cut -d' ' -f1)
+          grep -qi "SHA-256 digest: $expected" "$RUNNER_TEMP/certs.txt" || { echo "::error::APK is not signed with the expected key"; exit 1; }
+          mv "$apk" "$RUNNER_TEMP/${{ steps.version.outputs.apk }}"
+          rm -f "$KS_FILE"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version.outputs.apk }}
+          path: ${{ runner.temp }}/${{ steps.version.outputs.apk }}
+          retention-days: 14
+
+      - name: Publish release
+        if: steps.version.outputs.release == 'true'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          APK: ${{ runner.temp }}/${{ steps.version.outputs.apk }}
+        run: |
+          .github/scripts/release-notes.sh "$TAG" "$APK" > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
+          prerelease=""
+          case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$TAG" "$APK" \
+            --target "$GITHUB_SHA" \
+            --title "EXØS $TAG" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            $prerelease
