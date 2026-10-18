@@ -48,6 +48,68 @@ type QueueOverlayProps = {
   onPlay: (track: Track) => void;
 };
 
+type PlaybackProgressProps = {
+  durationSec: number;
+  durationLabel: string;
+  isPlaying: boolean;
+  accentColor: string;
+  glass: boolean;
+  onSeek: (value: number) => void;
+};
+
+/**
+ * The only part of the player that follows playback position. Progress
+ * changes every 250 ms and the scrub label on every drag frame; keeping both
+ * here stops them from re-rendering the artwork, controls and glass.
+ */
+function PlaybackProgress({
+  durationSec,
+  durationLabel,
+  isPlaying,
+  accentColor,
+  glass,
+  onSeek,
+}: PlaybackProgressProps) {
+  const progress = usePlayerStore((s) => s.progress);
+  const [scrubRatio, setScrubRatio] = useState<number | null>(null);
+  const totalDurationSec = audio.getDuration() || durationSec;
+  const displayedCurrentTimeSec = (scrubRatio ?? progress) * totalDurationSec;
+
+  return (
+    <View style={{ gap: 4 }}>
+      <SeekBar
+        progress={progress}
+        isPlaying={isPlaying}
+        onSeek={onSeek}
+        onSeekStart={audio.startSeeking}
+        onSeekEnd={audio.stopSeeking}
+        onScrub={setScrubRatio}
+        accentColor={accentColor}
+        glass={glass}
+      />
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+        }}
+      >
+        <AppText
+          variant="caption"
+          style={{ color: COLORS.textMuted, fontSize: 10 }}
+        >
+          {formatTime(displayedCurrentTimeSec)}
+        </AppText>
+        <AppText
+          variant="caption"
+          style={{ color: COLORS.textMuted, fontSize: 10 }}
+        >
+          {durationLabel}
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
 function QueueOverlay({
   glassMode,
   currentTrack,
@@ -175,10 +237,8 @@ function QueueOverlay({
 export default function PlayerScreen() {
   const { t } = useI18n();
   const [showLyrics, setShowLyrics] = useState(false);
-  const [scrubRatio, setScrubRatio] = useState<number | null>(null);
   const currentTrack = usePlayerStore((s) => s.currentTrack);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
-  const progress = usePlayerStore((s) => s.progress);
   const shuffle = usePlayerStore((s) => s.shuffle);
   const repeat = usePlayerStore((s) => s.repeat);
   const queue = usePlayerStore((s) => s.queue);
@@ -195,15 +255,10 @@ export default function PlayerScreen() {
   const accentColor = useDynamicAccent();
   const glassMode = useGlassMode();
   const artScale = useSharedValue(1);
-  const startSeeking = audio.startSeeking;
-  const stopSeeking = audio.stopSeeking;
 
-  const totalDurationSec =
-    audio.getDuration() ||
+  const trackDurationSec =
     currentTrack?.durationSec ||
     (currentTrack ? parseDuration(currentTrack.duration) : 0);
-  const displayedRatio = scrubRatio ?? progress;
-  const displayedCurrentTimeSec = displayedRatio * (totalDurationSec || 0);
 
   useEffect(() => {
     // Apple Music-style: the artwork recedes while paused.
@@ -226,12 +281,13 @@ export default function PlayerScreen() {
 
   const handleLyricSeek = useCallback(
     (seconds: number) => {
+      const totalDurationSec = audio.getDuration() || trackDurationSec;
       if (!totalDurationSec) return;
       const target = seconds + 0.05;
       const ratio = Math.max(0, Math.min(1, target / totalDurationSec));
       setProgress(ratio);
     },
-    [totalDurationSec, setProgress],
+    [trackDurationSec, setProgress],
   );
 
   if (!currentTrack) {
@@ -318,8 +374,7 @@ export default function PlayerScreen() {
                   key={currentTrack.id}
                   syncedLyrics={currentTrack.syncedLyrics}
                   plainLyrics={currentTrack.plainLyrics}
-                  progress={progress}
-                  duration={totalDurationSec}
+                  duration={trackDurationSec}
                   onSeekToTime={handleLyricSeek}
                   accentColor={accentColor}
                 />
@@ -330,7 +385,7 @@ export default function PlayerScreen() {
                     flex: 1,
                     borderRadius: glassMode ? 22 : 16,
                   }}
-                  resizeMode="cover"
+                  contentFit="cover"
                   transition={glassMode ? 400 : undefined}
                 />
               ) : (
@@ -408,37 +463,14 @@ export default function PlayerScreen() {
             </View>
           </View>
 
-          <View style={{ gap: 4 }}>
-            <SeekBar
-              progress={progress}
-              isPlaying={isPlaying}
-              onSeek={handleSeek}
-              onSeekStart={startSeeking}
-              onSeekEnd={stopSeeking}
-              onScrub={setScrubRatio}
-              accentColor={accentColor}
-              glass={glassMode}
-            />
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-              }}
-            >
-              <AppText
-                variant="caption"
-                style={{ color: COLORS.textMuted, fontSize: 10 }}
-              >
-                {formatTime(displayedCurrentTimeSec)}
-              </AppText>
-              <AppText
-                variant="caption"
-                style={{ color: COLORS.textMuted, fontSize: 10 }}
-              >
-                {currentTrack.duration}
-              </AppText>
-            </View>
-          </View>
+          <PlaybackProgress
+            durationSec={trackDurationSec}
+            durationLabel={currentTrack.duration}
+            isPlaying={isPlaying}
+            accentColor={accentColor}
+            glass={glassMode}
+            onSeek={handleSeek}
+          />
 
           <View
             style={{

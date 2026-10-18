@@ -33,34 +33,41 @@ type MiniPlayerProps = {
 // re-render each frame. In Glass mode there it jumps per poll instead.
 const ANIMATE_PROGRESS = Platform.OS !== 'android';
 
-export function MiniPlayer({ blur = true }: MiniPlayerProps) {
-  const currentTrack = usePlayerStore((s) => s.currentTrack);
-  const isPlaying = usePlayerStore((s) => s.isPlaying);
+type MiniPlayerProgressProps = {
+  glassMode: boolean;
+  accentColor: string;
+};
+
+/**
+ * Follows playback position on its own, so the 250 ms progress ticks
+ * re-render this bar and not the artwork, text and glass around it.
+ */
+function MiniPlayerProgress({
+  glassMode,
+  accentColor,
+}: MiniPlayerProgressProps) {
   const progress = usePlayerStore((s) => s.progress);
-  const togglePlayback = usePlayerStore((s) => s.togglePlayback);
-  const accentColor = useDynamicAccent();
-  const glassMode = useGlassMode();
   const progressWidth = useSharedValue(Math.max(progress * 100, 0.5));
 
   useEffect(() => {
     const width = Math.max(progress * 100, 0.5);
     if (glassMode && !ANIMATE_PROGRESS) {
-      progressWidth.value = width;
+      progressWidth.set(width);
       return;
     }
-    progressWidth.value = withTiming(width, {
-      duration: 250,
-      easing: Easing.linear,
-    });
+    progressWidth.set(
+      withTiming(width, {
+        duration: 250,
+        easing: Easing.linear,
+      }),
+    );
   }, [progress, progressWidth, glassMode]);
 
   const progressStyle = useAnimatedStyle(() => ({
-    width: `${progressWidth.value}%`,
+    width: `${progressWidth.get()}%`,
   }));
 
-  if (!currentTrack) return null;
-
-  const progressBar = (
+  return (
     <View
       style={
         glassMode
@@ -84,6 +91,20 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
         ]}
       />
     </View>
+  );
+}
+
+export function MiniPlayer({ blur = true }: MiniPlayerProps) {
+  const currentTrack = usePlayerStore((s) => s.currentTrack);
+  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const togglePlayback = usePlayerStore((s) => s.togglePlayback);
+  const accentColor = useDynamicAccent();
+  const glassMode = useGlassMode();
+
+  if (!currentTrack) return null;
+
+  const progressBar = (
+    <MiniPlayerProgress glassMode={glassMode} accentColor={accentColor} />
   );
 
   const row = (

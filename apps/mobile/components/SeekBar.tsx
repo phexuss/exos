@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -75,65 +75,81 @@ export function SeekBar({
     [onScrub],
   );
 
-  const pan = Gesture.Pan()
-    .hitSlop({ top: HIT_SLOP, bottom: HIT_SLOP })
-    .onStart((e) => {
-      'worklet';
-      const w = width.value;
-      const x = Math.max(0, Math.min(e.x, w));
-      isScrubbing.value = true;
-      cancelAnimation(position);
-      position.value = x;
-      thumbScale.value = withTiming(1.6, { duration: 120 });
-      if (glass) {
-        trackHeight.value = withSpring(
-          GLASS_TRACK_ACTIVE_HEIGHT,
-          GLASS_SPRING.snappy,
-        );
-      }
-      if (onSeekStart) runOnJS(onSeekStart)();
-      if (w > 0) runOnJS(jsScrub)(x / w);
-    })
-    .onUpdate((e) => {
-      'worklet';
-      const w = width.value;
-      const x = Math.max(0, Math.min(e.x, w));
-      position.value = x;
-      if (w > 0) runOnJS(jsScrub)(x / w);
-    })
-    .onEnd(() => {
-      'worklet';
-      thumbScale.value = withTiming(1, { duration: 200 });
-      trackHeight.value = withSpring(restHeight, GLASS_SPRING.smooth);
-      const w = width.value;
-      if (w > 0) runOnJS(onSeek)(position.value / w);
-      runOnJS(jsScrub)(null);
-      if (onSeekEnd) runOnJS(onSeekEnd)();
-      isScrubbing.value = false;
-    })
-    .onFinalize((_e, success) => {
-      'worklet';
-      if (success) return;
+  // Built once per set of callbacks: progress re-renders this every 250 ms and
+  // a fresh gesture object makes the detector reconfigure natively each time.
+  const gesture = useMemo(() => {
+    const pan = Gesture.Pan()
+      .hitSlop({ top: HIT_SLOP, bottom: HIT_SLOP })
+      .onStart((e) => {
+        'worklet';
+        const w = width.value;
+        const x = Math.max(0, Math.min(e.x, w));
+        isScrubbing.value = true;
+        cancelAnimation(position);
+        position.value = x;
+        thumbScale.value = withTiming(1.6, { duration: 120 });
+        if (glass) {
+          trackHeight.value = withSpring(
+            GLASS_TRACK_ACTIVE_HEIGHT,
+            GLASS_SPRING.snappy,
+          );
+        }
+        if (onSeekStart) runOnJS(onSeekStart)();
+        if (w > 0) runOnJS(jsScrub)(x / w);
+      })
+      .onUpdate((e) => {
+        'worklet';
+        const w = width.value;
+        const x = Math.max(0, Math.min(e.x, w));
+        position.value = x;
+        if (w > 0) runOnJS(jsScrub)(x / w);
+      })
+      .onEnd(() => {
+        'worklet';
+        thumbScale.value = withTiming(1, { duration: 200 });
+        trackHeight.value = withSpring(restHeight, GLASS_SPRING.smooth);
+        const w = width.value;
+        if (w > 0) runOnJS(onSeek)(position.value / w);
+        runOnJS(jsScrub)(null);
+        if (onSeekEnd) runOnJS(onSeekEnd)();
+        isScrubbing.value = false;
+      })
+      .onFinalize((_e, success) => {
+        'worklet';
+        if (success) return;
 
-      thumbScale.value = withTiming(1, { duration: 200 });
-      trackHeight.value = withSpring(restHeight, GLASS_SPRING.smooth);
-      isScrubbing.value = false;
-      runOnJS(jsScrub)(null);
-      if (onSeekEnd) runOnJS(onSeekEnd)();
-    });
+        thumbScale.value = withTiming(1, { duration: 200 });
+        trackHeight.value = withSpring(restHeight, GLASS_SPRING.smooth);
+        isScrubbing.value = false;
+        runOnJS(jsScrub)(null);
+        if (onSeekEnd) runOnJS(onSeekEnd)();
+      });
 
-  const tap = Gesture.Tap()
-    .hitSlop({ top: HIT_SLOP, bottom: HIT_SLOP })
-    .onEnd((e) => {
-      'worklet';
-      const w = width.value;
-      const x = Math.max(0, Math.min(e.x, w));
-      cancelAnimation(position);
-      position.value = x;
-      if (w > 0) runOnJS(onSeek)(x / w);
-    });
+    const tap = Gesture.Tap()
+      .hitSlop({ top: HIT_SLOP, bottom: HIT_SLOP })
+      .onEnd((e) => {
+        'worklet';
+        const w = width.value;
+        const x = Math.max(0, Math.min(e.x, w));
+        cancelAnimation(position);
+        position.value = x;
+        if (w > 0) runOnJS(onSeek)(x / w);
+      });
 
-  const gesture = Gesture.Race(pan, tap);
+    return Gesture.Race(pan, tap);
+  }, [
+    glass,
+    restHeight,
+    onSeek,
+    onSeekStart,
+    onSeekEnd,
+    jsScrub,
+    width,
+    position,
+    isScrubbing,
+    thumbScale,
+    trackHeight,
+  ]);
 
   const fillStyle = useAnimatedStyle(() => {
     const w = width.value;

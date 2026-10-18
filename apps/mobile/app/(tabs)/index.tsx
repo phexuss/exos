@@ -1,6 +1,7 @@
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { memo, useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Pressable, View } from 'react-native';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { SourceBadge } from '@/components/SourceBadge';
@@ -49,6 +50,7 @@ function RecentCardComponent({
       {track.coverUrl ? (
         <Image
           source={{ uri: track.coverUrl }}
+          recyclingKey={track.id}
           style={{
             width: 160,
             height: 160,
@@ -127,6 +129,7 @@ function SimilarCardComponent({
         {item.coverUrl ? (
           <Image
             source={{ uri: item.coverUrl }}
+            recyclingKey={String(item.deezerId)}
             style={{
               width: 130,
               height: 130,
@@ -195,6 +198,7 @@ function ArtistCardComponent({
       {artist.picture_medium ? (
         <Image
           source={{ uri: artist.picture_medium }}
+          recyclingKey={String(artist.id)}
           style={{ width: 64, height: 64, borderRadius: 32 }}
         />
       ) : (
@@ -245,6 +249,7 @@ function AlbumCardComponent({
       {album.cover_medium ? (
         <Image
           source={{ uri: album.cover_medium }}
+          recyclingKey={String(album.id)}
           style={{ width: 120, height: 120, borderRadius: 12 }}
         />
       ) : (

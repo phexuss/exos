@@ -102,6 +102,7 @@ function TrackItemComponent({
       {track.coverUrl ? (
         <Image
           source={{ uri: track.coverUrl }}
+          recyclingKey={track.id}
           style={{
             width: 52,
             height: 52,

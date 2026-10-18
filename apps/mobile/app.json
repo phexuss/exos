@@ -50,7 +50,8 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/withHighRefreshRate"
     ],
     "experiments": {
       "typedRoutes": true,
