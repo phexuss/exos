@@ -35,6 +35,13 @@ export default function DownloadButton() {
         from-accent
         to-sidebar-primary
         min-w-45
+        border
+        border-transparent
+        transition-colors
+        duration-500
+        glass:glass-surface
+        glass:bg-primary/35!
+        glass:border-primary/40
       "
     >
       <motion.div

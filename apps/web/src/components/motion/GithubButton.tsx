@@ -31,6 +31,13 @@ export default function GithubButton() {
         cursor-pointer
         bg-white
         text-black
+        border
+        border-transparent
+        transition-colors
+        duration-500
+        glass:glass-surface
+        glass:bg-white/12!
+        glass:text-white
       "
     >
       <Image
@@ -38,6 +45,7 @@ export default function GithubButton() {
         width={21}
         height={21}
         alt="GitHub Logo"
+        className="transition-[filter] duration-500 glass:invert"
         loading="eager"
       />
       <motion.div
