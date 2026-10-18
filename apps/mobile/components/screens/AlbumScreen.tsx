@@ -10,6 +10,7 @@ import { AppText } from '@/components/ui/AppText';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS } from '@/constants/colors';
 import { LAYOUT } from '@/constants/layout';
+import { useI18n } from '@/hooks/useI18n';
 import { type AlbumDetail, getAlbumDetail } from '@/services/api/albums';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -21,6 +22,7 @@ type Props = {
 };
 
 export function AlbumScreen({ id, titleHint }: Props) {
+  const { t, tn } = useI18n();
   const [album, setAlbum] = useState<AlbumDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -99,7 +101,7 @@ export function AlbumScreen({ id, titleHint }: Props) {
         }}
       >
         <AppText variant="body" style={{ color: COLORS.textMuted }}>
-          Album not found
+          {t('album.notFound')}
         </AppText>
       </SafeAreaView>
     );
@@ -154,7 +156,7 @@ export function AlbumScreen({ id, titleHint }: Props) {
           </AppText>
         ) : null}
         <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-          {album.tracks.length} tracks
+          {tn('tracks', album.tracks.length)}
         </AppText>
       </View>
     </View>

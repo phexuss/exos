@@ -175,7 +175,7 @@ export function ArtistScreen({ id }: Props) {
         }}
       >
         <AppText variant="body" style={{ color: COLORS.textMuted }}>
-          Artist not found
+          {t('artist.notFound')}
         </AppText>
       </SafeAreaView>
     );
@@ -243,7 +243,7 @@ export function ArtistScreen({ id }: Props) {
           <View style={{ flexDirection: 'row', gap: 16 }}>
             {artist.fanCount > 0 && (
               <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-                {formatFanCount(artist.fanCount)} fans
+                {t('artist.fans', { count: formatFanCount(artist.fanCount) })}
               </AppText>
             )}
             {artist.albumCount > 0 && (
@@ -268,7 +268,7 @@ export function ArtistScreen({ id }: Props) {
               paddingHorizontal: 16,
             }}
           >
-            ALBUMS
+            {t('artist.albums').toUpperCase()}
           </AppText>
           <ScrollView
             horizontal
@@ -294,7 +294,7 @@ export function ArtistScreen({ id }: Props) {
             paddingHorizontal: 16,
           }}
         >
-          TOP TRACKS
+          {t('artist.topTracks').toUpperCase()}
         </AppText>
       )}
     </View>

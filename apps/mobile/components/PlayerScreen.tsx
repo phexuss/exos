@@ -236,7 +236,7 @@ export default function PlayerScreen() {
           style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
         >
           <AppText variant="body" style={{ color: COLORS.textMuted }}>
-            No track selected
+            {t('player.noTrack')}
           </AppText>
         </View>
       </SafeAreaView>
