@@ -7,7 +7,7 @@
     "apk": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.phexuss.dev/api"
+        "EXPO_PUBLIC_API_URL": "https://exos-api.phexuss.dev/api"
       },
       "android": {
         "buildType": "apk"
@@ -15,7 +15,7 @@
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.phexuss.dev/api"
+        "EXPO_PUBLIC_API_URL": "https://exos-api.phexuss.dev/api"
       },
       "android": {
         "buildType": "app-bundle"

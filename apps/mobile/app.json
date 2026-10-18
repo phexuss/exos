@@ -58,7 +58,7 @@
       "reactCompiler": true
     },
     "extra": {
-      "apiUrl": "https://api.phexuss.dev/api",
+      "apiUrl": "https://exos-api.phexuss.dev/api",
       "router": {},
       "eas": {
         "projectId": "937a94f3-918c-4db4-86be-b1c20f36f59c"
