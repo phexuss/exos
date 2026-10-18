@@ -5,6 +5,7 @@ export const en = {
     library: 'Library',
     profile: 'Profile',
     settings: 'Settings',
+    back: 'Back',
     close: 'Close',
     language: 'Language',
     english: 'English',

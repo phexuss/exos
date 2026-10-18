@@ -5,6 +5,7 @@ export const ru = {
     library: 'Библиотека',
     profile: 'Профиль',
     settings: 'Настройки',
+    back: 'Назад',
     close: 'Закрыть',
     language: 'Язык',
     english: 'Английский',
