@@ -8,6 +8,7 @@ import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { LAYOUT } from '@/constants/layout';
 import { FONT_FAMILY } from '@/constants/typography';
+import { useI18n } from '@/hooks/useI18n';
 import {
   addTrackToPlaylist,
   createPlaylist,
@@ -39,6 +40,7 @@ export function TrackActionsSheet({
   onDeleted,
   extraAction,
 }: Props) {
+  const { t, tn } = useI18n();
   const [playlists, setPlaylists] = useState<PlaylistRow[]>([]);
   const [showPlaylists, setShowPlaylists] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -151,13 +153,15 @@ export function TrackActionsSheet({
         <View style={{ padding: 20, gap: 18 }}>
           <View style={{ gap: 8 }}>
             <AppText variant="title" weight="bold">
-              Delete download?
+              {t('trackActions.deleteDownloadTitle')}
             </AppText>
             <AppText
               variant="body"
               style={{ color: COLORS.textSecondary, lineHeight: 22 }}
             >
-              Remove "{activeTrack.title}" from this device.
+              {t('trackActions.deleteDownloadMessage', {
+                title: activeTrack.title,
+              })}
             </AppText>
           </View>
 
@@ -175,7 +179,7 @@ export function TrackActionsSheet({
               }}
             >
               <AppText variant="body" weight="medium">
-                Cancel
+                {t('common.cancel')}
               </AppText>
             </Pressable>
             <Pressable
@@ -197,7 +201,7 @@ export function TrackActionsSheet({
                 weight="medium"
                 style={{ color: COLORS.danger }}
               >
-                {deleting ? 'Deleting...' : 'Delete'}
+                {deleting ? t('common.deleting') : t('common.delete')}
               </AppText>
             </Pressable>
           </View>
@@ -206,7 +210,7 @@ export function TrackActionsSheet({
         <View style={{ padding: 20, gap: 12 }}>
           <TextInput
             maxFontSizeMultiplier={LAYOUT.maxFontScale}
-            placeholder="Playlist name"
+            placeholder={t('library.playlistName')}
             placeholderTextColor={COLORS.textMuted}
             value={newName}
             onChangeText={setNewName}
@@ -232,7 +236,7 @@ export function TrackActionsSheet({
             }}
           >
             <AppText variant="body" weight="medium" style={{ color: '#fff' }}>
-              Create & Add
+              {t('library.createAndAdd')}
             </AppText>
           </Pressable>
         </View>
@@ -264,7 +268,7 @@ export function TrackActionsSheet({
               </AppText>
             </View>
             <AppText variant="body" weight="medium">
-              New Playlist
+              {t('library.newPlaylist')}
             </AppText>
           </Pressable>
           {playlists.map((pl) => (
@@ -297,7 +301,7 @@ export function TrackActionsSheet({
                   {pl.name}
                 </AppText>
                 <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-                  {pl.track_count} tracks
+                  {tn('tracks', pl.track_count)}
                 </AppText>
               </View>
             </Pressable>
@@ -318,7 +322,7 @@ export function TrackActionsSheet({
           >
             <AppIcon name="playlist" size={22} color={COLORS.textPrimary} />
             <AppText variant="body" weight="medium">
-              Add to Playlist
+              {t('library.addToPlaylist')}
             </AppText>
           </Pressable>
           {extraAction ? (
@@ -362,7 +366,7 @@ export function TrackActionsSheet({
               weight="medium"
               style={{ color: COLORS.danger }}
             >
-              Delete from Downloads
+              {t('trackActions.deleteFromDownloads')}
             </AppText>
           </Pressable>
         </View>
