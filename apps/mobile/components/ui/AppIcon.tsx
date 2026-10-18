@@ -1,4 +1,5 @@
 import { AltArrowDown as AltArrowDownLinear } from '@solar-icons/react-native/category/arrows/Linear/AltArrowDown';
+import { AltArrowLeft as AltArrowLeftLinear } from '@solar-icons/react-native/category/arrows/Linear/AltArrowLeft';
 import { AltArrowRight as AltArrowRightLinear } from '@solar-icons/react-native/category/arrows/Linear/AltArrowRight';
 import { DownloadMinimalistic as DownloadLinear } from '@solar-icons/react-native/category/arrows-action/Linear/DownloadMinimalistic';
 import { Heart as HeartLinear } from '@solar-icons/react-native/category/like/Linear/Heart';
@@ -44,6 +45,7 @@ export type IconName =
   | 'trash'
   | 'globe'
   | 'check'
+  | 'chevron-left'
   | 'chevron-right'
   | 'chevron-down'
   | 'shuffle'
@@ -73,6 +75,7 @@ const ICON_MAP: Record<IconName, ComponentType<IconProps>> = {
   trash: TrashLinear,
   globe: GlobeLinear,
   check: CheckCircleLinear,
+  'chevron-left': AltArrowLeftLinear,
   'chevron-right': AltArrowRightLinear,
   'chevron-down': AltArrowDownLinear,
   shuffle: ShuffleLinear,
