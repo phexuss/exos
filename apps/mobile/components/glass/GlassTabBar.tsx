@@ -1,14 +1,12 @@
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSequence,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,6 +21,9 @@ import { useTabChromeCovered } from '@/hooks/useTabChromeCovered';
 export const GLASS_TAB_BAR_HEIGHT = 62;
 export const GLASS_TAB_BAR_MARGIN = 10;
 const BUBBLE_INSET = 5;
+// How much the droplet stretches (and thins) while it is a full tab away.
+const BUBBLE_STRETCH_X = 0.3;
+const BUBBLE_SQUASH_Y = 0.12;
 
 type GlassTabBarProps = BottomTabBarProps & {
   icons: Record<string, IconName>;
@@ -40,11 +41,11 @@ function GlassTab({ icon, focused, onPress, onLongPress }: GlassTabProps) {
   const pressScale = useSharedValue(1);
 
   useEffect(() => {
-    scale.value = withSpring(focused ? 1 : 0.92, GLASS_SPRING.snappy);
+    scale.set(withSpring(focused ? 1 : 0.92, GLASS_SPRING.snappy));
   }, [focused, scale]);
 
   const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value * pressScale.value }],
+    transform: [{ scale: scale.get() * pressScale.get() }],
   }));
 
   return (
@@ -52,11 +53,11 @@ function GlassTab({ icon, focused, onPress, onLongPress }: GlassTabProps) {
       accessibilityRole="button"
       accessibilityState={focused ? { selected: true } : {}}
       onPressIn={() => {
-        pressScale.value = withSpring(0.8, GLASS_SPRING.press);
+        pressScale.set(withSpring(0.8, GLASS_SPRING.press));
         Haptics.selectionAsync().catch(() => {});
       }}
       onPressOut={() => {
-        pressScale.value = withSpring(1, GLASS_SPRING.snappy);
+        pressScale.set(withSpring(1, GLASS_SPRING.snappy));
       }}
       onPress={onPress}
       onLongPress={onLongPress}
@@ -81,27 +82,42 @@ export function GlassTabBar({ state, navigation, icons }: GlassTabBarProps) {
   const insets = useSafeAreaInsets();
   const covered = useTabChromeCovered();
   const tabCount = state.routes.length;
-  const rowWidth = useSharedValue(0);
+  // Plain state, not a shared value: the bubble's width only changes on
+  // layout, so the animation itself touches transforms alone and never
+  // re-runs layout on a frame.
+  const [rowWidth, setRowWidth] = useState(0);
+  const tabWidth = rowWidth / tabCount;
   const position = useSharedValue(state.index);
-  const stretch = useSharedValue(1);
+  const target = useSharedValue(state.index);
+  const lastTarget = useRef(state.index);
 
+  // Started from the press itself, so the droplet is already moving while
+  // React renders (and on first visit mounts) the next screen.
+  const moveBubble = useCallback(
+    (index: number) => {
+      if (lastTarget.current === index) return;
+      lastTarget.current = index;
+      target.set(index);
+      position.set(withSpring(index, GLASS_SPRING.snappy));
+    },
+    [position, target],
+  );
+
+  // Navigation that didn't come from a tap (back button, deep links).
   useEffect(() => {
-    position.value = withSpring(state.index, GLASS_SPRING.snappy);
-    stretch.value = withSequence(
-      withTiming(1.35, { duration: 110 }),
-      withSpring(1, GLASS_SPRING.snappy),
-    );
-  }, [state.index, position, stretch]);
+    moveBubble(state.index);
+  }, [state.index, moveBubble]);
 
+  // One spring drives everything: the droplet stretches with the distance it
+  // still has to travel and relaxes as it lands, instead of a separate
+  // stretch animation racing the movement.
   const bubbleStyle = useAnimatedStyle(() => {
-    const tabWidth = rowWidth.value / tabCount;
+    const away = Math.min(Math.abs(position.get() - target.get()), 1);
     return {
-      opacity: rowWidth.value > 0 ? 1 : 0,
-      width: Math.max(0, tabWidth - BUBBLE_INSET * 2),
       transform: [
-        { translateX: position.value * tabWidth + BUBBLE_INSET },
-        { scaleX: stretch.value },
-        { scaleY: 1 - (stretch.value - 1) * 0.4 },
+        { translateX: position.get() * tabWidth + BUBBLE_INSET },
+        { scaleX: 1 + away * BUBBLE_STRETCH_X },
+        { scaleY: 1 - away * BUBBLE_SQUASH_Y },
       ],
     };
   });
@@ -131,26 +147,27 @@ export function GlassTabBar({ state, navigation, icons }: GlassTabBarProps) {
       >
         <View
           style={{ flex: 1, flexDirection: 'row' }}
-          onLayout={(e) => {
-            rowWidth.value = e.nativeEvent.layout.width;
-          }}
+          onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}
         >
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              {
-                position: 'absolute',
-                top: BUBBLE_INSET,
-                bottom: BUBBLE_INSET,
-                left: 0,
-                borderRadius: GLASS.radius.capsule,
-                backgroundColor: GLASS.selection,
-                borderWidth: StyleSheet.hairlineWidth,
-                borderColor: GLASS.rimStrong,
-              },
-              bubbleStyle,
-            ]}
-          />
+          {tabWidth > 0 ? (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                {
+                  position: 'absolute',
+                  top: BUBBLE_INSET,
+                  bottom: BUBBLE_INSET,
+                  left: 0,
+                  width: tabWidth - BUBBLE_INSET * 2,
+                  borderRadius: GLASS.radius.capsule,
+                  backgroundColor: GLASS.selection,
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: GLASS.rimStrong,
+                },
+                bubbleStyle,
+              ]}
+            />
+          ) : null}
           {state.routes.map((route, index) => {
             const focused = state.index === index;
             return (
@@ -165,6 +182,7 @@ export function GlassTabBar({ state, navigation, icons }: GlassTabBarProps) {
                     canPreventDefault: true,
                   });
                   if (!focused && !event.defaultPrevented) {
+                    moveBubble(index);
                     navigation.navigate(route.name);
                   }
                 }}

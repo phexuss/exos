@@ -33,6 +33,11 @@ type MiniPlayerProps = {
 // re-render each frame. In Glass mode there it jumps per poll instead.
 const ANIMATE_PROGRESS = Platform.OS !== 'android';
 
+// Without easing, Glass mode on Android also follows progress in 0.5% steps
+// (a couple of pixels) so the bar, and the blur behind it, update about once
+// a second instead of on every poll.
+const STEPPED_PROGRESS_STEPS = 200;
+
 type MiniPlayerProgressProps = {
   glassMode: boolean;
   accentColor: string;
@@ -46,25 +51,27 @@ function MiniPlayerProgress({
   glassMode,
   accentColor,
 }: MiniPlayerProgressProps) {
-  const progress = usePlayerStore((s) => s.progress);
-  const progressWidth = useSharedValue(Math.max(progress * 100, 0.5));
+  const stepped = glassMode && !ANIMATE_PROGRESS;
+  const progress = usePlayerStore((s) =>
+    stepped
+      ? Math.round(s.progress * STEPPED_PROGRESS_STEPS) / STEPPED_PROGRESS_STEPS
+      : s.progress,
+  );
+  const fill = useSharedValue(Math.max(progress, 0.005));
 
   useEffect(() => {
-    const width = Math.max(progress * 100, 0.5);
-    if (glassMode && !ANIMATE_PROGRESS) {
-      progressWidth.set(width);
+    const ratio = Math.max(progress, 0.005);
+    if (stepped) {
+      fill.set(ratio);
       return;
     }
-    progressWidth.set(
-      withTiming(width, {
-        duration: 250,
-        easing: Easing.linear,
-      }),
-    );
-  }, [progress, progressWidth, glassMode]);
+    fill.set(withTiming(ratio, { duration: 250, easing: Easing.linear }));
+  }, [progress, fill, stepped]);
 
+  // A scaled full-width bar instead of an animated width: transforms skip
+  // layout, a percentage width re-runs it on every frame.
   const progressStyle = useAnimatedStyle(() => ({
-    width: `${progressWidth.get()}%`,
+    transform: [{ scaleX: fill.get() }],
   }));
 
   return (
@@ -86,7 +93,12 @@ function MiniPlayerProgress({
     >
       <Animated.View
         style={[
-          { height: glassMode ? 2 : 1, backgroundColor: accentColor },
+          {
+            width: '100%',
+            height: glassMode ? 2 : 1,
+            backgroundColor: accentColor,
+            transformOrigin: 'left',
+          },
           progressStyle,
         ]}
       />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -51,25 +51,36 @@ export function SeekBar({
   const thumbScale = useSharedValue(1);
   const trackHeight = useSharedValue(restHeight);
 
+  // JS-side copies of what the progress effect needs. Reading a shared
+  // value's `.value` from React blocks the JS thread until the UI thread
+  // answers, and this effect runs on every 250 ms progress tick.
+  const layoutWidth = useRef(0);
+  const scrubbing = useRef(false);
+  const lastTarget = useRef(0);
+
   useEffect(() => {
-    trackHeight.value = restHeight;
+    trackHeight.set(restHeight);
   }, [restHeight, trackHeight]);
 
   useEffect(() => {
-    const target = progress * width.value;
-    if (width.value <= 0 || isScrubbing.value) return;
+    const w = layoutWidth.current;
+    if (w <= 0 || scrubbing.current) return;
+    const target = progress * w;
+    const jump = Math.abs(lastTarget.current - target) > w * 0.08;
+    lastTarget.current = target;
 
-    if (!isPlaying || Math.abs(position.value - target) > width.value * 0.08) {
+    if (!isPlaying || jump) {
       cancelAnimation(position);
-      position.value = target;
+      position.set(target);
       return;
     }
 
-    position.value = withTiming(target, { duration: 220 });
-  }, [isPlaying, isScrubbing, position, progress, width]);
+    position.set(withTiming(target, { duration: 220 }));
+  }, [isPlaying, position, progress]);
 
   const jsScrub = useCallback(
     (ratio: number | null) => {
+      scrubbing.current = ratio !== null;
       onScrub?.(ratio);
     },
     [onScrub],
@@ -180,9 +191,12 @@ export function SeekBar({
           justifyContent: 'center',
         }}
         onLayout={(e) => {
-          width.value = e.nativeEvent.layout.width;
-          if (!isScrubbing.value) {
-            position.value = progress * e.nativeEvent.layout.width;
+          const w = e.nativeEvent.layout.width;
+          layoutWidth.current = w;
+          width.set(w);
+          if (!scrubbing.current) {
+            lastTarget.current = progress * w;
+            position.set(lastTarget.current);
           }
         }}
       >
