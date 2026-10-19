@@ -103,6 +103,9 @@ export const en = {
     glassMode: 'Glass mode',
     glassModeDesc:
       'Translucent frosted interface with fluid animations. Experimental — restart the app if something looks off',
+    glassBlur: 'Live blur',
+    glassBlurDesc:
+      'Real-time blur behind the tab bar and mini player. Looks best, but can stutter on Android',
     cloudSection: 'Cloud backup',
     restoreLibrary: 'Restore library',
     restoreLibraryDesc: 'Show backed-up downloads and save them again',

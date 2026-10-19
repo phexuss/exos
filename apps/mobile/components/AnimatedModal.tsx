@@ -25,6 +25,7 @@ import {
 import { GLASS, GLASS_SPRING, SECONDARY_BLUR } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
 import { useGlassMode } from '@/hooks/useGlassMode';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 type AnimatedModalVariant = 'center' | 'sheet';
 
@@ -125,6 +126,7 @@ export function AnimatedModal({
   disableBackdropPress,
 }: AnimatedModalProps) {
   const glassMode = useGlassMode();
+  const liveBlur = useSettingsStore((s) => s.glassBlur);
   const insets = useSafeAreaInsets();
   const [mounted, setMounted] = useState(visible);
   const exitDuration = variant === 'sheet' ? SHEET_EXIT_MS : CENTER_EXIT_MS;
@@ -196,8 +198,9 @@ export function AnimatedModal({
         floating
         variant="thick"
         // The backdrop behind is already blurred. On Android a blur inside the
-        // modal's own window can't track the sheet as it slides in.
-        blur={SECONDARY_BLUR}
+        // modal's own window can't track the sheet as it slides in. Without
+        // live blur, asking for one gets the sheet the dense tint instead.
+        blur={SECONDARY_BLUR || !liveBlur}
         style={[
           {
             borderRadius: isSheet ? GLASS.radius.sheet : GLASS.radius.dialog,
@@ -249,10 +252,12 @@ export function AnimatedModal({
               justifyContent: isSheet ? 'flex-end' : 'center',
             },
             backdropStyle,
-            glassMode ? { backgroundColor: GLASS.scrim } : undefined,
+            glassMode
+              ? { backgroundColor: liveBlur ? GLASS.scrim : GLASS.scrimDense }
+              : undefined,
           ]}
         >
-          {glassMode ? (
+          {glassMode && liveBlur ? (
             <BlurView
               pointerEvents="none"
               intensity={GLASS.blur.backdrop}

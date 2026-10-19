@@ -14,6 +14,17 @@ export const GLASS = {
     thin: 'rgba(28,28,32,0.24)',
     thick: 'rgba(22,22,26,0.66)',
   },
+  /**
+   * Tint for surfaces that would blur but live blur is off: dense enough
+   * that content scrolling underneath reads as frosted, not see-through.
+   */
+  tintDense: {
+    regular: 'rgba(30,30,34,0.86)',
+    thin: 'rgba(30,30,34,0.74)',
+    thick: 'rgba(24,24,28,0.92)',
+  },
+  /** Modal backdrop scrim when live blur is off. */
+  scrimDense: 'rgba(0,0,0,0.6)',
   rim: 'rgba(255,255,255,0.16)',
   rimStrong: 'rgba(255,255,255,0.26)',
   highlightTop: 'rgba(255,255,255,0.14)',
