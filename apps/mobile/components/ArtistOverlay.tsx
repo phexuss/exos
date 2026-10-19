@@ -11,6 +11,7 @@ import { MiniPlayer } from '@/components/MiniPlayer';
 import { AlbumScreen } from '@/components/screens/AlbumScreen';
 import { ArtistScreen } from '@/components/screens/ArtistScreen';
 import { COLORS } from '@/constants/colors';
+import { SECONDARY_BLUR } from '@/constants/glass';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useOverlayStore } from '@/store/useOverlayStore';
 
@@ -92,7 +93,10 @@ export function ArtistOverlay() {
         }}
         pointerEvents="box-none"
       >
-        <MiniPlayer />
+        {/* Overlays sit outside every navigation screen, so on Android a blur
+            here would re-capture the whole app, hidden tabs included, on
+            each frame. The opaque glow behind needs only the tint. */}
+        <MiniPlayer blur={SECONDARY_BLUR} />
       </View>
     </Animated.View>
   );

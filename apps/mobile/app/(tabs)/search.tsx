@@ -18,7 +18,7 @@ import { AppText } from '@/components/ui/AppText';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { SourcePill } from '@/components/ui/SourcePill';
 import { COLORS } from '@/constants/colors';
-import { GLASS } from '@/constants/glass';
+import { GLASS, SECONDARY_BLUR } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
 import type { SourceKey } from '@/constants/sources';
 import { SPACING } from '@/constants/spacing';
@@ -50,6 +50,9 @@ function SearchField({ glassMode, children }: SearchFieldProps) {
     return (
       <GlassSurface
         variant="thin"
+        // Scrolls with the results over a static glow: nothing moves behind
+        // it, so on Android a native blur would only re-render every frame.
+        blur={SECONDARY_BLUR}
         style={{ borderRadius: GLASS.radius.capsule }}
         contentStyle={{
           ...rowStyle,
