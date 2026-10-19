@@ -33,6 +33,9 @@ env:
   EXPO_PUBLIC_API_URL: https://exos-api.phexuss.dev/api
   # Real devices only; drop x86/x86_64 to halve build time and APK size.
   ARCHITECTURES: arm64-v8a,armeabi-v7a
+  # Certificate of the EAS keystore that signed every earlier release. A release
+  # signed with any other key cannot be installed over an existing install.
+  RELEASE_CERT_SHA256: 314a0cab1f88e9bf91f8c6d78064ae9e645d2a69c6112346d4f56b6913c667b2
 
 jobs:
   build:
@@ -132,6 +135,13 @@ jobs:
           ks="$RUNNER_TEMP/release.keystore"
           if [ -n "$KEYSTORE" ]; then
             echo "$KEYSTORE" | base64 -d > "$ks"
+            if [ "${{ steps.version.outputs.release }}" = "true" ]; then
+              actual=$(keytool -exportcert -keystore "$ks" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" | sha256sum | cut -d' ' -f1)
+              if [ "$actual" != "$RELEASE_CERT_SHA256" ]; then
+                echo "::error::Keystore certificate is $actual, expected $RELEASE_CERT_SHA256. Upload the EAS keystore to the Production secrets."
+                exit 1
+              fi
+            fi
           else
             # PR builds without secrets: throwaway key, same signing path.
             STORE_PASSWORD=ci-password KEY_PASSWORD=ci-password KEY_ALIAS=ci
