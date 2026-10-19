@@ -56,8 +56,14 @@ function SettingsGroup({ glass, style, children }: SettingsGroupProps) {
 
 export function SettingsScreen() {
   const { locale, setLocale, t } = useI18n();
-  const { dynamicAccent, setDynamicAccent, glassMode, setGlassMode } =
-    useSettingsStore();
+  const {
+    dynamicAccent,
+    setDynamicAccent,
+    glassMode,
+    setGlassMode,
+    glassBlur,
+    setGlassBlur,
+  } = useSettingsStore();
   const closeSettings = useOverlayStore((s) => s.closeSettings);
   const openFaq = useOverlayStore((s) => s.openFaq);
   const user = useAuthStore((s) => s.user);
@@ -242,6 +248,39 @@ export function SettingsScreen() {
               thumbColor={COLORS.textPrimary}
             />
           </View>
+          {glassMode ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingVertical: 14,
+                borderBottomWidth: 0.5,
+                borderBottomColor: COLORS.divider,
+              }}
+            >
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <AppText variant="label" weight="medium">
+                  {t('settings.glassBlur')}
+                </AppText>
+                <AppText
+                  variant="caption"
+                  style={{ color: COLORS.textMuted, marginTop: 2 }}
+                >
+                  {t('settings.glassBlurDesc')}
+                </AppText>
+              </View>
+              <Switch
+                value={glassBlur}
+                onValueChange={setGlassBlur}
+                trackColor={{
+                  false: COLORS.surfaceMuted,
+                  true: COLORS.accent,
+                }}
+                thumbColor={COLORS.textPrimary}
+              />
+            </View>
+          ) : null}
         </SettingsGroup>
       </View>
       {}

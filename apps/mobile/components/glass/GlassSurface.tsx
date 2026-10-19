@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { GLASS, type GlassVariant } from '@/constants/glass';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 /**
  * Frosted "liquid glass" container. Put size/position/margins in `style` and
@@ -50,6 +51,11 @@ export function GlassSurface({
   style,
   contentStyle,
 }: GlassSurfaceProps) {
+  const liveBlur = useSettingsStore((s) => s.glassBlur);
+  const nativeBlur = blur && liveBlur;
+  // A surface that asked for blur but doesn't get it covers moving content,
+  // so it needs the denser tint to stay legible.
+  const tint = blur && !liveBlur ? GLASS.tintDense : GLASS.tint;
   const flat = StyleSheet.flatten(style) ?? {};
   const radius = flat.borderRadius ?? GLASS.radius.card;
 
@@ -67,7 +73,7 @@ export function GlassSurface({
         floating ? { flexGrow: 1 } : undefined,
       ]}
     >
-      {blur ? (
+      {nativeBlur ? (
         <BlurView
           pointerEvents="none"
           intensity={intensity ?? GLASS.blur[variant]}
@@ -78,10 +84,7 @@ export function GlassSurface({
       ) : null}
       <View
         pointerEvents="none"
-        style={[
-          StyleSheet.absoluteFill,
-          { backgroundColor: GLASS.tint[variant] },
-        ]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: tint[variant] }]}
       />
       {highlight ? (
         <LinearGradient
