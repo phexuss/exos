@@ -25,7 +25,6 @@ import {
   DownloadResponseDto,
   DownloadTicketQueryDto,
   DownloadTicketResponseDto,
-  StreamMode,
 } from './download.dto';
 import { DownloadService } from './download.service';
 
@@ -118,7 +117,7 @@ export class DownloadController {
     @Res({ passthrough: false }) res: Response,
   ): Promise<void> {
     const downloadDto = this.downloadService.resolveStreamTicket(dto.token);
-    if (downloadDto.mode === StreamMode.STREAM) {
+    if (this.downloadService.usesCachedStream(downloadDto)) {
       await this.downloadService.streamCachedAudio(downloadDto, req, res);
       return;
     }

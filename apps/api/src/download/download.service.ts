@@ -1,6 +1,9 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import { mkdir, readdir, rename, rm, stat, utimes } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import {
   BadRequestException,
@@ -44,6 +47,16 @@ const YTDLP_MAX_WAITERS = 20;
 const DIRECT_URL_CACHE_TTL_SEC = 30 * 60;
 const STREAM_PROBE_TIMEOUT_MS = 4000;
 const DEFAULT_YOUTUBE_BOT_CHECK_COOLDOWN_SEC = 5 * 60;
+const STREAM_USER_AGENT =
+  'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 ' +
+  '(KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36';
+// SoundCloud now serves most tracks only as HLS. The player can't take a
+// playlist through our proxy, so the segments are remuxed once into a plain
+// m4a on local disk and served from there with Range support.
+const HLS_CACHE_DIR = join(tmpdir(), 'exos-hls');
+const HLS_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const HLS_CACHE_MAX_BYTES = 1024 * 1024 * 1024;
+const HLS_REMUX_TIMEOUT_MS = 120 * 1000;
 const CACHE_BUST_HTTP_STATUSES = new Set([403, 404, 410]);
 const YOUTUBE_AUTH_COOKIE_NAMES = new Set([
   'SID',
@@ -77,6 +90,14 @@ class PrefetchSkippedError extends Error {
   constructor() {
     super('No free yt-dlp slot for prefetch');
     this.name = 'PrefetchSkippedError';
+  }
+}
+
+/** Upstream answered with an HLS playlist instead of audio bytes. */
+class HlsPlaylistError extends Error {
+  constructor() {
+    super('Upstream returned an HLS playlist');
+    this.name = 'HlsPlaylistError';
   }
 }
 
@@ -119,6 +140,7 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
    * instead of orphaning them past the parent's exit.
    */
   private readonly liveStreamProcesses = new Set<ChildProcess>();
+  private readonly pendingHlsRemuxes = new Map<string, Promise<string>>();
 
   constructor(
     private readonly configService: ConfigService,
@@ -493,7 +515,9 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
 
   private resolveStreamFormat(dto: DownloadDto, source: string): string {
     if (this.isSoundCloudSource(source)) {
-      return 'http_mp3_128_url/bestaudio[protocol^=http][ext=mp3]/bestaudio[protocol^=http]/bestaudio';
+      // Progressive mp3 is gone for most tracks; of the HLS variants AAC
+      // remuxes into m4a without re-encoding.
+      return 'http_mp3_128_url/bestaudio[protocol^=http][ext=mp3]/bestaudio[protocol^=http]/bestaudio[acodec^=mp4a]/bestaudio[ext=m4a]/bestaudio';
     }
 
     return this.resolveFormat(dto.format);
@@ -925,15 +949,29 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
    */
   prefetchStream(dto: DownloadDto): void {
     const streamDto: DownloadDto = { ...dto, mode: StreamMode.STREAM };
-    void this.getOrResolveDirectUrl(streamDto, { background: true }).catch(
-      (e: unknown) => {
+    void this.getOrResolveDirectUrl(streamDto, { background: true })
+      .then(({ url, cacheKey }) =>
+        this.isHlsUrl(url)
+          ? this.getOrRemuxHls(url, cacheKey, { background: true })
+          : undefined,
+      )
+      .catch((e: unknown) => {
         this.logger.debug(
           `Prefetch skipped for query=${dto.query}: ${
             e instanceof Error ? e.message : String(e)
           }`,
         );
-      },
-    );
+      });
+  }
+
+  /**
+   * Ticket downloads of SoundCloud tracks go through the cached stream path
+   * too: `yt-dlp -o -` can't post-process HLS, so piping it would hand the
+   * app raw segments instead of an m4a.
+   */
+  usesCachedStream(dto: DownloadDto): boolean {
+    if ((dto.mode ?? StreamMode.DOWNLOAD) === StreamMode.STREAM) return true;
+    return this.isSoundCloudSource(this.resolveSource(dto));
   }
 
   /**
@@ -949,19 +987,20 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
     req: Request,
     res: ExpressResponse,
   ): Promise<void> {
-    const { url, cacheHit, cacheKey } = await this.getOrResolveDirectUrl(dto);
-    const host = this.safeUrlHost(url);
-
-    if (this.isDirectStreamHost(host)) {
-      this.logger.warn(
-        `Stream redirect (host=${host} cacheHit=${cacheHit}) — STREAM_DIRECT_HOSTS match`,
-      );
-      res.redirect(302, url);
+    const cacheKey = this.buildDirectUrlCacheKey(dto);
+    // Seeks re-request the same ticket: an already remuxed HLS track is
+    // served straight from disk without touching Redis or upstream.
+    const remuxed = await this.findRemuxedHls(cacheKey);
+    if (remuxed) {
+      await this.sendAudioFile(remuxed, req, res);
       return;
     }
 
+    const { url, cacheHit } = await this.getOrResolveDirectUrl(dto);
+    const host = this.safeUrlHost(url);
+
     try {
-      await this.proxyRangeStream(url, req, res, host, cacheHit);
+      await this.deliverStream(url, cacheKey, req, res, cacheHit);
     } catch (e: unknown) {
       // Headers may already be sent if the client started receiving bytes —
       // we can't recover the response stream in that case, just bail.
@@ -980,23 +1019,259 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
         await this.bustCachedDirectUrl(cacheKey);
         const fresh = await this.resolveDirectUrl(dto);
         await this.cacheDirectUrl(cacheKey, fresh);
-        const freshHost = this.safeUrlHost(fresh);
-
-        if (this.isDirectStreamHost(freshHost)) {
-          res.redirect(302, fresh);
-          return;
-        }
 
         try {
-          await this.proxyRangeStream(fresh, req, res, freshHost, false);
+          await this.deliverStream(fresh, cacheKey, req, res, false);
           return;
         } catch (retryErr: unknown) {
-          this.handleStreamFailure(retryErr, freshHost, res);
+          this.handleStreamFailure(retryErr, this.safeUrlHost(fresh), res);
           return;
         }
       }
 
       this.handleStreamFailure(e, host, res);
+    }
+  }
+
+  /**
+   * Sends one resolved URL to the client: HLS gets remuxed and served from
+   * disk, hosts in `STREAM_DIRECT_HOSTS` get a 302, everything else is
+   * proxied byte for byte.
+   */
+  private async deliverStream(
+    url: string,
+    cacheKey: string,
+    req: Request,
+    res: ExpressResponse,
+    cacheHit: boolean,
+  ): Promise<void> {
+    const host = this.safeUrlHost(url);
+
+    if (!this.isHlsUrl(url)) {
+      if (this.isDirectStreamHost(host)) {
+        this.logger.warn(
+          `Stream redirect (host=${host} cacheHit=${cacheHit}) — STREAM_DIRECT_HOSTS match`,
+        );
+        res.redirect(302, url);
+        return;
+      }
+
+      try {
+        await this.proxyRangeStream(url, req, res, host, cacheHit);
+        return;
+      } catch (e: unknown) {
+        if (!(e instanceof HlsPlaylistError)) throw e;
+      }
+    }
+
+    const file = await this.getOrRemuxHls(url, cacheKey);
+    await this.sendAudioFile(file, req, res);
+  }
+
+  private isHlsUrl(url: string): boolean {
+    try {
+      return /\.m3u8$/i.test(new URL(url).pathname);
+    } catch {
+      return false;
+    }
+  }
+
+  private hlsFilePath(cacheKey: string): string {
+    const name = createHash('sha256').update(cacheKey).digest('hex');
+    return join(HLS_CACHE_DIR, `${name}.m4a`);
+  }
+
+  private async findRemuxedHls(cacheKey: string): Promise<string | null> {
+    const file = this.hlsFilePath(cacheKey);
+    try {
+      const info = await stat(file);
+      if (Date.now() - info.mtimeMs > HLS_CACHE_TTL_MS) return null;
+      return file;
+    } catch {
+      return null;
+    }
+  }
+
+  private async getOrRemuxHls(
+    url: string,
+    cacheKey: string,
+    options: { background?: boolean } = {},
+  ): Promise<string> {
+    const existing = await this.findRemuxedHls(cacheKey);
+    if (existing) return existing;
+
+    const pending = this.pendingHlsRemuxes.get(cacheKey);
+    if (pending) return pending;
+
+    const remux = this.remuxHls(url, this.hlsFilePath(cacheKey), options)
+      .then((file) => {
+        void this.sweepHlsCache();
+        return file;
+      })
+      .finally(() => {
+        this.pendingHlsRemuxes.delete(cacheKey);
+      });
+    this.pendingHlsRemuxes.set(cacheKey, remux);
+    return remux;
+  }
+
+  /** Downloads every segment with ffmpeg and stores them as one m4a. */
+  private async remuxHls(
+    url: string,
+    file: string,
+    options: { background?: boolean },
+  ): Promise<string> {
+    const release = options.background
+      ? this.tryReserveYtdlpProcess()
+      : await this.reserveYtdlpProcess();
+    if (!release) throw new PrefetchSkippedError();
+
+    const host = this.safeUrlHost(url);
+    const part = `${file}.${process.pid}.${Date.now()}.part`;
+    const startedAt = Date.now();
+
+    try {
+      await mkdir(HLS_CACHE_DIR, { recursive: true });
+      await new Promise<void>((resolve, reject) => {
+        const proc = spawn(
+          'ffmpeg',
+          [
+            '-nostdin',
+            '-hide_banner',
+            '-loglevel',
+            'error',
+            '-user_agent',
+            STREAM_USER_AGENT,
+            '-rw_timeout',
+            '15000000',
+            '-i',
+            url,
+            '-vn',
+            '-c:a',
+            'copy',
+            '-movflags',
+            '+faststart',
+            '-f',
+            'mp4',
+            '-y',
+            part,
+          ],
+          { stdio: ['ignore', 'ignore', 'pipe'] },
+        );
+        let stderr = '';
+        proc.stderr.on('data', (chunk: Buffer) => {
+          if (stderr.length < 8 * 1024) stderr += chunk.toString();
+        });
+        const timer = setTimeout(
+          () => proc.kill('SIGKILL'),
+          HLS_REMUX_TIMEOUT_MS,
+        );
+        proc.on('error', (err) => {
+          clearTimeout(timer);
+          reject(err);
+        });
+        proc.on('close', (code, signal) => {
+          clearTimeout(timer);
+          if (code === 0) {
+            resolve();
+            return;
+          }
+          const status = /HTTP error (\d{3})|Server returned (\d{3})/.exec(
+            stderr,
+          );
+          const httpStatus = status
+            ? Number(status[1] ?? status[2])
+            : /403 Forbidden/.test(stderr)
+              ? 403
+              : /404 Not Found/.test(stderr)
+                ? 404
+                : 502;
+          reject(
+            new StreamUpstreamError(
+              httpStatus,
+              `ffmpeg HLS remux failed (code=${code} signal=${signal}): ${stderr
+                .trim()
+                .slice(-500)}`,
+            ),
+          );
+        });
+      });
+      await rename(part, file);
+      this.logger.warn(
+        `Remuxed HLS host=${host} in ${Date.now() - startedAt}ms`,
+      );
+      return file;
+    } catch (e: unknown) {
+      await rm(part, { force: true });
+      throw e;
+    } finally {
+      release();
+    }
+  }
+
+  private async sendAudioFile(
+    file: string,
+    req: Request,
+    res: ExpressResponse,
+  ): Promise<void> {
+    // Keeps a track that is being listened to from being swept.
+    const now = new Date();
+    await utimes(file, now, now).catch(() => undefined);
+    this.logger.debug(
+      `Serving remuxed HLS range=${req.headers.range ?? 'none'}`,
+    );
+
+    await new Promise<void>((resolve) => {
+      res.sendFile(
+        file,
+        {
+          headers: { 'Content-Type': 'audio/mp4', 'Cache-Control': 'no-store' },
+          cacheControl: false,
+          lastModified: false,
+        },
+        (err?: Error) => {
+          if (err && !res.headersSent) {
+            this.logger.error(`Sending remuxed HLS failed: ${err.message}`);
+            res.status(502).end();
+          }
+          resolve();
+        },
+      );
+    });
+  }
+
+  /** Drops expired remuxes, then the oldest ones while over the size cap. */
+  private async sweepHlsCache(): Promise<void> {
+    try {
+      const names = await readdir(HLS_CACHE_DIR);
+      const files: Array<{ path: string; size: number; mtimeMs: number }> = [];
+      for (const name of names) {
+        const path = join(HLS_CACHE_DIR, name);
+        const info = await stat(path).catch(() => null);
+        if (!info?.isFile()) continue;
+        const stalePart =
+          name.endsWith('.part') &&
+          Date.now() - info.mtimeMs > HLS_REMUX_TIMEOUT_MS * 2;
+        if (stalePart || Date.now() - info.mtimeMs > HLS_CACHE_TTL_MS) {
+          await rm(path, { force: true });
+          continue;
+        }
+        if (!name.endsWith('.part')) {
+          files.push({ path, size: info.size, mtimeMs: info.mtimeMs });
+        }
+      }
+
+      let total = files.reduce((sum, f) => sum + f.size, 0);
+      files.sort((a, b) => a.mtimeMs - b.mtimeMs);
+      for (const f of files) {
+        if (total <= HLS_CACHE_MAX_BYTES) break;
+        await rm(f.path, { force: true });
+        total -= f.size;
+      }
+    } catch (e: unknown) {
+      this.logger.warn(
+        `HLS cache sweep failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
   }
 
@@ -1036,9 +1311,7 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
     const upstreamHeaders: Record<string, string> = {
       // Generic UA — most CDNs are lenient. Some sndcdn signed URLs check
       // UA loosely; this avoids being identified as a bot/curl.
-      'User-Agent':
-        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 ' +
-        '(KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+      'User-Agent': STREAM_USER_AGENT,
     };
     const range = req.headers.range;
     if (typeof range === 'string' && range.length > 0) {
@@ -1088,6 +1361,10 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
           `contentRange=${upstreamContentRange ?? 'none'} ` +
           `acceptRanges=${upstreamAcceptRanges ?? 'none'}`,
       );
+
+      if (upstreamContentType?.toLowerCase().includes('mpegurl')) {
+        throw new HlsPlaylistError();
+      }
 
       const contentType = this.resolveProxyContentType(
         host,
