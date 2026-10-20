@@ -64,8 +64,13 @@ RUN set -eux; \
       *) echo "unsupported arch ${TARGETARCH}" >&2; exit 1 ;; \
     esac; \
     if [ "$YTDLP_VERSION" = latest ]; then base=latest/download; else base="download/$YTDLP_VERSION"; fi; \
-    wget -qO /usr/bin/yt-dlp "https://github.com/yt-dlp/yt-dlp/releases/$base/$asset"; \
-    chmod 0755 /usr/bin/yt-dlp; \
+    # Lives in a directory the runtime user owns so docker-entrypoint.sh can
+    # self-update it (yt-dlp -U renames files next to the binary).
+    mkdir -p /opt/yt-dlp; \
+    wget -qO /opt/yt-dlp/yt-dlp "https://github.com/yt-dlp/yt-dlp/releases/$base/$asset"; \
+    chmod 0755 /opt/yt-dlp/yt-dlp; \
+    chown -R node:node /opt/yt-dlp; \
+    ln -s /opt/yt-dlp/yt-dlp /usr/bin/yt-dlp; \
     printf '%s\n' '--js-runtimes node' '--remote-components ejs:github' > /etc/yt-dlp.conf; \
     yt-dlp --version
 
