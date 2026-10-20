@@ -37,7 +37,7 @@ import { UserModule } from './user/user.module';
 
         SWAGGER_ENABLED: Joi.boolean().default(false),
         YTDLP_PATH: Joi.string().optional(),
-        YTDLP_TIMEOUT_MS: Joi.number().default(10000),
+        YTDLP_TIMEOUT_MS: Joi.number().default(45000),
         YTDLP_MAX_CONCURRENT: Joi.number().integer().min(1).default(3),
         YTDLP_STREAM_URL_PROBE: Joi.string().valid('0', '1').optional(),
         YTDLP_YOUTUBE_EXTRACTOR_ARGS: Joi.string().optional().allow(''),
