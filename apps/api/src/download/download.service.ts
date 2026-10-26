@@ -36,6 +36,7 @@ const DOWNLOAD_TICKET_TTL_MS = 2 * 60 * 1000;
  */
 const STREAM_TICKET_TTL_MS = 3 * 60 * 60 * 1000;
 /** How long a request waits for a free yt-dlp slot before giving up. */
+const YTDLP_MIN_TIMEOUT_MS = 30 * 1000;
 const YTDLP_SLOT_WAIT_MS = 15 * 1000;
 const YTDLP_MAX_WAITERS = 20;
 /**
@@ -297,9 +298,11 @@ export class DownloadService implements OnModuleInit, OnApplicationShutdown {
   }
 
   private get ytdlpTimeoutMs(): number {
+    // YouTube resolves now run its JS challenges through Node, which alone
+    // can take 10-20 s; anything shorter kills yt-dlp before it answers.
     return Math.max(
-      1000,
-      this.configService.get<number>('YTDLP_TIMEOUT_MS') ?? 10000,
+      YTDLP_MIN_TIMEOUT_MS,
+      this.configService.get<number>('YTDLP_TIMEOUT_MS') ?? 45000,
     );
   }
 
