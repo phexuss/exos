@@ -222,12 +222,39 @@ async fn soundcloud_stream(app: &AppHandle, page: &str) -> Result<ResolvedStream
     }
     let dir = stream_cache_dir(app);
     tokio::fs::create_dir_all(&dir).await.map_err(|e| e.to_string())?;
-    let dest = dir.join(format!("{}.{}", hashed(&format!("sc|{page}")), stream.ext));
+    let dest = dir.join(format!("{}.{}", hashed(&format!("sc2|{page}")), stream.ext));
     if !dest.is_file() {
-        soundcloud::fetch_hls(&stream.url, stream.ext, &dest, |_| {}).await?;
+        let raw = dest.with_extension(format!("part.{}", stream.ext));
+        soundcloud::fetch_hls(&stream.url, stream.ext, &raw, |_| {}).await?;
+        // Glued-together HLS segments carry no length index, so players guess the
+        // duration from the first chunk and seek badly. A copy through ffmpeg
+        // writes a proper header; without ffmpeg the raw file still plays.
+        let remuxed = match tools::ffmpeg(app).await {
+            Some(ff) => remux(Path::new(&ff.path), &raw, &dest).await,
+            None => Err("no ffmpeg".into()),
+        };
+        if remuxed.is_ok() {
+            let _ = tokio::fs::remove_file(&raw).await;
+        } else {
+            tokio::fs::rename(&raw, &dest).await.map_err(|e| e.to_string())?;
+        }
     }
     let url = media::file_url(&dest.display().to_string())?;
     Ok(ResolvedStream { url, protocol: "file".into(), ext: stream.ext.into(), source_url: None })
+}
+
+async fn remux(ffmpeg: &Path, input: &Path, out: &Path) -> Result<(), String> {
+    let (input, out_s) = (input.display().to_string(), out.display().to_string());
+    let mut args = vec!["-hide_banner", "-loglevel", "error", "-y", "-i", &input, "-map", "0:a", "-c", "copy"];
+    if out.extension().is_some_and(|e| e == "m4a") {
+        args.extend(["-movflags", "+faststart"]);
+    }
+    args.push(&out_s);
+    let result = proc::output(ffmpeg, &args, Duration::from_secs(60)).await.map(|_| ());
+    if result.is_err() {
+        let _ = tokio::fs::remove_file(out).await;
+    }
+    result
 }
 
 pub async fn resolve_stream(app: &AppHandle, req: SourceRequest) -> Result<ResolvedStream, String> {

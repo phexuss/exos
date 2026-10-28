@@ -786,7 +786,9 @@ img { display: block; }
   opacity: 0;
   transition: opacity 120ms;
 }
-.slider:hover .slider__thumb, .slider.dragging .slider__thumb { opacity: 1; }
+/* Clicking focuses it; the browser ring there reads as a bug, so keyboard focus shows the thumb instead. */
+.slider:focus, .slider:focus-visible { outline: none; }
+.slider:hover .slider__thumb, .slider.dragging .slider__thumb, .slider:focus-visible .slider__thumb { opacity: 1; }
 .slider.loading .slider__rail { background: linear-gradient(90deg, var(--fill-3), var(--fill-6), var(--fill-3)); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 

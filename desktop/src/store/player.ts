@@ -223,9 +223,15 @@ export const usePlayer = create<PlayerState>((set, get) => {
 
   audio.volume = useSettings.getState().volume;
   audio.addEventListener('timeupdate', () => set({ time: audio.currentTime }));
-  audio.addEventListener('loadedmetadata', () => {
-    if (Number.isFinite(audio.duration)) set({ duration: audio.duration });
-  });
+  // The catalogue knows the real length; files stitched from HLS chunks can
+  // report a few seconds, so the file only wins when the catalogue has nothing.
+  const syncDuration = () => {
+    const known = get().current?.durationSec ?? 0;
+    if (known > 0 || !Number.isFinite(audio.duration)) return;
+    set({ duration: audio.duration });
+  };
+  audio.addEventListener('loadedmetadata', syncDuration);
+  audio.addEventListener('durationchange', syncDuration);
   audio.addEventListener('play', () => {
     set({ status: 'playing', loadingNote: null });
     const { queue, index, repeat } = get();
