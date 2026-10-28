@@ -100,6 +100,12 @@ type PlayerState = {
 };
 
 let loadSeq = 0;
+let nowPlayingCloser: (() => Promise<void>) | null = null;
+let nowPlayingClosing = false;
+/** The full-window view registers its exit animation here while it is mounted. */
+export function registerNowPlayingCloser(fn: (() => Promise<void>) | null) {
+  nowPlayingCloser = fn;
+}
 /** Tracks resolved to a playable URL in this session (direct URLs live ~6 h). */
 const urlCache = new Map<string, { url: string; at: number }>();
 const URL_TTL_MS = 3 * 60 * 60 * 1000;
@@ -329,7 +335,18 @@ export const usePlayer = create<PlayerState>((set, get) => {
       set((s) => ({ repeat: s.repeat === 'off' ? 'all' : s.repeat === 'all' ? 'one' : 'off' })),
     setPanel: (panel) => set({ panel }),
     togglePanel: (p) => set((s) => ({ panel: s.panel === p ? null : p })),
-    setNowPlaying: (open) => set({ nowPlayingOpen: open }),
+    setNowPlaying: (open) => {
+      if (!open && get().nowPlayingOpen && nowPlayingCloser && !nowPlayingClosing) {
+        // Let the full-window view animate out before it unmounts.
+        nowPlayingClosing = true;
+        void nowPlayingCloser().finally(() => {
+          nowPlayingClosing = false;
+          set({ nowPlayingOpen: false });
+        });
+        return;
+      }
+      if (!nowPlayingClosing) set({ nowPlayingOpen: open });
+    },
     removeFromQueue: (i) =>
       set((s) => {
         if (i === s.index) return s;

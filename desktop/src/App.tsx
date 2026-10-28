@@ -12,6 +12,7 @@ import { Toasts } from '@/components/Toasts';
 import { useAccent } from '@/hooks/useAccent';
 import { IS_TAURI } from '@/lib/env';
 import { exampleTracks } from '@/lib/mock';
+import { installMotion } from '@/lib/motion';
 
 const IS_MAC = IS_TAURI && /Mac/i.test(navigator.userAgent);
 import { useHotkeys } from '@/hooks/useHotkeys';
@@ -54,6 +55,7 @@ function EngineBanner() {
 
 function Screen() {
   const route = useNav((s) => s.route);
+  const dir = useNav((s) => s.dir);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     ref.current?.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
@@ -86,7 +88,7 @@ function Screen() {
     <main className="main">
       <div className="scroller" ref={ref}>
         {route.name !== 'settings' && <EngineBanner />}
-        <div key={JSON.stringify(route)}>
+        <div key={JSON.stringify(route)} className="route" style={{ '--dir': dir } as React.CSSProperties}>
           <ScreenBoundary>{screen}</ScreenBoundary>
         </div>
       </div>
@@ -102,6 +104,7 @@ export function App() {
   const focusSearch = useCallback(() => searchRef.current?.focus(), []);
 
   useEffect(() => {
+    installMotion();
     void useAuth.getState().bootstrap();
     void useEngine.getState().refresh();
     if (import.meta.env.MODE === 'prototype') {

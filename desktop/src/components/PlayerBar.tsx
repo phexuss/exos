@@ -14,8 +14,9 @@ import {
   ListMusic,
   LoaderCircle,
 } from 'lucide-react';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { formatTime } from '@/lib/format';
+import { flyPressedCoverTo } from '@/lib/motion';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
 import { useSettings } from '@/store/settings';
@@ -70,16 +71,23 @@ export function PlayerBar() {
   const canNext = usePlayer((s) => s.index < s.queue.length - 1 || s.repeat === 'all');
   const p = usePlayer.getState();
   const go = useNav((s) => s.go);
+  const nowRef = useRef<HTMLDivElement>(null);
+  const currentId = current?.id;
+
+  useEffect(() => {
+    if (!currentId) return;
+    requestAnimationFrame(() => flyPressedCoverTo(nowRef.current?.querySelector('.cover') ?? null));
+  }, [currentId]);
 
   return (
-    <footer className="player slab">
-      <div className="player__now">
+    <footer className={`player slab ${status === 'playing' ? 'is-playing' : ''}`}>
+      <div className="player__now" ref={nowRef}>
         {current ? (
           <>
             <button type="button" onClick={() => p.setNowPlaying(true)} aria-label="Открыть плеер на всё окно">
               <Cover src={current.coverUrl} seed={current.album ?? current.id} label={current.title} />
             </button>
-            <div style={{ minWidth: 0 }}>
+            <div key={current.id} className="player__text" style={{ minWidth: 0 }}>
               <div className="player__title ellipsis">{current.title}</div>
               {note ? (
                 <div className="player__note ellipsis">{note}</div>
@@ -119,7 +127,7 @@ export function PlayerBar() {
           <button type="button" className="icon-btn" onClick={p.prev} disabled={!current} aria-label="Предыдущий" title="Предыдущий (Shift+←)">
             <SkipBack size={20} fill="currentColor" />
           </button>
-          <button type="button" className="play-btn" onClick={p.toggle} disabled={!current} aria-label={status === 'playing' ? 'Пауза' : 'Играть'} title="Пробел">
+          <button type="button" className={`play-btn ${status}`} onClick={p.toggle} disabled={!current} aria-label={status === 'playing' ? 'Пауза' : 'Играть'} title="Пробел">
             {status === 'loading' ? (
               <LoaderCircle size={20} className="spin-icon" />
             ) : status === 'playing' ? (

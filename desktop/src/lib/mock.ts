@@ -9,10 +9,11 @@ import type {
   Track,
   User,
 } from './types';
+import { generatedCover } from './art';
 
 export const user: User = { id: 'u1', name: 'Max', username: 'phexuss', email: 'max@example.com' };
 
-const ARTISTS: ArtistDetails[] = [
+const ARTIST_LIST: ArtistDetails[] = [
   { id: 'a1', name: 'Daft Punk' },
   { id: 'a2', name: 'Radiohead' },
   { id: 'a3', name: 'Земфира' },
@@ -23,7 +24,9 @@ const ARTISTS: ArtistDetails[] = [
   { id: 'a8', name: 'Björk' },
 ];
 
-const ALBUMS: (AlbumCard & { artistId: string })[] = [
+const ARTISTS: ArtistDetails[] = ARTIST_LIST.map((a) => ({ ...a, pictureUrl: generatedCover(`artist ${a.name}`, 400) }));
+
+const ALBUM_LIST: (AlbumCard & { artistId: string })[] = [
   { id: 'al1', title: 'Discovery', artistName: 'Daft Punk', artistId: 'a1', year: '2001' },
   { id: 'al2', title: 'In Rainbows', artistName: 'Radiohead', artistId: 'a2', year: '2007' },
   { id: 'al3', title: 'Вендетта', artistName: 'Земфира', artistId: 'a3', year: '2005' },
@@ -35,6 +38,8 @@ const ALBUMS: (AlbumCard & { artistId: string })[] = [
   { id: 'al9', title: 'Random Access Memories', artistName: 'Daft Punk', artistId: 'a1', year: '2013' },
   { id: 'al10', title: 'OK Computer', artistName: 'Radiohead', artistId: 'a2', year: '1997' },
 ];
+
+const ALBUMS = ALBUM_LIST.map((a) => ({ ...a, coverUrl: generatedCover(a.title) }));
 
 const RAW: [string, string, string, number][] = [
   ['One More Time', 'a1', 'al1', 320],
@@ -72,6 +77,7 @@ const TRACKS: Track[] = RAW.map(([title, artistId, albumId, durationSec], i) => 
     artist: { id: artist.id, name: artist.name },
     album: album.title,
     albumId: album.id,
+    coverUrl: album.coverUrl,
     durationSec,
     isrc: `GBXXX07000${String(i).padStart(2, '0')}`,
     source: 'deezer',
@@ -88,6 +94,7 @@ const SC_TRACKS: Track[] = [
   title: String(title),
   artist: { id: String(uploader), name: String(uploader) },
   durationSec: Number(d),
+  coverUrl: generatedCover(String(title), 400),
   isrc: `https://soundcloud.com/${uploader}/track-${i}`,
   source: 'soundcloud' as const,
 }));

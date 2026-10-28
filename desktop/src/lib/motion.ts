@@ -77,7 +77,7 @@ export function flyPressedCoverTo(to: HTMLElement | null) {
 /* ---------- pointer-following light on surfaces ---------- */
 
 function onPointerMove(e: PointerEvent) {
-  const el = (e.target as Element | null)?.closest?.('.spot') as HTMLElement | null;
+  const el = (e.target as Element | null)?.closest?.('.quick, .rank__row, .tt__row, .queue-item') as HTMLElement | null;
   if (!el) return;
   const r = el.getBoundingClientRect();
   el.style.setProperty('--mx', `${e.clientX - r.left}px`);
