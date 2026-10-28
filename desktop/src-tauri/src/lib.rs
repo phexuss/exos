@@ -76,7 +76,25 @@ fn reveal_file(path: String) -> Result<(), String> {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// WebKitGTK on the Nvidia driver under Wayland either dies with "Error 71" or fails to
+/// allocate GBM buffers. These two switches keep GPU rendering and avoid both. Runs before
+/// any thread exists, and leaves alone anything the user set themselves.
+#[cfg(target_os = "linux")]
+fn nvidia_workarounds() {
+    if !std::path::Path::new("/proc/driver/nvidia").exists() {
+        return;
+    }
+    for (key, value) in [("__NV_DISABLE_EXPLICIT_SYNC", "1"), ("WEBKIT_DMABUF_RENDERER_DISABLE_GBM", "1")] {
+        if std::env::var_os(key).is_none() {
+            std::env::set_var(key, value);
+        }
+    }
+}
+
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    nvidia_workarounds();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             use tauri::Manager;
