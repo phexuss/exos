@@ -79,6 +79,8 @@ const mockStatus: EngineStatus = {
   installable: { ytdlp: true, ffmpeg: true, deno: true },
 };
 
+export type CookieCheck = { count: number; youtube: number; signedIn: boolean };
+
 export const engine = {
   status: () => (IS_MOCK ? Promise.resolve(mockStatus) : invoke<EngineStatus>('engine_status')),
   install: (tool: Tool) =>
@@ -105,6 +107,11 @@ export const engine = {
     IS_MOCK ? Promise.resolve() : invoke<void>('delete_file', { path }),
   fileExists: (path: string) =>
     IS_MOCK ? Promise.resolve(true) : invoke<boolean>('file_exists', { path }),
+  /** Reads the browser's cookies now and reports what yt-dlp got. */
+  checkCookies: (browser: string) =>
+    IS_MOCK
+      ? new Promise<CookieCheck>((r) => setTimeout(() => r({ count: 0, youtube: 0, signedIn: false }), 600))
+      : invoke<CookieCheck>('check_cookies', { browser }),
 };
 
 export async function revealInFolder(path: string): Promise<void> {
@@ -125,11 +132,10 @@ export async function pickFolder(): Promise<string | null> {
   return typeof picked === 'string' ? picked : null;
 }
 
-/** URL the <audio> element can play for a file on disk. */
+/** URL the <audio> element can play for a file on disk, served by the app's loopback server. */
 export async function fileUrl(path: string): Promise<string> {
   if (IS_MOCK) return path;
-  const core = await import('@tauri-apps/api/core');
-  return core.convertFileSrc(path);
+  return invoke<string>('media_file', { path });
 }
 
 /* ---------- simulated download for the prototype ---------- */

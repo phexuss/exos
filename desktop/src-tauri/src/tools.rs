@@ -85,9 +85,26 @@ fn locate(app: &AppHandle, name: &str) -> Option<(PathBuf, bool)> {
         .map(|p| (p, false))
 }
 
+/// Version lines by binary path and modification time. Asking a PyInstaller
+/// yt-dlp for its version costs a second or more, and every play and download
+/// looks the tools up; a reinstall or update changes the mtime and so re-asks.
+static VERSIONS: std::sync::Mutex<Vec<(PathBuf, SystemTime, String)>> = std::sync::Mutex::new(Vec::new());
+
 async fn version_of(path: &Path, args: &[&str]) -> Option<String> {
+    let mtime = std::fs::metadata(path).and_then(|m| m.modified()).ok();
+    if let Some(mtime) = mtime {
+        let cache = VERSIONS.lock().unwrap();
+        if let Some((_, _, v)) = cache.iter().find(|(p, t, _)| p == path && *t == mtime) {
+            return Some(v.clone());
+        }
+    }
     let out = proc::output(path, args, VERSION_TIMEOUT).await.ok()?;
     let first = out.lines().next()?.trim().to_string();
+    if let Some(mtime) = mtime {
+        let mut cache = VERSIONS.lock().unwrap();
+        cache.retain(|(p, _, _)| p != path);
+        cache.push((path.to_path_buf(), mtime, first.clone()));
+    }
     Some(first)
 }
 

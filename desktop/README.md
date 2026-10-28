@@ -34,16 +34,22 @@ Source choice mirrors `apps/api/src/download/download.service.ts`: Deezer
 tracks resolve as `ytsearch1:<ISRC>` (fallback `artist title`), SoundCloud
 tracks by their page URL.
 
-- **Play**: `yt-dlp --print url` resolves a direct audio URL and the webview
-  plays it. HLS sources, or a URL the webview refuses, are pulled into the
-  cache first (`cache_track`) and played from disk.
+- **Play**: `yt-dlp --print` resolves a direct audio URL plus the headers it
+  used. The `<audio>` element never touches the CDN or Tauri's asset protocol
+  (WebKitGTK won't play media from custom schemes): `media.rs` runs a loopback
+  HTTP server on `127.0.0.1` that proxies CDN streams with yt-dlp's headers and
+  serves files from disk, both with Range support, behind a per-launch secret.
+  HLS sources, or a URL that fails to play, are pulled into the cache first
+  (`cache_track`) and played from disk.
 - **Download**: yt-dlp writes into a scratch folder, `-x --audio-format m4a`
   (stream copy for YouTube's AAC) or mp3, tagged with the Deezer/SoundCloud
   title/artist/album, then the file moves to `~/Music/EXØS/Artist - Title.m4a`.
   Two downloads run at once; the rest queue. Progress comes from
   `--progress-template`.
-- If YouTube asks to sign in, Settings → "Browser cookies for YouTube" adds
-  `--cookies-from-browser <browser>`.
+- If YouTube asks to sign in, Settings → "Browser cookies for YouTube" picks a
+  browser. yt-dlp exports its cookies to a file at most every 30 minutes and
+  each run gets a private copy (`--cookies`), instead of re-reading the browser
+  on every run. "Check cookies" shows whether a YouTube sign-in was found.
 
 The downloaded-tracks list is `library.json` in the app data folder; downloads
 are also pushed to `/library/downloads` so they show up on the phone.

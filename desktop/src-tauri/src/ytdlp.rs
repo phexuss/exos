@@ -15,8 +15,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 use crate::paths::{stream_cache_dir, work_dir};
-use crate::proc;
-use crate::tools;
+use crate::{cookies, media, proc, tools};
 
 /// YouTube's JS challenge alone can take 10-20 s; give the whole run room.
 const RESOLVE_TIMEOUT: Duration = Duration::from_secs(90);
@@ -142,8 +141,22 @@ async fn ctx(app: &AppHandle) -> Result<Ctx, String> {
     Ok(Ctx { ytdlp: ytdlp.path.into(), ffmpeg: ffmpeg.map(|f| f.path.into()) })
 }
 
-/// Flags every run shares: no user config, our JS runtime, our ffmpeg, cookies.
-async fn base_args(app: &AppHandle, ctx: &Ctx, req: &SourceRequest, source: &str) -> Vec<String> {
+/// Flags every run shares, plus the cookie copy to delete once the run ends.
+struct BaseArgs {
+    args: Vec<String>,
+    cookie_copy: Option<PathBuf>,
+}
+
+impl Drop for BaseArgs {
+    fn drop(&mut self) {
+        if let Some(p) = self.cookie_copy.take() {
+            let _ = std::fs::remove_file(p);
+        }
+    }
+}
+
+/// No user config, our JS runtime, our ffmpeg, cookies.
+async fn base_args(app: &AppHandle, ctx: &Ctx, req: &SourceRequest, source: &str) -> BaseArgs {
     let mut args: Vec<String> = vec![
         "--ignore-config".into(),
         "--no-playlist".into(),
@@ -152,6 +165,9 @@ async fn base_args(app: &AppHandle, ctx: &Ctx, req: &SourceRequest, source: &str
         "2".into(),
         "--socket-timeout".into(),
         "20".into(),
+        // HLS (SoundCloud) and DASH arrive in small pieces; fetch several at once.
+        "--concurrent-fragments".into(),
+        "4".into(),
     ];
     if let Some(js) = tools::js_runtime(app).await {
         args.push("--js-runtimes".into());
@@ -161,13 +177,17 @@ async fn base_args(app: &AppHandle, ctx: &Ctx, req: &SourceRequest, source: &str
         args.push("--ffmpeg-location".into());
         args.push(ff.display().to_string());
     }
+    let mut cookie_copy = None;
     if let Some(browser) = req.cookies_browser.as_deref().filter(|b| !b.is_empty()) {
         if is_youtube(source) || source.starts_with("ytsearch") {
-            args.push("--cookies-from-browser".into());
-            args.push(browser.to_string());
+            if let Some(copy) = cookies::for_run(app, browser).await {
+                args.push("--cookies".into());
+                args.push(copy.display().to_string());
+                cookie_copy = Some(copy);
+            }
         }
     }
-    args
+    BaseArgs { args, cookie_copy }
 }
 
 fn friendly(err: String) -> String {
@@ -190,25 +210,32 @@ fn friendly(err: String) -> String {
 pub async fn resolve_stream(app: &AppHandle, req: SourceRequest) -> Result<ResolvedStream, String> {
     let ctx = ctx(app).await?;
     let source = resolve_source(&req)?;
-    let mut args = base_args(app, &ctx, &req, &source).await;
-    args.extend([
+    let mut base = base_args(app, &ctx, &req, &source).await;
+    base.args.extend([
         "-f".into(),
         stream_format(&source).into(),
         "--print".into(),
-        "%(protocol)s\t%(ext)s\t%(url)s".into(),
+        "%(protocol)s\t%(ext)s\t%(http_headers)j\t%(url)s".into(),
         source,
     ]);
-    let refs: Vec<&str> = args.iter().map(String::as_str).collect();
+    let refs: Vec<&str> = base.args.iter().map(String::as_str).collect();
     let out = proc::output(&ctx.ytdlp, &refs, RESOLVE_TIMEOUT).await.map_err(friendly)?;
     let line = out.lines().rev().find(|l| l.contains("\thttp")).ok_or("yt-dlp не вернул ссылку")?;
-    let mut parts = line.splitn(3, '\t');
+    let mut parts = line.splitn(4, '\t');
     let protocol = parts.next().unwrap_or("").to_string();
     let ext = parts.next().unwrap_or("").to_string();
+    let headers: Vec<(String, String)> = serde_json::from_str::<HashMap<String, String>>(parts.next().unwrap_or("{}"))
+        .map(|h| h.into_iter().collect())
+        .unwrap_or_default();
     let url = parts.next().unwrap_or("").trim().to_string();
-    // A format with separate audio/video pieces prints several URLs; we only ask for audio.
-    let url = url.split('\n').next().unwrap_or("").to_string();
     if !is_http(&url) {
         return Err("yt-dlp вернул странную ссылку".into());
+    }
+    if protocol.starts_with("http") {
+        // The CDN may insist on yt-dlp's headers, which <audio> can't send; our
+        // loopback server forwards them.
+        let url = media::remote_url(url, headers, ext.clone())?;
+        return Ok(ResolvedStream { url, protocol, ext });
     }
     Ok(ResolvedStream { url, protocol, ext })
 }
@@ -260,6 +287,9 @@ async fn run_download(
     let ytdlp = ctx(app).await?.ytdlp;
     tokio::fs::create_dir_all(scratch).await.map_err(|e| e.to_string())?;
     args.extend([
+        // YouTube throttles long single requests; ask in 10 MB pieces.
+        "--http-chunk-size".into(),
+        "10M".into(),
         "--newline".into(),
         "--progress".into(),
         "--progress-template".into(),
@@ -372,7 +402,8 @@ pub async fn cache_track(app: &AppHandle, id: &str, req: SourceRequest) -> Resul
     }
     let ctx = ctx(app).await?;
     let source = resolve_source(&req)?;
-    let mut args = base_args(app, &ctx, &req, &source).await;
+    let base = base_args(app, &ctx, &req, &source).await;
+    let mut args = base.args.clone();
     args.extend(["-f".into(), stream_format(&source).into(), "-o".into(), format!("{key}.%(ext)s")]);
     args.push(source);
 
@@ -433,7 +464,8 @@ pub async fn download_track(app: &AppHandle, req: DownloadRequest) -> Result<Dow
         return Err("Для MP3 нужен ffmpeg. Поставь его в Настройках или выбери M4A".into());
     }
 
-    let mut args = base_args(app, &ctx, &req.src, &source).await;
+    let base = base_args(app, &ctx, &req.src, &source).await;
+    let mut args = base.args.clone();
     let format = if soundcloud {
         stream_format(&source)
     } else if has_ffmpeg {

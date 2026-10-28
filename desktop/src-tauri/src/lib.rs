@@ -1,4 +1,6 @@
+mod cookies;
 mod library;
+mod media;
 mod paths;
 mod proc;
 mod tools;
@@ -70,12 +72,22 @@ fn open_folder(path: String) -> Result<(), String> {
     tauri_plugin_opener::open_path(&path, None::<&str>).map_err(|e| e.to_string())
 }
 
+/// A loopback URL the player can load a downloaded or cached file from.
+#[tauri::command]
+fn media_file(path: String) -> Result<String, String> {
+    media::file_url(&path)
+}
+
+#[tauri::command]
+async fn check_cookies(app: AppHandle, browser: String) -> Result<cookies::CookieCheck, String> {
+    cookies::check(&app, &browser).await
+}
+
 #[tauri::command]
 fn reveal_file(path: String) -> Result<(), String> {
     tauri_plugin_opener::reveal_item_in_dir(&path).map_err(|e| e.to_string())
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 /// WebKitGTK on the Nvidia driver under Wayland either dies with "Error 71" or fails to
 /// allocate GBM buffers. These two switches keep GPU rendering and avoid both. Runs before
 /// any thread exists, and leaves alone anything the user set themselves.
@@ -91,6 +103,7 @@ fn nvidia_workarounds() {
     }
 }
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(target_os = "linux")]
     nvidia_workarounds();
@@ -112,6 +125,9 @@ pub fn run() {
             library::allow_known_dirs(&handle);
             // Leftovers from downloads interrupted by quitting.
             let _ = std::fs::remove_dir_all(paths::work_dir(&handle));
+            if let Err(e) = tauri::async_runtime::block_on(media::start()) {
+                eprintln!("media server: {e}");
+            }
             tauri::async_runtime::spawn(tools::auto_update(handle));
             Ok(())
         })
@@ -129,6 +145,8 @@ pub fn run() {
             file_exists,
             open_folder,
             reveal_file,
+            media_file,
+            check_cookies,
         ])
         .run(tauri::generate_context!())
         .expect("error while running EXØS");

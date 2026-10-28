@@ -1,10 +1,50 @@
 import { CheckCircle2, CircleAlert, Download, FolderOpen, RefreshCw } from 'lucide-react';
-import { openFolder, pickFolder, type Tool, type ToolInfo } from '@/lib/engine';
+import { useState } from 'react';
+import { type CookieCheck, engine, openFolder, pickFolder, type Tool, type ToolInfo } from '@/lib/engine';
 import { API_BASE_URL } from '@/lib/env';
 import { useAuth } from '@/store/auth';
 import { useEngine } from '@/store/engine';
 import { type CookiesBrowser, useSettings } from '@/store/settings';
 import { Toggle } from '@/components/ui';
+
+function CookiesCheck({ browser }: { browser: string }) {
+  const [state, setState] = useState<{ for: string; busy: boolean; result?: CookieCheck; error?: string }>({
+    for: browser,
+    busy: false,
+  });
+  const current = state.for === browser ? state : { for: browser, busy: false };
+  const run = () => {
+    setState({ for: browser, busy: true });
+    engine
+      .checkCookies(browser)
+      .then((result) => setState({ for: browser, busy: false, result }))
+      .catch((e) => setState({ for: browser, busy: false, error: String(e) }));
+  };
+  const r = current.result;
+  return (
+    <div className="row">
+      <div style={{ minWidth: 0 }}>
+        <div className="row__label">Проверить куки</div>
+        <div className="row__hint">
+          {current.error ? (
+            <span style={{ color: 'var(--danger)' }}>{current.error}</span>
+          ) : r ? (
+            r.signedIn ? (
+              `yt-dlp прочитал ${r.count} куки, из них ${r.youtube} от YouTube. Вход в YouTube есть.`
+            ) : (
+              `yt-dlp прочитал ${r.count} куки, из них ${r.youtube} от YouTube, но входа в YouTube в этом браузере нет. Войди в YouTube и проверь снова.`
+            )
+          ) : (
+            'Прочитает куки прямо сейчас и покажет, видит ли yt-dlp вход в YouTube. Дальше они обновляются раз в полчаса.'
+          )}
+        </div>
+      </div>
+      <button type="button" className="btn sm" disabled={current.busy} onClick={run}>
+        <RefreshCw size={14} className={current.busy ? 'spin-icon' : undefined} /> {current.busy ? 'Читаю…' : 'Проверить'}
+      </button>
+    </div>
+  );
+}
 
 function ToolRow({
   tool,
@@ -131,6 +171,7 @@ export function Settings() {
                 ))}
               </select>
             </div>
+            {s.cookiesBrowser && <CookiesCheck browser={s.cookiesBrowser} />}
           </div>
         </section>
 
