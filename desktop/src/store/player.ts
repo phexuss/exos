@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { engine, fileUrl, sourceRequest } from '@/lib/engine';
+import { engine, fileUrl, rememberSource, rememberedSource, type ResolvedStream, sourceRequest } from '@/lib/engine';
 import { IS_MOCK } from '@/lib/env';
 import * as api from '@/lib/services';
 import type { Lyrics, Track } from '@/lib/types';
@@ -104,25 +104,60 @@ let loadSeq = 0;
 const urlCache = new Map<string, { url: string; at: number }>();
 const URL_TTL_MS = 3 * 60 * 60 * 1000;
 
+/** Resolves running right now, so a prefetch and a click share one yt-dlp run. */
+const inFlight = new Map<string, Promise<string>>();
+
+async function resolveRemote(track: Track, note: (s: string) => void): Promise<string> {
+  const cached = urlCache.get(track.id);
+  if (cached && Date.now() - cached.at < URL_TTL_MS) return cached.url;
+  const running = inFlight.get(track.id);
+  if (running) return running;
+
+  const run = (async () => {
+    const browser = useSettings.getState().cookiesBrowser;
+    const remembered = rememberedSource(track.id);
+    let stream: ResolvedStream;
+    try {
+      stream = await engine.resolveStream(sourceRequest(track, browser));
+    } catch (e) {
+      if (!remembered) throw e;
+      // The remembered video may be gone; search again.
+      rememberSource(track.id, undefined);
+      stream = await engine.resolveStream(sourceRequest(track, browser));
+    }
+    if (stream.sourceUrl && track.source !== 'soundcloud') rememberSource(track.id, stream.sourceUrl);
+    let url = stream.url;
+    if (stream.protocol.startsWith('m3u8')) {
+      // HLS that only yt-dlp could resolve: pull it into the cache first.
+      note('Собираю трек из HLS…');
+      url = await fileUrl(await engine.cacheTrack(track.id, sourceRequest(track, browser)));
+    }
+    urlCache.set(track.id, { url, at: Date.now() });
+    return url;
+  })();
+  inFlight.set(track.id, run);
+  try {
+    return await run;
+  } finally {
+    inFlight.delete(track.id);
+  }
+}
+
 async function resolvePlayable(track: Track, note: (s: string) => void): Promise<string> {
   const local = useLibrary.getState().get(track.id);
   if (local) return fileUrl(local.filePath);
+  note(track.source === 'soundcloud' ? 'Получаю поток SoundCloud…' : 'yt-dlp ищет источник…');
+  return resolveRemote(track, note);
+}
 
-  const cached = urlCache.get(track.id);
-  if (cached && Date.now() - cached.at < URL_TTL_MS) return cached.url;
-
-  const req = sourceRequest(track, useSettings.getState().cookiesBrowser);
-  note('yt-dlp ищет источник…');
-  const stream = await engine.resolveStream(req);
-  let url = stream.url;
-  if (stream.protocol.startsWith('m3u8')) {
-    // HLS (most SoundCloud tracks now) can't go into <audio> on every
-    // platform; yt-dlp + ffmpeg pull it into the cache first.
-    note('Собираю трек из HLS…');
-    url = await fileUrl(await engine.cacheTrack(track.id, req));
-  }
-  urlCache.set(track.id, { url, at: Date.now() });
-  return url;
+/** Resolves the next track while this one plays, so skipping starts at once. */
+let prefetchTimer: ReturnType<typeof setTimeout> | null = null;
+function schedulePrefetch(next: Track | undefined) {
+  if (prefetchTimer) clearTimeout(prefetchTimer);
+  if (!next || IS_MOCK || useLibrary.getState().get(next.id)) return;
+  prefetchTimer = setTimeout(() => {
+    void resolveRemote(next, () => {}).catch(() => {});
+  }, 4000);
 }
 
 function shuffled<T>(items: T[]): T[] {
@@ -191,7 +226,11 @@ export const usePlayer = create<PlayerState>((set, get) => {
   audio.addEventListener('loadedmetadata', () => {
     if (Number.isFinite(audio.duration)) set({ duration: audio.duration });
   });
-  audio.addEventListener('play', () => set({ status: 'playing', loadingNote: null }));
+  audio.addEventListener('play', () => {
+    set({ status: 'playing', loadingNote: null });
+    const { queue, index, repeat } = get();
+    schedulePrefetch(queue[index + 1] ?? (repeat === 'all' ? queue[0] : undefined));
+  });
   audio.addEventListener('pause', () => {
     if (get().status !== 'loading') set({ status: 'paused' });
   });

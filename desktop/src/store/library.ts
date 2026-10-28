@@ -70,7 +70,7 @@ export const useLibrary = create<LibraryState>((set, get) => {
           title: track.title,
           artist: track.artist.name,
           album: track.album,
-          format: track.source === 'soundcloud' ? 'mp3' : settings.format,
+          format: settings.format,
           dir: settings.musicDir ?? defaultMusicDir,
         }),
         api.getLyrics(track),

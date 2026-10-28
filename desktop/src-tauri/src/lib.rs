@@ -3,6 +3,7 @@ mod library;
 mod media;
 mod paths;
 mod proc;
+mod soundcloud;
 mod tools;
 #[cfg(target_os = "linux")]
 mod vblank;

@@ -15,7 +15,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 use crate::paths::{stream_cache_dir, work_dir};
-use crate::{cookies, media, proc, tools};
+use crate::{cookies, media, proc, soundcloud, tools};
 
 /// YouTube's JS challenge alone can take 10-20 s; give the whole run room.
 const RESOLVE_TIMEOUT: Duration = Duration::from_secs(90);
@@ -44,10 +44,15 @@ pub struct DownloadRequest {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ResolvedStream {
     pub url: String,
     pub protocol: String,
     pub ext: String,
+    /// The page the audio came from (the YouTube video a search found), so the
+    /// app can skip the search next time.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_url: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -207,26 +212,51 @@ fn friendly(err: String) -> String {
     err
 }
 
+/// SoundCloud straight from its API: a proxied URL for progressive streams,
+/// a cached file for HLS.
+async fn soundcloud_stream(app: &AppHandle, page: &str) -> Result<ResolvedStream, String> {
+    let stream = soundcloud::resolve(app, page).await?;
+    if !stream.hls {
+        let url = media::remote_url(stream.url, soundcloud::proxy_headers(), stream.ext.into())?;
+        return Ok(ResolvedStream { url, protocol: "https".into(), ext: stream.ext.into(), source_url: None });
+    }
+    let dir = stream_cache_dir(app);
+    tokio::fs::create_dir_all(&dir).await.map_err(|e| e.to_string())?;
+    let dest = dir.join(format!("{}.{}", hashed(&format!("sc|{page}")), stream.ext));
+    if !dest.is_file() {
+        soundcloud::fetch_hls(&stream.url, stream.ext, &dest, |_| {}).await?;
+    }
+    let url = media::file_url(&dest.display().to_string())?;
+    Ok(ResolvedStream { url, protocol: "file".into(), ext: stream.ext.into(), source_url: None })
+}
+
 pub async fn resolve_stream(app: &AppHandle, req: SourceRequest) -> Result<ResolvedStream, String> {
-    let ctx = ctx(app).await?;
     let source = resolve_source(&req)?;
+    if is_soundcloud(&source) {
+        match soundcloud_stream(app, &source).await {
+            Ok(s) => return Ok(s),
+            Err(e) => eprintln!("soundcloud: {e}; falling back to yt-dlp"),
+        }
+    }
+    let ctx = ctx(app).await?;
     let mut base = base_args(app, &ctx, &req, &source).await;
     base.args.extend([
         "-f".into(),
         stream_format(&source).into(),
         "--print".into(),
-        "%(protocol)s\t%(ext)s\t%(http_headers)j\t%(url)s".into(),
+        "%(protocol)s\t%(ext)s\t%(http_headers)j\t%(webpage_url)s\t%(url)s".into(),
         source,
     ]);
     let refs: Vec<&str> = base.args.iter().map(String::as_str).collect();
     let out = proc::output(&ctx.ytdlp, &refs, RESOLVE_TIMEOUT).await.map_err(friendly)?;
     let line = out.lines().rev().find(|l| l.contains("\thttp")).ok_or("yt-dlp не вернул ссылку")?;
-    let mut parts = line.splitn(4, '\t');
+    let mut parts = line.splitn(5, '\t');
     let protocol = parts.next().unwrap_or("").to_string();
     let ext = parts.next().unwrap_or("").to_string();
     let headers: Vec<(String, String)> = serde_json::from_str::<HashMap<String, String>>(parts.next().unwrap_or("{}"))
         .map(|h| h.into_iter().collect())
         .unwrap_or_default();
+    let source_url = Some(parts.next().unwrap_or("").trim().to_string()).filter(|u| is_youtube(u) || is_soundcloud(u));
     let url = parts.next().unwrap_or("").trim().to_string();
     if !is_http(&url) {
         return Err("yt-dlp вернул странную ссылку".into());
@@ -235,9 +265,9 @@ pub async fn resolve_stream(app: &AppHandle, req: SourceRequest) -> Result<Resol
         // The CDN may insist on yt-dlp's headers, which <audio> can't send; our
         // loopback server forwards them.
         let url = media::remote_url(url, headers, ext.clone())?;
-        return Ok(ResolvedStream { url, protocol, ext });
+        return Ok(ResolvedStream { url, protocol, ext, source_url });
     }
-    Ok(ResolvedStream { url, protocol, ext })
+    Ok(ResolvedStream { url, protocol, ext, source_url })
 }
 
 fn hashed(id: &str) -> String {
@@ -454,10 +484,108 @@ pub fn allow_file(app: &AppHandle, path: &Path) {
     }
 }
 
+/// Tags (and if asked, re-encodes) a file with ffmpeg, writing `out`.
+async fn ffmpeg_finish(ffmpeg: &Path, input: &Path, out: &Path, req: &DownloadRequest, to_mp3: bool) -> Result<(), String> {
+    let mut args: Vec<String> = vec![
+        "-hide_banner".into(),
+        "-loglevel".into(),
+        "error".into(),
+        "-y".into(),
+        "-i".into(),
+        input.display().to_string(),
+        "-map".into(),
+        "0:a".into(),
+        "-map_metadata".into(),
+        "-1".into(),
+    ];
+    if to_mp3 {
+        args.extend(["-c:a".into(), "libmp3lame".into(), "-q:a".into(), "0".into()]);
+    } else {
+        args.extend(["-c:a".into(), "copy".into()]);
+    }
+    for (key, value) in [("title", Some(req.title.as_str())), ("artist", Some(req.artist.as_str())), ("album", req.album.as_deref())] {
+        if let Some(v) = value.filter(|v| !v.trim().is_empty()) {
+            args.push("-metadata".into());
+            args.push(format!("{key}={v}"));
+        }
+    }
+    if out.extension().is_some_and(|e| e == "m4a") {
+        args.extend(["-movflags".into(), "+faststart".into()]);
+    }
+    args.push(out.display().to_string());
+    let refs: Vec<&str> = args.iter().map(String::as_str).collect();
+    proc::output(ffmpeg, &refs, Duration::from_secs(300)).await.map(|_| ())
+}
+
+/// SoundCloud download straight from its API; the caller falls back to yt-dlp on error.
+async fn soundcloud_download(
+    app: &AppHandle,
+    req: &DownloadRequest,
+    page: &str,
+    ffmpeg: Option<&Path>,
+    scratch: &Path,
+    cancel: &mut tokio::sync::oneshot::Receiver<()>,
+) -> Result<PathBuf, String> {
+    let emit = |stage: &'static str, progress: f64| {
+        let _ = app.emit("download://progress", Progress { id: req.id.clone(), stage, progress, speed: None, eta: None });
+    };
+    emit("resolving", 0.0);
+    let work = async {
+        let stream = soundcloud::resolve(app, page).await?;
+        tokio::fs::create_dir_all(scratch).await.map_err(|e| e.to_string())?;
+        let raw = scratch.join(format!("raw.{}", stream.ext));
+        let progress = |f: f64| emit("downloading", f.min(1.0));
+        if stream.hls {
+            soundcloud::fetch_hls(&stream.url, stream.ext, &raw, progress).await?;
+        } else {
+            soundcloud::fetch_progressive(&stream.url, &raw, progress).await?;
+        }
+        let Some(ffmpeg) = ffmpeg else { return Ok(raw) };
+        let to_mp3 = req.format == "mp3" && stream.ext != "mp3";
+        let out = scratch.join(format!("track.{}", if to_mp3 { "mp3" } else { stream.ext }));
+        emit("converting", 1.0);
+        match ffmpeg_finish(ffmpeg, &raw, &out, req, to_mp3).await {
+            Ok(()) => Ok(out),
+            // Untagged is better than nothing.
+            Err(e) if !to_mp3 => {
+                eprintln!("ffmpeg tagging failed: {e}");
+                Ok(raw)
+            }
+            Err(e) => Err(e),
+        }
+    };
+    tokio::select! {
+        r = work => r,
+        _ = cancel => Err("отменено".into()),
+    }
+}
+
 pub async fn download_track(app: &AppHandle, req: DownloadRequest) -> Result<Downloaded, String> {
     let ctx = ctx(app).await?;
     let source = resolve_source(&req.src)?;
     let soundcloud = is_soundcloud(&source);
+    if soundcloud {
+        let scratch = work_dir(app).join(format!("sc-{}", hashed(&req.id)));
+        let _ = tokio::fs::remove_dir_all(&scratch).await;
+        let mut rx = register(app, &req.id);
+        let result = soundcloud_download(app, &req, &source, ctx.ffmpeg.as_deref(), &scratch, &mut rx).await;
+        unregister(app, &req.id);
+        match result {
+            Ok(file) => {
+                let done = finish_download(app, &req, &file).await;
+                let _ = tokio::fs::remove_dir_all(&scratch).await;
+                return done;
+            }
+            Err(e) if e == "отменено" => {
+                let _ = tokio::fs::remove_dir_all(&scratch).await;
+                return Err(e);
+            }
+            Err(e) => {
+                let _ = tokio::fs::remove_dir_all(&scratch).await;
+                eprintln!("soundcloud: {e}; falling back to yt-dlp");
+            }
+        }
+    }
     let has_ffmpeg = ctx.ffmpeg.is_some();
     let want_mp3 = req.format == "mp3";
     if want_mp3 && !has_ffmpeg && !soundcloud {
@@ -517,18 +645,23 @@ pub async fn download_track(app: &AppHandle, req: DownloadRequest) -> Result<Dow
         }
     };
 
+    let done = finish_download(app, &req, &run.file).await;
+    let _ = tokio::fs::remove_dir_all(&scratch).await;
+    done
+}
+
+/// Moves a finished file into the music folder as "Artist - Title.ext".
+async fn finish_download(app: &AppHandle, req: &DownloadRequest, file: &Path) -> Result<Downloaded, String> {
     let dir = PathBuf::from(&req.dir);
     tokio::fs::create_dir_all(&dir)
         .await
         .map_err(|e| format!("не удалось создать папку {}: {e}", dir.display()))?;
-    let ext = run
-        .file
+    let ext = file
         .extension()
         .map(|e| e.to_string_lossy().to_string())
         .unwrap_or_else(|| "m4a".into());
     let dest = free_path(&dir, &safe_name(&format!("{} - {}", req.artist, req.title)), &ext);
-    move_file(&run.file, &dest).await?;
-    let _ = tokio::fs::remove_dir_all(&scratch).await;
+    move_file(file, &dest).await?;
     allow_file(app, &dest);
     let _ = app.emit(
         "download://progress",
