@@ -1,0 +1,168 @@
+mod cookies;
+mod library;
+mod media;
+mod paths;
+mod proc;
+mod tools;
+#[cfg(target_os = "linux")]
+mod vblank;
+mod ytdlp;
+
+use serde_json::Value;
+use tauri::AppHandle;
+
+#[tauri::command]
+async fn engine_status(app: AppHandle) -> tools::EngineStatus {
+    tools::status(&app).await
+}
+
+#[tauri::command]
+async fn engine_install(app: AppHandle, tool: String) -> Result<(), String> {
+    tools::install(&app, &tool).await
+}
+
+#[tauri::command]
+async fn engine_update_ytdlp(app: AppHandle) -> Result<String, String> {
+    tools::update_ytdlp(&app).await
+}
+
+#[tauri::command]
+async fn resolve_stream(app: AppHandle, req: ytdlp::SourceRequest) -> Result<ytdlp::ResolvedStream, String> {
+    ytdlp::resolve_stream(&app, req).await
+}
+
+#[tauri::command]
+async fn cache_track(app: AppHandle, id: String, req: ytdlp::SourceRequest) -> Result<String, String> {
+    ytdlp::cache_track(&app, &id, req).await
+}
+
+#[tauri::command]
+async fn download_track(app: AppHandle, req: ytdlp::DownloadRequest) -> Result<ytdlp::Downloaded, String> {
+    ytdlp::download_track(&app, req).await
+}
+
+#[tauri::command]
+fn cancel_download(app: AppHandle, id: String) {
+    ytdlp::cancel(&app, &id);
+}
+
+#[tauri::command]
+async fn library_read(app: AppHandle) -> Result<Option<Value>, String> {
+    library::read(&app).await
+}
+
+#[tauri::command]
+async fn library_write(app: AppHandle, tracks: Value) -> Result<(), String> {
+    library::write(&app, tracks).await
+}
+
+#[tauri::command]
+async fn delete_file(path: String) -> Result<(), String> {
+    library::delete_audio(&path).await
+}
+
+#[tauri::command]
+fn file_exists(path: String) -> bool {
+    std::path::Path::new(&path).is_file()
+}
+
+/// Opens a folder in the file manager, creating it first (the music folder
+/// doesn't exist until the first download).
+#[tauri::command]
+fn open_folder(path: String) -> Result<(), String> {
+    std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+    tauri_plugin_opener::open_path(&path, None::<&str>).map_err(|e| e.to_string())
+}
+
+/// A loopback URL the player can load a downloaded or cached file from.
+#[tauri::command]
+fn media_file(path: String) -> Result<String, String> {
+    media::file_url(&path)
+}
+
+#[tauri::command]
+async fn check_cookies(app: AppHandle, browser: String) -> Result<cookies::CookieCheck, String> {
+    cookies::check(&app, &browser).await
+}
+
+#[tauri::command]
+fn reveal_file(path: String) -> Result<(), String> {
+    tauri_plugin_opener::reveal_item_in_dir(&path).map_err(|e| e.to_string())
+}
+
+/// WebKitGTK on the Nvidia driver under Wayland either dies with "Error 71" or fails to
+/// allocate GBM buffers. These two switches keep GPU rendering and avoid both. Runs before
+/// any thread exists, and leaves alone anything the user set themselves.
+#[cfg(target_os = "linux")]
+fn nvidia_workarounds() {
+    if !std::path::Path::new("/proc/driver/nvidia").exists() {
+        return;
+    }
+    for (key, value) in [("__NV_DISABLE_EXPLICIT_SYNC", "1"), ("WEBKIT_DMABUF_RENDERER_DISABLE_GBM", "1")] {
+        if std::env::var_os(key).is_none() {
+            std::env::set_var(key, value);
+        }
+    }
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    #[cfg(target_os = "linux")]
+    nvidia_workarounds();
+
+    tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            use tauri::Manager;
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.unminimize();
+                let _ = w.set_focus();
+            }
+        }))
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_http::init())
+        .manage(ytdlp::Jobs::default())
+        .setup(|app| {
+            let handle = app.handle().clone();
+            library::allow_known_dirs(&handle);
+            // Leftovers from downloads interrupted by quitting.
+            let _ = std::fs::remove_dir_all(paths::work_dir(&handle));
+            #[cfg(target_os = "linux")]
+            {
+                use tauri::Manager;
+                use webkit2gtk::glib::object::ObjectType;
+                use webkit2gtk::WebViewExt;
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.with_webview(|wv| {
+                        if let Some(settings) = wv.inner().settings() {
+                            vblank::allow_full_refresh(settings.as_ptr().cast());
+                        }
+                    });
+                }
+            }
+            if let Err(e) = tauri::async_runtime::block_on(media::start()) {
+                eprintln!("media server: {e}");
+            }
+            tauri::async_runtime::spawn(tools::auto_update(handle));
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            engine_status,
+            engine_install,
+            engine_update_ytdlp,
+            resolve_stream,
+            cache_track,
+            download_track,
+            cancel_download,
+            library_read,
+            library_write,
+            delete_file,
+            file_exists,
+            open_folder,
+            reveal_file,
+            media_file,
+            check_cookies,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running EXØS");
+}

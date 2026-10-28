@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "EXØS",
+  "mainBinaryName": "exos",
+  "version": "0.1.0",
+  "identifier": "dev.phexuss.exos",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "EXØS",
+        "width": 1360,
+        "height": 860,
+        "minWidth": 900,
+        "minHeight": 600,
+        "center": true,
+        "decorations": false,
+        "backgroundColor": "#121212"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' data: blob: https: asset: http://asset.localhost; media-src 'self' blob: https: asset: http://asset.localhost http://127.0.0.1:*; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https: asset: http://asset.localhost",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$AUDIO/**", "$APPCACHE/**", "$APPLOCALDATA/**"]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Music",
+    "shortDescription": "Deezer + SoundCloud player",
+    "longDescription": "EXØS desktop: search Deezer and SoundCloud, listen and download with yt-dlp running on your own computer.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
