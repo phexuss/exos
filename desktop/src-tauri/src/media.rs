@@ -244,6 +244,11 @@ async fn upstream(
     }
 }
 
+/// Just the host, for logs; the rest of a CDN URL is a signature.
+fn host(url: &str) -> &str {
+    url.split("://").nth(1).and_then(|r| r.split('/').next()).unwrap_or("?")
+}
+
 /// "bytes 0-999/5000" → (0, 999, 5000).
 fn content_range(resp: &reqwest::Response) -> Option<(u64, u64, u64)> {
     let v = resp.headers().get("content-range")?.to_str().ok()?;
@@ -293,7 +298,7 @@ async fn serve_remote(
     };
     let code = resp.status().as_u16();
     if code >= 400 {
-        eprintln!("media: upstream answered {code}");
+        eprintln!("media: upstream answered {code} ({} {}, bytes={from}-{first_end})", if req.head { "HEAD" } else { "GET" }, host(url));
         return write_head(sock, refuse(code), &[("Content-Length", "0".into())]).await;
     }
     let Some((_, got_end, total)) = content_range(&resp).filter(|_| code == 206) else {
@@ -329,7 +334,7 @@ async fn serve_remote(
             break;
         };
         if resp.status().as_u16() != 206 {
-            eprintln!("media: upstream answered {} mid-stream", resp.status().as_u16());
+            eprintln!("media: upstream answered {} mid-stream ({}, bytes={pos}-{stop})", resp.status().as_u16(), host(url));
             break;
         }
         let sent = pipe(sock, resp).await?;

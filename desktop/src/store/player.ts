@@ -106,16 +106,20 @@ let nowPlayingClosing = false;
 export function registerNowPlayingCloser(fn: (() => Promise<void>) | null) {
   nowPlayingCloser = fn;
 }
-/** Tracks resolved to a playable URL in this session (direct URLs live ~6 h). */
-const urlCache = new Map<string, { url: string; at: number }>();
+/** Tracks resolved to a playable URL in this session. */
+const urlCache = new Map<string, { url: string; at: number; ttl: number }>();
+/** YouTube links live ~6 h; SoundCloud signs its CDN links for minutes, and re-resolving it is quick. */
 const URL_TTL_MS = 3 * 60 * 60 * 1000;
+const SC_URL_TTL_MS = 4 * 60 * 1000;
+/** Local files (library, stream cache) stay valid for the session. */
+const FILE_TTL_MS = Number.POSITIVE_INFINITY;
 
 /** Resolves running right now, so a prefetch and a click share one yt-dlp run. */
 const inFlight = new Map<string, Promise<string>>();
 
 async function resolveRemote(track: Track, note: (s: string) => void): Promise<string> {
   const cached = urlCache.get(track.id);
-  if (cached && Date.now() - cached.at < URL_TTL_MS) return cached.url;
+  if (cached && Date.now() - cached.at < cached.ttl) return cached.url;
   const running = inFlight.get(track.id);
   if (running) return running;
 
@@ -133,12 +137,14 @@ async function resolveRemote(track: Track, note: (s: string) => void): Promise<s
     }
     if (stream.sourceUrl && track.source !== 'soundcloud') rememberSource(track.id, stream.sourceUrl);
     let url = stream.url;
+    let ttl = stream.protocol === 'file' ? FILE_TTL_MS : track.source === 'soundcloud' ? SC_URL_TTL_MS : URL_TTL_MS;
     if (stream.protocol.startsWith('m3u8')) {
       // HLS that only yt-dlp could resolve: pull it into the cache first.
       note('Собираю трек из HLS…');
       url = await fileUrl(await engine.cacheTrack(track.id, sourceRequest(track, browser)));
+      ttl = FILE_TTL_MS;
     }
-    urlCache.set(track.id, { url, at: Date.now() });
+    urlCache.set(track.id, { url, at: Date.now(), ttl });
     return url;
   })();
   inFlight.set(track.id, run);
@@ -203,7 +209,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
         const req = sourceRequest(track, useSettings.getState().cookiesBrowser);
         const cachedUrl = await fileUrl(await engine.cacheTrack(track.id, req));
         if (seq !== loadSeq) return;
-        urlCache.set(track.id, { url: cachedUrl, at: Date.now() });
+        urlCache.set(track.id, { url: cachedUrl, at: Date.now(), ttl: FILE_TTL_MS });
         audio.src = cachedUrl;
         await audio.play();
       }
@@ -245,6 +251,28 @@ export const usePlayer = create<PlayerState>((set, get) => {
   });
   audio.addEventListener('pause', () => {
     if (get().status !== 'loading') set({ status: 'paused' });
+  });
+  // A CDN link can stop answering mid-track (expired signature, a refused
+  // range). Resolve a fresh one once and carry on from the same spot.
+  let recoveredFor: string | null = null;
+  audio.addEventListener('error', () => {
+    const { current, status, time } = get();
+    if (!current || status === 'loading' || IS_MOCK || useLibrary.getState().get(current.id)) return;
+    if (recoveredFor === current.id) return;
+    recoveredFor = current.id;
+    const seq = loadSeq;
+    const wasPlaying = status === 'playing';
+    urlCache.delete(current.id);
+    void resolveRemote(current, () => {})
+      .then((url) => {
+        if (seq !== loadSeq) return;
+        audio.src = url;
+        audio.currentTime = time;
+        if (wasPlaying) return audio.play();
+      })
+      .catch(() => {
+        if (seq === loadSeq) set({ status: 'paused' });
+      });
   });
   audio.addEventListener('ended', () => {
     const { repeat, index, queue } = get();
