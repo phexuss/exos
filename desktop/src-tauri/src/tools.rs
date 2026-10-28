@@ -69,8 +69,29 @@ fn extra_dirs() -> Vec<PathBuf> {
     dirs
 }
 
+/// Where the unpacked ("onedir") yt-dlp build lives: the executable plus its
+/// `_internal` folder. It starts several times faster than the single-file
+/// build, which unpacks a whole Python runtime to a temp folder on every run.
+fn ytdlp_dist_dir(app: &AppHandle) -> PathBuf {
+    bin_dir(app).join("yt-dlp-dist")
+}
+
+fn ytdlp_in_dist(dir: &Path) -> Option<PathBuf> {
+    std::fs::read_dir(dir).ok()?.flatten().map(|e| e.path()).find(|p| {
+        p.is_file()
+            && p.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
+                n.starts_with("yt-dlp") && (!cfg!(windows) || n.ends_with(".exe"))
+            })
+    })
+}
+
 /// Our own copy first, then PATH, then the usual install locations.
 fn locate(app: &AppHandle, name: &str) -> Option<(PathBuf, bool)> {
+    if name == "yt-dlp" {
+        if let Some(p) = ytdlp_in_dist(&ytdlp_dist_dir(app)) {
+            return Some((p, true));
+        }
+    }
     let managed = bin_dir(app).join(exe(name));
     if managed.is_file() {
         return Some((managed, true));
@@ -173,14 +194,15 @@ pub async fn status(app: &AppHandle) -> EngineStatus {
 
 /* ---------- install ---------- */
 
+/// The unpacked builds; see `ytdlp_dist_dir`.
 fn ytdlp_asset() -> Option<&'static str> {
     match (std::env::consts::OS, std::env::consts::ARCH) {
-        ("windows", "x86_64") => Some("yt-dlp.exe"),
-        ("windows", "aarch64") => Some("yt-dlp_arm64.exe"),
-        ("windows", "x86") => Some("yt-dlp_x86.exe"),
-        ("macos", _) => Some("yt-dlp_macos"),
-        ("linux", "x86_64") => Some("yt-dlp_linux"),
-        ("linux", "aarch64") => Some("yt-dlp_linux_aarch64"),
+        ("windows", "x86_64") => Some("yt-dlp_win.zip"),
+        ("windows", "aarch64") => Some("yt-dlp_win_arm64.zip"),
+        ("windows", "x86") => Some("yt-dlp_win_x86.zip"),
+        ("macos", _) => Some("yt-dlp_macos.zip"),
+        ("linux", "x86_64") => Some("yt-dlp_linux.zip"),
+        ("linux", "aarch64") => Some("yt-dlp_linux_aarch64.zip"),
         _ => None,
     }
 }
@@ -281,18 +303,88 @@ fn extract(zip_path: &Path, wanted: &[&str], into: &Path) -> Result<(), String> 
     Ok(())
 }
 
+/// Unpacks a whole archive into `into`, keeping folders and exec bits.
+fn extract_all(zip_path: &Path, into: &Path) -> Result<(), String> {
+    let file = std::fs::File::open(zip_path).map_err(|e| e.to_string())?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
+        let Some(rel) = entry.enclosed_name() else { continue };
+        let dest = into.join(rel);
+        if entry.is_dir() {
+            std::fs::create_dir_all(&dest).map_err(|e| e.to_string())?;
+            continue;
+        }
+        if let Some(parent) = dest.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        let mut out = std::fs::File::create(&dest).map_err(|e| e.to_string())?;
+        std::io::copy(&mut entry, &mut out).map_err(|e| e.to_string())?;
+        #[cfg(unix)]
+        if let Some(mode) = entry.unix_mode() {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&dest, std::fs::Permissions::from_mode(mode & 0o7777));
+        }
+    }
+    Ok(())
+}
+
+async fn install_ytdlp(app: &AppHandle) -> Result<(), String> {
+    let bin = bin_dir(app);
+    let asset = ytdlp_asset().ok_or("под эту систему нет готового yt-dlp")?;
+    let url = format!("https://github.com/yt-dlp/yt-dlp/releases/latest/download/{asset}");
+    let tmp = bin.join("yt-dlp.zip.part");
+    download_to(app, "ytdlp", &url, &tmp).await?;
+    let dist = ytdlp_dist_dir(app);
+    let fresh = bin.join("yt-dlp-dist.new");
+    let old = bin.join("yt-dlp-dist.old");
+    let _ = tokio::fs::remove_dir_all(&fresh).await;
+    let (zip2, fresh2) = (tmp.clone(), fresh.clone());
+    let unpacked = tokio::task::spawn_blocking(move || extract_all(&zip2, &fresh2)).await.map_err(|e| e.to_string())?;
+    let _ = tokio::fs::remove_file(&tmp).await;
+    unpacked?;
+    let main = ytdlp_in_dist(&fresh).ok_or("в архиве yt-dlp нет исполняемого файла")?;
+    make_executable(&main)?;
+    // Swap folders. On Windows this fails while a yt-dlp from the old folder
+    // is running; the old one then stays and the next start tries again.
+    let _ = tokio::fs::remove_dir_all(&old).await;
+    if dist.exists() {
+        tokio::fs::rename(&dist, &old).await.map_err(|e| format!("yt-dlp сейчас занят, обновлю позже: {e}"))?;
+    }
+    tokio::fs::rename(&fresh, &dist).await.map_err(|e| e.to_string())?;
+    let _ = tokio::fs::remove_dir_all(&old).await;
+    // The single-file build from earlier versions of EXØS.
+    let _ = tokio::fs::remove_file(bin.join(exe("yt-dlp"))).await;
+    let _ = std::fs::write(data_dir(app).join("ytdlp-updated"), "");
+    Ok(())
+}
+
+/// The newest release tag, read from GitHub's redirect without the API.
+async fn latest_ytdlp_tag() -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .user_agent(concat!("EXOS-desktop/", env!("CARGO_PKG_VERSION")))
+        .redirect(reqwest::redirect::Policy::none())
+        .connect_timeout(Duration::from_secs(20))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let resp = client
+        .get("https://github.com/yt-dlp/yt-dlp/releases/latest")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let location = resp
+        .headers()
+        .get("location")
+        .and_then(|v| v.to_str().ok())
+        .ok_or("GitHub не ответил редиректом")?;
+    location.rsplit('/').next().map(str::to_string).filter(|t| !t.is_empty()).ok_or_else(|| "нет тега".into())
+}
+
 pub async fn install(app: &AppHandle, tool: &str) -> Result<(), String> {
     let bin = bin_dir(app);
     tokio::fs::create_dir_all(&bin).await.map_err(|e| e.to_string())?;
     match tool {
-        "ytdlp" => {
-            let asset = ytdlp_asset().ok_or("под эту систему нет готового yt-dlp")?;
-            let url = format!("https://github.com/yt-dlp/yt-dlp/releases/latest/download/{asset}");
-            let tmp = bin.join(format!("{}.part", exe("yt-dlp")));
-            download_to(app, "ytdlp", &url, &tmp).await?;
-            make_executable(&tmp)?;
-            tokio::fs::rename(&tmp, bin.join(exe("yt-dlp"))).await.map_err(|e| e.to_string())?;
-        }
+        "ytdlp" => install_ytdlp(app).await?,
         "deno" => {
             let target = deno_target().ok_or("под эту систему нет готового Deno")?;
             let url = format!("https://github.com/denoland/deno/releases/latest/download/deno-{target}.zip");
@@ -324,7 +416,9 @@ pub async fn install(app: &AppHandle, tool: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// `yt-dlp -U` for our own copy. A system yt-dlp belongs to its package manager.
+/// Updates our own copy to the latest release. A system yt-dlp belongs to its
+/// package manager. The single-file build of earlier versions is replaced by
+/// the faster unpacked one.
 pub async fn update_ytdlp(app: &AppHandle) -> Result<String, String> {
     let (path, managed) = locate(app, "yt-dlp").ok_or("yt-dlp не установлен")?;
     if !managed {
@@ -333,22 +427,71 @@ pub async fn update_ytdlp(app: &AppHandle) -> Result<String, String> {
             path.display()
         ));
     }
-    proc::output(&path, &["-U"], Duration::from_secs(120)).await?;
-    let _ = std::fs::write(data_dir(app).join("ytdlp-updated"), "");
+    let unpacked = path.starts_with(ytdlp_dist_dir(app));
+    let current = version_of(&path, &["--version"]).await;
+    if unpacked {
+        let latest = latest_ytdlp_tag().await?;
+        if current.as_deref() == Some(latest.as_str()) {
+            let _ = std::fs::write(data_dir(app).join("ytdlp-updated"), "");
+            return Ok(latest);
+        }
+    }
+    install_ytdlp(app).await?;
+    let (path, _) = locate(app, "yt-dlp").ok_or("yt-dlp не установился")?;
     version_of(&path, &["--version"]).await.ok_or_else(|| "yt-dlp не запускается".into())
 }
 
 /// YouTube breaks old yt-dlp releases every few weeks, so our copy updates
-/// itself in the background at most once a day.
+/// itself in the background at most once a day. A single-file copy left by an
+/// earlier version is swapped for the unpacked build right away.
 pub async fn auto_update(app: AppHandle) {
+    let Some((path, true)) = locate(&app, "yt-dlp") else { return };
+    let legacy = !path.starts_with(ytdlp_dist_dir(&app));
     let stamp = data_dir(&app).join("ytdlp-updated");
     let fresh = std::fs::metadata(&stamp)
         .and_then(|m| m.modified())
         .ok()
         .and_then(|t| SystemTime::now().duration_since(t).ok())
         .is_some_and(|age| age < Duration::from_secs(20 * 3600));
-    if fresh || !matches!(locate(&app, "yt-dlp"), Some((_, true))) {
+    if fresh && !legacy {
         return;
     }
-    let _ = update_ytdlp(&app).await;
+    if let Err(e) = update_ytdlp(&app).await {
+        eprintln!("yt-dlp update: {e}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn unpacks_the_onedir_build_and_finds_its_executable() {
+        let root = std::env::temp_dir().join(format!("exos-tools-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let zip_path = root.join("yt.zip");
+        let main = if cfg!(windows) { "yt-dlp.exe" } else { "yt-dlp_linux" };
+        {
+            let mut w = zip::ZipWriter::new(std::fs::File::create(&zip_path).unwrap());
+            let exec = zip::write::SimpleFileOptions::default().unix_permissions(0o755);
+            w.add_directory("_internal/", exec).unwrap();
+            w.start_file("_internal/base_library.zip", zip::write::SimpleFileOptions::default()).unwrap();
+            w.write_all(b"lib").unwrap();
+            w.start_file(main, exec).unwrap();
+            w.write_all(b"bin").unwrap();
+            w.finish().unwrap();
+        }
+        let dist = root.join("dist");
+        extract_all(&zip_path, &dist).unwrap();
+        assert_eq!(std::fs::read(dist.join("_internal/base_library.zip")).unwrap(), b"lib");
+        assert_eq!(ytdlp_in_dist(&dist), Some(dist.join(main)));
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(std::fs::metadata(dist.join(main)).unwrap().permissions().mode() & 0o777, 0o755);
+        }
+        std::fs::remove_dir_all(&root).unwrap();
+    }
 }

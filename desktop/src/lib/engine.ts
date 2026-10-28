@@ -28,7 +28,8 @@ export type SourceRequest = {
   cookiesBrowser?: string;
 };
 
-export type ResolvedStream = { url: string; protocol: string; ext: string };
+/** `sourceUrl`: the YouTube video a search landed on, remembered to skip the search next time. */
+export type ResolvedStream = { url: string; protocol: string; ext: string; sourceUrl?: string };
 
 export type DownloadRequest = SourceRequest & {
   id: string;
@@ -48,12 +49,43 @@ export type DownloadProgress = {
   error?: string;
 };
 
+const SOURCES_KEY = 'exos.sourceUrls';
+const SOURCES_MAX = 3000;
+let sources: Record<string, string> | null = null;
+
+function loadSources(): Record<string, string> {
+  if (sources) return sources;
+  try {
+    sources = JSON.parse(localStorage.getItem(SOURCES_KEY) ?? '{}') as Record<string, string>;
+  } catch {
+    sources = {};
+  }
+  return sources;
+}
+
+/** Remembers which video a Deezer track resolved to; searching is the slow half of a resolve. */
+export function rememberSource(trackId: string, url: string | undefined) {
+  const map = loadSources();
+  if (url) map[trackId] = url;
+  else delete map[trackId];
+  const keys = Object.keys(map);
+  if (keys.length > SOURCES_MAX) for (const k of keys.slice(0, keys.length - SOURCES_MAX)) delete map[k];
+  try {
+    localStorage.setItem(SOURCES_KEY, JSON.stringify(map));
+  } catch {}
+}
+
+export function rememberedSource(trackId: string): string | undefined {
+  return loadSources()[trackId];
+}
+
 export function sourceRequest(track: Track, cookiesBrowser?: string): SourceRequest {
   const scUrl =
     track.source === 'soundcloud' && track.isrc?.startsWith('http') ? track.isrc : null;
+  const known = scUrl ? undefined : rememberedSource(track.id);
   return {
-    query: scUrl ?? `${track.artist.name} ${track.title}`,
-    isrc: scUrl ? undefined : track.isrc,
+    query: scUrl ?? known ?? `${track.artist.name} ${track.title}`,
+    isrc: scUrl || known ? undefined : track.isrc,
     source: track.source,
     cookiesBrowser: cookiesBrowser || undefined,
   };

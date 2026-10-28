@@ -30,6 +30,24 @@ into its own data folder in one click (Settings → Local engine):
   install on Windows (yt-dlp's FFmpeg-Builds); on macOS/Linux use
   `brew install ffmpeg` / the distro package.
 
+yt-dlp is installed as the unpacked ("onedir") release build
+(`yt-dlp_win.zip`, `yt-dlp_linux.zip`, `yt-dlp_macos.zip`) into
+`bin/yt-dlp-dist`: the single-file build unpacks a Python runtime to a temp
+folder on every run, which costs seconds per track on Windows. The unpacked
+build can't `-U`, so the app checks the latest tag (from GitHub's
+`releases/latest` redirect) at most daily and swaps the folder. A single-file
+copy left by an older version is replaced on the next start.
+
+SoundCloud skips yt-dlp: `soundcloud.rs` scrapes the web client id, resolves
+the page URL and picks one transcoding (progressive before HLS, AAC before
+MP3). Progressive streams go through the loopback proxy; HLS whose pieces
+concatenate into a playable file (MP3 chunks, fMP4 with an init segment) is
+fetched 8 pieces at a time. Anything else falls back to yt-dlp.
+
+The player resolves the next queued track a few seconds into the current one,
+and remembers which YouTube video a Deezer track resolved to, so replays and
+downloads skip the search.
+
 Source choice mirrors `apps/api/src/download/download.service.ts`: Deezer
 tracks resolve as `ytsearch1:<ISRC>` (fallback `artist title`), SoundCloud
 tracks by their page URL.
