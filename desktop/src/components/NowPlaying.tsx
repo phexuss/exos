@@ -1,5 +1,6 @@
 import { ChevronDown } from 'lucide-react';
 import { usePlayer } from '@/store/player';
+import { AmbientArt } from './Ambient';
 import { Lyrics } from './Lyrics';
 import { Cover, SourcePill } from './ui';
 
@@ -10,7 +11,10 @@ export function NowPlaying() {
   if (!open || !current) return null;
   return (
     <section className="np" aria-label="Сейчас играет">
-      <div className="np__bg" />
+      <div className="np__bg">
+        <AmbientArt />
+        <div className="ambient__veil" />
+      </div>
       <button type="button" className="icon-btn np__close" onClick={close} aria-label="Свернуть (Esc)" title="Свернуть (Esc)">
         <ChevronDown size={22} />
       </button>

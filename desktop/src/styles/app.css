@@ -46,7 +46,6 @@
   --glass-rim: rgba(255, 255, 255, 0.14);
   --glass-rim-strong: rgba(255, 255, 255, 0.24);
   --glass-highlight: rgba(255, 255, 255, 0.1);
-  --glass-blur: 40px;
 
   --font: 'Jost', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, monospace;
@@ -141,15 +140,16 @@ img { display: block; }
 }
 .ambient__art {
   position: absolute;
-  inset: -20%;
+  inset: -8%;
+  width: 116%;
+  height: 116%;
   background-size: cover;
   background-position: center;
-  filter: blur(90px) saturate(1.5);
   opacity: 0;
-  transform: scale(1.1);
   transition: opacity 900ms var(--ease-out);
 }
-.ambient__art.is-on { opacity: 0.55; }
+.ambient__art.is-on { opacity: 0.7; animation: ambient-in 900ms var(--ease-out); }
+@keyframes ambient-in { from { opacity: 0; } }
 .ambient__veil {
   position: absolute;
   inset: 0;
@@ -158,13 +158,15 @@ img { display: block; }
     linear-gradient(180deg, var(--veil-light), var(--veil-mid));
 }
 
-/* Glass slab: blur of the ambient layer + tint + rim + top highlight. */
+/*
+ * Glass slab: tint + rim + top highlight. Slabs only ever sit over the
+ * ambient layer, which is already blurred, so a backdrop-filter would redo
+ * the same blur every frame (on Linux, on the CPU) for no visible change.
+ */
 .glass .slab {
   background:
     linear-gradient(180deg, var(--glass-highlight), transparent 60px),
     var(--glass-tint);
-  backdrop-filter: blur(var(--glass-blur)) saturate(170%);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(170%);
   box-shadow: inset 0 0 0 1px var(--glass-rim);
 }
 .flat .slab { background: var(--surface); }
@@ -564,11 +566,11 @@ img { display: block; }
 .tt__src { display: flex; }
 
 .eq { display: inline-flex; gap: 2px; align-items: flex-end; height: 14px; }
-.eq i { width: 3px; background: var(--accent); border-radius: 1px; animation: eq 900ms ease-in-out infinite; }
+.eq i { width: 3px; height: 14px; background: var(--accent); border-radius: 1px; transform-origin: bottom; animation: eq 900ms ease-in-out infinite; }
 .eq i:nth-child(2) { animation-delay: -300ms; }
 .eq i:nth-child(3) { animation-delay: -600ms; }
 .eq.paused i { animation-play-state: paused; }
-@keyframes eq { 0%, 100% { height: 4px; } 50% { height: 14px; } }
+@keyframes eq { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
 
 .src-pill {
   display: inline-flex;
@@ -849,8 +851,9 @@ img { display: block; }
   overflow: hidden;
 }
 @keyframes np-in { from { opacity: 0; transform: translateY(24px) scale(0.98); } to { opacity: 1; transform: none; } }
-.np__bg { position: absolute; inset: 0; z-index: -1; background: var(--veil-mid); backdrop-filter: blur(60px) saturate(160%); -webkit-backdrop-filter: blur(60px) saturate(160%); }
-.flat .np__bg { background: var(--bg); backdrop-filter: none; }
+.np__bg { position: absolute; inset: 0; z-index: -1; overflow: hidden; background: var(--bg); }
+.np__bg .ambient__veil { background: var(--veil-mid); }
+.flat .np__bg .ambient__art { display: none; }
 .np__art { display: flex; flex-direction: column; justify-content: center; gap: 24px; min-height: 0; }
 .np__art .cover { width: min(100%, 52vh); border-radius: 22px; box-shadow: 0 40px 100px var(--shadow-3); }
 .np__title { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
