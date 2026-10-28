@@ -4,6 +4,8 @@ mod media;
 mod paths;
 mod proc;
 mod tools;
+#[cfg(target_os = "linux")]
+mod vblank;
 mod ytdlp;
 
 use serde_json::Value;
@@ -125,6 +127,19 @@ pub fn run() {
             library::allow_known_dirs(&handle);
             // Leftovers from downloads interrupted by quitting.
             let _ = std::fs::remove_dir_all(paths::work_dir(&handle));
+            #[cfg(target_os = "linux")]
+            {
+                use tauri::Manager;
+                use webkit2gtk::glib::object::ObjectType;
+                use webkit2gtk::WebViewExt;
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.with_webview(|wv| {
+                        if let Some(settings) = wv.inner().settings() {
+                            vblank::allow_full_refresh(settings.as_ptr().cast());
+                        }
+                    });
+                }
+            }
             if let Err(e) = tauri::async_runtime::block_on(media::start()) {
                 eprintln!("media server: {e}");
             }

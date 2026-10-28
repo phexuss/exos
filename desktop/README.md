@@ -54,6 +54,20 @@ tracks by their page URL.
 The downloaded-tracks list is `library.json` in the app data folder; downloads
 are also pushed to `/library/downloads` so they show up on the phone.
 
+## Linux notes
+
+- **Nvidia + Wayland**: WebKitGTK either dies with a Wayland protocol error or
+  can't allocate GBM buffers. When `/proc/driver/nvidia` exists the app sets
+  `__NV_DISABLE_EXPLICIT_SYNC=1` and `WEBKIT_DMABUF_RENDERER_DISABLE_GBM=1`
+  before the webview starts (unless already set).
+- **Refresh rate**: WebKitGTK paces frames with libdrm's `drmWaitVBlank`,
+  which Nvidia's driver doesn't support, so it falls back to a fixed 60 fps
+  timer. The binary exports its own `drmWaitVBlank` (`src/vblank.rs`,
+  `build.rs`) that forwards to libdrm and, only when the driver refuses, sleeps
+  one refresh of the CRTC's mode instead. It also turns off WebKit's
+  `PreferPageRenderingUpdatesNear60FPSEnabled`. `EXOS_VBLANK=0` disables the
+  emulation.
+
 ## Develop
 
 ```bash
