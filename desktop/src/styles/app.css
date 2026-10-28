@@ -60,6 +60,15 @@
   --radius-lg: 24px;
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Overshoots a touch and settles; redefined with linear() below where supported. */
+  --ease-spring: cubic-bezier(0.22, 1.2, 0.36, 1);
+  --dur-1: 160ms;
+  --dur-2: 320ms;
+  --dur-3: 520ms;
+  --dur-4: 900ms;
+  --stagger: 45ms;
+  --spot: color-mix(in srgb, var(--accent) 18%, transparent);
+  --shine: rgba(255, 255, 255, 0.2);
 
   /* White-alpha fills, from barely-there to pressed. */
   --fill-1: rgba(255, 255, 255, 0.05);
@@ -351,8 +360,7 @@ img { display: block; }
   scroll-behavior: smooth;
 }
 .page { padding: 28px var(--gutter) 48px; display: flex; flex-direction: column; gap: 36px; }
-.page-enter { animation: page-in 220ms var(--ease-out); }
-@keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* The route wrapper slides; the page's sections then rise one after another (see motion). */
 
 .h1, .detail-head__title, .artist-banner__name { overflow-wrap: anywhere; min-width: 0; }
 .h1 { font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
@@ -786,7 +794,9 @@ img { display: block; }
   opacity: 0;
   transition: opacity 120ms;
 }
-.slider:hover .slider__thumb, .slider.dragging .slider__thumb { opacity: 1; }
+/* Clicking focuses it; the browser ring there reads as a bug, so keyboard focus shows the thumb instead. */
+.slider:focus, .slider:focus-visible { outline: none; }
+.slider:hover .slider__thumb, .slider.dragging .slider__thumb, .slider:focus-visible .slider__thumb { opacity: 1; }
 .slider.loading .slider__rail { background: linear-gradient(90deg, var(--fill-3), var(--fill-6), var(--fill-3)); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 
@@ -848,15 +858,13 @@ img { display: block; }
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 56px;
   padding: calc(var(--titlebar-h) + 24px) 64px calc(var(--player-h) + 34px);
-  animation: np-in 320ms var(--ease-out);
   overflow: hidden;
 }
-@keyframes np-in { from { opacity: 0; transform: translateY(24px) scale(0.98); } to { opacity: 1; transform: none; } }
 .np__bg { position: absolute; inset: 0; z-index: -1; overflow: hidden; background: var(--bg); }
 .np__bg .ambient__veil { background: var(--veil-mid); }
 .flat .np__bg .ambient__art { display: none; }
 .np__art { display: flex; flex-direction: column; justify-content: center; gap: 24px; min-height: 0; }
-.np__art .cover { width: min(100%, 52vh); border-radius: 22px; box-shadow: 0 40px 100px var(--shadow-3); }
+.np__art .cover { width: 100%; border-radius: 22px; box-shadow: 0 40px 100px var(--shadow-3); }
 .np__title { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
 .np__artist { font-size: 18px; color: var(--text-2); }
 .np__lyrics { overflow-y: auto; min-height: 0; mask-image: linear-gradient(180deg, transparent, black 12%, black 80%, transparent); }
@@ -1127,4 +1135,167 @@ img { display: block; }
   .settings .row { grid-template-columns: minmax(0, 1fr); }
   .job { grid-template-columns: 40px minmax(0, 1fr) 36px; }
   .job .bar, .job__state { display: none; }
+}
+
+/* ---------- motion ----------
+ * Only transform and opacity move, so the compositor does the work and
+ * nothing repaints per frame. The exceptions are small on purpose: the
+ * karaoke fill of one lyric line, the shine on one cover, the accent colour.
+ */
+
+@supports (animation-timing-function: linear(0, 1)) {
+  :root {
+    --ease-spring: linear(0, 0.0068, 0.0268, 0.0594, 0.1033 4.9%, 0.2219, 0.3626 10.8%, 0.6747 17.5%, 0.8203, 0.9324 25.1%, 1.0123 30.4%, 1.0421, 1.0581 37.1%, 1.0619 39.6%, 1.0581, 1.0461 46.2%, 1.0187 53.7%, 0.9993 62.4%, 0.9942 68.3%, 0.9963 82.5%, 1);
+  }
+}
+
+/* The accent follows the artwork; registering it lets it glide between covers. */
+@property --accent { syntax: '<color>'; inherits: true; initial-value: #818cf8; }
+:root { transition: --accent var(--dur-4) var(--ease-out); }
+
+@keyframes rise { from { opacity: 0; transform: translateY(14px) scale(0.985); } }
+@keyframes fade-in { from { opacity: 0; } }
+
+/* Screens slide in from the side you are travelling towards. */
+.route { animation: route-in var(--dur-3) var(--ease-spring) both; }
+@keyframes route-in { from { opacity: 0; transform: translateX(calc(var(--dir, 1) * 32px)); } }
+
+/* Sections, cards and rows arrive in a quick cascade instead of all at once. */
+.page-enter > *,
+.grid-cards > *,
+.shelf > *,
+.quick-grid > *,
+.rank__row,
+.tt__row,
+.queue-item {
+  animation: rise var(--dur-3) var(--ease-spring) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+:is(.page-enter, .grid-cards, .shelf, .quick-grid, .rank, .tt, .queue) > :nth-child(2) { --i: 1; }
+:is(.page-enter, .grid-cards, .shelf, .quick-grid, .rank, .tt, .queue) > :nth-child(3) { --i: 2; }
+:is(.page-enter, .grid-cards, .shelf, .quick-grid, .rank, .tt, .queue) > :nth-child(4) { --i: 3; }
+:is(.page-enter, .grid-cards, .shelf, .quick-grid, .rank, .tt, .queue) > :nth-child(5) { --i: 4; }
+:is(.page-enter, .grid-cards, .shelf, .quick-grid, .rank, .tt, .queue) > :nth-child(6) { --i: 5; }
+:is(.page-enter, .grid-cards, .shelf, .quick-grid, .rank, .tt, .queue) > :nth-child(7) { --i: 6; }
+:is(.page-enter, .grid-cards, .shelf, .quick-grid, .rank, .tt, .queue) > :nth-child(8) { --i: 7; }
+:is(.page-enter, .grid-cards, .shelf, .quick-grid, .rank, .tt, .queue) > :nth-child(n + 9) { --i: 8; }
+/* Nested lists start once their section has arrived. */
+.page-enter > :nth-child(2) :is(.grid-cards, .shelf, .quick-grid, .rank, .tt) > * { animation-delay: calc((var(--i, 0) + 2) * var(--stagger)); }
+.page-enter > :nth-child(n + 3) :is(.grid-cards, .shelf, .quick-grid, .rank, .tt) > * { animation-delay: calc((var(--i, 0) + 4) * var(--stagger)); }
+
+/* A soft light, tinted by the accent, follows the pointer over anything you can play. */
+.quick, .rank__row, .tt__row, .queue-item { position: relative; isolation: isolate; overflow: hidden; }
+.quick::before, .rank__row::before, .tt__row::before, .queue-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 360px;
+  height: 360px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--spot), transparent);
+  transform: translate(calc(var(--mx, -400px) - 180px), calc(var(--my, -400px) - 180px));
+  opacity: 0;
+  transition: opacity var(--dur-2);
+  pointer-events: none;
+}
+:is(.quick, .rank__row, .tt__row, .queue-item):hover::before { opacity: 1; }
+
+/* Cards lift, their art zooms a little inside its frame, and they give under a press. */
+.shelf { padding-top: 10px; margin-top: -10px; }
+.card__art { transition: transform var(--dur-2) var(--ease-spring); }
+.card__art::after {
+  content: '';
+  position: absolute;
+  inset: 8% 6% -4%;
+  z-index: -1;
+  border-radius: var(--radius);
+  box-shadow: 0 22px 44px var(--shadow-3);
+  opacity: 0;
+  transition: opacity var(--dur-2);
+}
+.card .cover img, .quick .cover img, .rank__art .cover img { transition: transform var(--dur-3) var(--ease-out); }
+.card:hover .card__art { transform: translateY(-6px); }
+.card:hover .card__art::after { opacity: 1; }
+.card:hover .cover img, .quick:hover .cover img, .rank__row:hover .cover img { transform: scale(1.07); }
+.card:active .card__art { transform: translateY(-2px) scale(0.97); transition-duration: var(--dur-1); }
+.quick { transition: background 140ms, transform var(--dur-2) var(--ease-spring); }
+.quick:active, .tt__row:active, .rank__row:active { transform: scale(0.985); }
+.rank__row .rank__title { transition: transform var(--dur-2) var(--ease-spring); }
+.rank__row:hover .rank__title { transform: translateX(4px); }
+
+/* Player bar: new track text slides up, the play button breathes while music plays. */
+.player__text { animation: rise var(--dur-3) var(--ease-spring) both; }
+.player__now .cover { transition: transform var(--dur-2) var(--ease-spring); }
+.player__now button:hover .cover { transform: scale(1.06); }
+.play-btn { position: relative; transition: transform var(--dur-1) var(--ease-spring); }
+.play-btn::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  opacity: 0;
+  pointer-events: none;
+}
+.play-btn.playing::after { animation: ring 2.4s var(--ease-out) infinite; }
+@keyframes ring { from { opacity: 0.55; transform: scale(1); } to { opacity: 0; transform: scale(1.55); } }
+.slider__fill { transition: background var(--dur-1); }
+.slider__thumb { transition: opacity 120ms, transform var(--dur-1) var(--ease-spring); }
+.slider.dragging .slider__thumb { transform: scale(1.25); }
+.eq i { animation-timing-function: var(--ease-spring); }
+
+/* The ambient artwork drifts slowly, so the window never feels like a still. */
+.ambient__art.is-on, .np__bg .ambient__art.is-on {
+  will-change: transform;
+  animation: fade-in var(--dur-4) var(--ease-out), drift 38s ease-in-out infinite alternate;
+}
+@keyframes drift {
+  0% { transform: scale(1) translate(0, 0) rotate(0deg); }
+  50% { transform: scale(1.12) translate(-2.5%, 1.5%) rotate(4deg); }
+  100% { transform: scale(1.06) translate(2%, -2%) rotate(-3deg); }
+}
+
+/* Now playing: the cover tilts towards the pointer, catches light, and sinks back when paused. */
+.np__tilt { perspective: 1100px; width: min(100%, 52vh); }
+.np__cover {
+  position: relative;
+  border-radius: 22px;
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform var(--dur-3) var(--ease-out), scale var(--dur-3) var(--ease-spring);
+  will-change: transform;
+}
+.np__tilt.is-paused .np__cover { scale: 0.92; }
+.np__shine {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(70% 70% at var(--gx, 30%) var(--gy, 10%), var(--shine), transparent 60%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-2);
+}
+.np__tilt:hover .np__shine { opacity: 1; }
+.np__meta { animation: rise var(--dur-3) var(--ease-spring) both; animation-delay: 120ms; }
+.np__lyrics { animation: fade-in var(--dur-3) var(--ease-out) both; animation-delay: 200ms; }
+
+/* Lyrics: the active line fills in like karaoke as it is sung. */
+@property --p { syntax: '<number>'; inherits: true; initial-value: 0; }
+.lyrics__line { align-self: flex-start; max-width: 100%; }
+.lyrics__line.is-active {
+  color: transparent;
+  background: linear-gradient(90deg, var(--text) calc(var(--p) * 100%), var(--text-4) calc(var(--p) * 100% + 8%));
+  -webkit-background-clip: text;
+  background-clip: text;
+  transition: --p 280ms linear, transform var(--dur-3) var(--ease-spring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }

@@ -13,6 +13,8 @@ type NavState = {
   stack: Route[];
   index: number;
   route: Route;
+  /** 1 going forward, -1 going back; pages slide in from that side. */
+  dir: 1 | -1;
   go: (route: Route) => void;
   back: () => void;
   forward: () => void;
@@ -26,6 +28,7 @@ export const useNav = create<NavState>((set, get) => ({
   stack: [{ name: 'home' }],
   index: 0,
   route: { name: 'home' },
+  dir: 1,
   canBack: false,
   canForward: false,
   go: (route) => {
@@ -33,12 +36,12 @@ export const useNav = create<NavState>((set, get) => ({
     if (sameRoute(stack[index], route)) return;
     const next = [...stack.slice(0, index + 1), route].slice(-50);
     const i = next.length - 1;
-    set({ stack: next, index: i, route, canBack: i > 0, canForward: false });
+    set({ stack: next, index: i, route, dir: 1, canBack: i > 0, canForward: false });
   },
   back: () => {
     const { stack, index } = get();
     if (index === 0) return;
-    set({ index: index - 1, route: stack[index - 1], canBack: index - 1 > 0, canForward: true });
+    set({ index: index - 1, route: stack[index - 1], dir: -1, canBack: index - 1 > 0, canForward: true });
   },
   forward: () => {
     const { stack, index } = get();
@@ -46,6 +49,7 @@ export const useNav = create<NavState>((set, get) => ({
     set({
       index: index + 1,
       route: stack[index + 1],
+      dir: 1,
       canBack: true,
       canForward: index + 1 < stack.length - 1,
     });

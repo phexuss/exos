@@ -9,6 +9,10 @@ export function Lyrics({ big }: { big?: boolean }) {
   const seek = usePlayer((s) => s.seek);
   const lines = useMemo(() => (lyrics?.syncedLyrics ? parseLrc(lyrics.syncedLyrics) : []), [lyrics]);
   const active = activeLineIndex(lines, time);
+  // How far into the active line we are, for the karaoke fill.
+  const lineStart = active >= 0 ? lines[active].time : 0;
+  const lineEnd = lines[active + 1]?.time ?? lineStart + 4;
+  const fill = active >= 0 ? Math.max(0, Math.min(1, (time - lineStart) / Math.max(0.5, lineEnd - lineStart))) : 0;
   const ref = useRef<HTMLDivElement>(null);
   const userScrolledAt = useRef(0);
 
@@ -43,6 +47,7 @@ export function Lyrics({ big }: { big?: boolean }) {
           key={`${l.time}-${i}`}
           data-i={i}
           className={`lyrics__line ${i === active ? 'is-active' : i < active ? 'is-past' : ''}`}
+          style={i === active ? ({ '--p': fill } as React.CSSProperties) : undefined}
           onClick={() => {
             userScrolledAt.current = 0;
             seek(l.time);

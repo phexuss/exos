@@ -217,6 +217,60 @@ async fn serve_file(sock: &mut TcpStream, req: &Request, path: &Path) -> std::io
     Ok(())
 }
 
+/// Upstream requests ask for at most this much at a time. YouTube's CDN throttles
+/// or refuses open-ended ranges (yt-dlp fetches it in 10 MiB pieces for the
+/// same reason), while the webview always asks for "the rest of the file".
+const CHUNK: u64 = if cfg!(test) { 1000 } else { 10 << 20 };
+
+async fn upstream(
+    url: &str,
+    headers: &[(String, String)],
+    method: reqwest::Method,
+    range: Option<String>,
+) -> Option<reqwest::Response> {
+    let mut r = client().request(method, url);
+    for (k, v) in headers {
+        r = r.header(k.as_str(), v.as_str());
+    }
+    if let Some(range) = range {
+        r = r.header("Range", range);
+    }
+    match r.send().await {
+        Ok(resp) => Some(resp),
+        Err(e) => {
+            eprintln!("media: upstream request failed: {e}");
+            None
+        }
+    }
+}
+
+/// "bytes 0-999/5000" → (0, 999, 5000).
+fn content_range(resp: &reqwest::Response) -> Option<(u64, u64, u64)> {
+    let v = resp.headers().get("content-range")?.to_str().ok()?;
+    let (span, total) = v.strip_prefix("bytes ")?.split_once('/')?;
+    let (a, b) = span.split_once('-')?;
+    Some((a.parse().ok()?, b.parse().ok()?, total.parse().ok()?))
+}
+
+async fn pipe(sock: &mut TcpStream, resp: reqwest::Response) -> std::io::Result<u64> {
+    let mut sent = 0;
+    let mut body = resp.bytes_stream();
+    while let Some(chunk) = body.next().await {
+        let Ok(chunk) = chunk else { break };
+        sock.write_all(&chunk).await?;
+        sent += chunk.len() as u64;
+    }
+    Ok(sent)
+}
+
+fn refuse(code: u16) -> &'static str {
+    if code == 416 {
+        "416 Range Not Satisfiable"
+    } else {
+        "502 Bad Gateway"
+    }
+}
+
 async fn serve_remote(
     sock: &mut TcpStream,
     req: &Request,
@@ -224,44 +278,93 @@ async fn serve_remote(
     headers: &[(String, String)],
     ext: &str,
 ) -> std::io::Result<()> {
-    let mut upstream = client().request(if req.head { reqwest::Method::HEAD } else { reqwest::Method::GET }, url);
-    for (k, v) in headers {
-        upstream = upstream.header(k.as_str(), v.as_str());
-    }
-    if let Some((a, b)) = req.range {
-        let spec = match (a, b) {
-            (Some(a), Some(b)) => format!("bytes={a}-{b}"),
-            (Some(a), None) => format!("bytes={a}-"),
-            (None, Some(s)) => format!("bytes=-{s}"),
-            (None, None) => "bytes=0-".into(),
-        };
-        upstream = upstream.header("Range", spec);
-    }
-    let resp = match upstream.send().await {
-        Ok(r) => r,
-        Err(_) => return write_head(sock, "502 Bad Gateway", &[("Content-Length", "0".into())]).await,
+    // CDNs label audio-only MP4 as video/mp4; say what it is so the decoder doesn't hesitate.
+    let mut out = vec![("Content-Type", mime(ext).to_string()), ("Accept-Ranges", "bytes".to_string())];
+    let (from, to) = match req.range {
+        Some((Some(a), b)) => (a, b),
+        None | Some((None, None)) => (0, None),
+        // A suffix range needs the length first; rare enough to pass through.
+        Some((None, Some(suffix))) => return passthrough(sock, req, url, headers, out, format!("bytes=-{suffix}")).await,
+    };
+    let first_end = to.unwrap_or(u64::MAX).min(from.saturating_add(CHUNK - 1));
+    let method = if req.head { reqwest::Method::HEAD } else { reqwest::Method::GET };
+    let Some(resp) = upstream(url, headers, method, Some(format!("bytes={from}-{first_end}"))).await else {
+        return write_head(sock, "502 Bad Gateway", &[("Content-Length", "0".into())]).await;
     };
     let code = resp.status().as_u16();
     if code >= 400 {
-        let status = if code == 416 { "416 Range Not Satisfiable" } else { "502 Bad Gateway" };
-        return write_head(sock, status, &[("Content-Length", "0".into())]).await;
+        eprintln!("media: upstream answered {code}");
+        return write_head(sock, refuse(code), &[("Content-Length", "0".into())]).await;
     }
-    let status = if code == 206 { "206 Partial Content" } else { "200 OK" };
-    // CDNs label audio-only MP4 as video/mp4; say what it is so the decoder doesn't hesitate.
-    let mut out = vec![("Content-Type", mime(ext).to_string()), ("Accept-Ranges", "bytes".to_string())];
+    let Some((_, got_end, total)) = content_range(&resp).filter(|_| code == 206) else {
+        // The server ignored Range and sends the whole file: hand it over as is.
+        if let Some(v) = resp.headers().get("content-length").and_then(|v| v.to_str().ok()) {
+            out.push(("Content-Length", v.to_string()));
+        }
+        write_head(sock, "200 OK", &out).await?;
+        if !req.head {
+            pipe(sock, resp).await?;
+        }
+        return Ok(());
+    };
+    let end = to.unwrap_or(total.saturating_sub(1)).min(total.saturating_sub(1));
+    out.push(("Content-Length", (end + 1 - from).to_string()));
+    let status = if req.range.is_some() {
+        out.push(("Content-Range", format!("bytes {from}-{end}/{total}")));
+        "206 Partial Content"
+    } else {
+        "200 OK"
+    };
+    write_head(sock, status, &out).await?;
+    if req.head {
+        return Ok(());
+    }
+    let mut pos = from + pipe(sock, resp).await?;
+    if pos != got_end + 1 {
+        return Ok(()); // cut short; the webview will ask again from where it stopped
+    }
+    while pos <= end {
+        let stop = end.min(pos + CHUNK - 1);
+        let Some(resp) = upstream(url, headers, reqwest::Method::GET, Some(format!("bytes={pos}-{stop}"))).await else {
+            break;
+        };
+        if resp.status().as_u16() != 206 {
+            eprintln!("media: upstream answered {} mid-stream", resp.status().as_u16());
+            break;
+        }
+        let sent = pipe(sock, resp).await?;
+        if sent == 0 {
+            break;
+        }
+        pos += sent;
+    }
+    Ok(())
+}
+
+async fn passthrough(
+    sock: &mut TcpStream,
+    req: &Request,
+    url: &str,
+    headers: &[(String, String)],
+    mut out: Vec<(&str, String)>,
+    range: String,
+) -> std::io::Result<()> {
+    let method = if req.head { reqwest::Method::HEAD } else { reqwest::Method::GET };
+    let Some(resp) = upstream(url, headers, method, Some(range)).await else {
+        return write_head(sock, "502 Bad Gateway", &[("Content-Length", "0".into())]).await;
+    };
+    let code = resp.status().as_u16();
+    if code >= 400 {
+        return write_head(sock, refuse(code), &[("Content-Length", "0".into())]).await;
+    }
     for name in ["content-length", "content-range"] {
         if let Some(v) = resp.headers().get(name).and_then(|v| v.to_str().ok()) {
             out.push((if name == "content-length" { "Content-Length" } else { "Content-Range" }, v.to_string()));
         }
     }
-    write_head(sock, status, &out).await?;
-    if req.head {
-        return Ok(());
-    }
-    let mut body = resp.bytes_stream();
-    while let Some(chunk) = body.next().await {
-        let Ok(chunk) = chunk else { break };
-        sock.write_all(&chunk).await?;
+    write_head(sock, if code == 206 { "206 Partial Content" } else { "200 OK" }, &out).await?;
+    if !req.head {
+        pipe(sock, resp).await?;
     }
     Ok(())
 }
@@ -308,7 +411,14 @@ mod tests {
         let proxied = remote_url(url.clone(), vec![("User-Agent".into(), "exos-test".into())], "m4a".into()).unwrap();
         let (s, cr, body) = get(&proxied, Some("bytes=10-19")).await;
         assert_eq!((s, cr.as_deref(), body.as_slice()), (206, Some("bytes 10-19/5000"), &data[10..20]));
-        assert_eq!(get(&proxied, None).await.2, data);
+        // Larger asks are fetched upstream in CHUNK-sized pieces and stitched back.
+        let (s, cr, body) = get(&proxied, Some("bytes=900-2100")).await;
+        assert_eq!((s, cr.as_deref(), body.as_slice()), (206, Some("bytes 900-2100/5000"), &data[900..2101]));
+        let (s, cr, body) = get(&proxied, Some("bytes=1500-")).await;
+        assert_eq!((s, cr.as_deref(), body.as_slice()), (206, Some("bytes 1500-4999/5000"), &data[1500..]));
+        assert_eq!(get(&proxied, None).await, (200, None, data.clone()));
+        let (s, cr, body) = get(&proxied, Some("bytes=-100")).await;
+        assert_eq!((s, cr.as_deref(), body.as_slice()), (206, Some("bytes 4900-4999/5000"), &data[4900..]));
         std::fs::remove_dir_all(dir).unwrap();
     }
 }

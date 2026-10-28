@@ -97,7 +97,14 @@ export function Slider({
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={Math.round(shown)}
-      tabIndex={-1}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (!onCommit || !max) return;
+        const step = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -1 : 0;
+        if (!step) return;
+        e.preventDefault();
+        onCommit(Math.max(0, Math.min(max, value + step * max * 0.05)));
+      }}
       onPointerDown={(e) => {
         if (!max) return;
         e.currentTarget.setPointerCapture(e.pointerId);
