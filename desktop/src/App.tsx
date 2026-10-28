@@ -2,6 +2,7 @@ import { CircleAlert } from 'lucide-react';
 import { useCallback, useEffect, useRef } from 'react';
 import { Ambient } from '@/components/Ambient';
 import { ContextMenu } from '@/components/ContextMenu';
+import { ScreenBoundary } from '@/components/ErrorBoundary';
 import { NowPlaying } from '@/components/NowPlaying';
 import { PlayerBar } from '@/components/PlayerBar';
 import { SidePanel } from '@/components/SidePanel';
@@ -85,7 +86,9 @@ function Screen() {
     <main className="main">
       <div className="scroller" ref={ref}>
         {route.name !== 'settings' && <EngineBanner />}
-        <div key={JSON.stringify(route)}>{screen}</div>
+        <div key={JSON.stringify(route)}>
+          <ScreenBoundary>{screen}</ScreenBoundary>
+        </div>
       </div>
     </main>
   );

@@ -1,4 +1,5 @@
 import { ArrowDownToLine, RotateCcw, X } from 'lucide-react';
+import { useMemo } from 'react';
 import { useLibrary, type DownloadJob } from '@/store/library';
 import { Cover } from '@/components/ui';
 
@@ -53,7 +54,9 @@ function Job({ job }: { job: DownloadJob }) {
 }
 
 export function Downloads() {
-  const jobs = useLibrary((s) => Object.values(s.jobs).sort((a, b) => b.startedAt - a.startedAt));
+  // Select the stable map, not a fresh array: zustand 5 re-renders forever on a new reference.
+  const jobMap = useLibrary((s) => s.jobs);
+  const jobs = useMemo(() => Object.values(jobMap).sort((a, b) => b.startedAt - a.startedAt), [jobMap]);
   const clearFinished = useLibrary((s) => s.clearFinished);
   const active = jobs.filter((j) => j.stage !== 'done' && j.stage !== 'error');
   const finished = jobs.filter((j) => j.stage === 'done' || j.stage === 'error');

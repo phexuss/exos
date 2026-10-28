@@ -647,6 +647,7 @@ img { display: block; }
 }
 .empty svg { color: var(--text-3); opacity: 0.6; }
 .empty strong { color: var(--text); font-size: 17px; font-weight: 500; }
+.empty code { font-size: 12px; color: var(--text-2); user-select: text; max-width: 60ch; overflow-wrap: anywhere; }
 
 
 /* ---------- library / downloads ---------- */
