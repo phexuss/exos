@@ -18,6 +18,7 @@
       "icon": "./assets/images/icon.png",
       "adaptiveIcon": {
         "backgroundColor": "#080914",
+        "backgroundImage": "./assets/images/icon-background.png",
         "foregroundImage": "./assets/images/icon-foreground.png",
         "monochromeImage": "./assets/images/icon-monochrome.png"
       },
