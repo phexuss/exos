@@ -162,6 +162,75 @@ export async function resolve(pageUrl: string): Promise<Stream> {
   return { url: stream.url, hls: kind === 'hls', ext: codec === 'aac' ? 'm4a' : 'mp3' };
 }
 
+/* ---------- sets → tracks (playlist import) ---------- */
+
+export type ScApiTrack = {
+  id: number;
+  title?: string;
+  duration?: number;
+  full_duration?: number;
+  permalink_url?: string;
+  artwork_url?: string | null;
+  user?: { id?: number; username?: string; avatar_url?: string | null };
+};
+
+/** A SoundCloud track as the window's Track type has it (same shape the API's search returns). */
+export type ScImportTrack = {
+  id: string;
+  title: string;
+  artist: { id: string; name: string };
+  durationSec: number;
+  coverUrl?: string;
+  isrc: string;
+  source: 'soundcloud';
+};
+
+/** `large` artwork is 100 px; the same URL serves 500 px under t500x500. */
+const art = (url?: string | null) => (url ? url.replace(/-large(\.\w+)$/, '-t500x500$1') : undefined);
+
+export function mapApiTrack(t: ScApiTrack): ScImportTrack | null {
+  if (!t.title || !t.permalink_url) return null;
+  return {
+    id: `sc_${t.id}`,
+    title: t.title,
+    artist: { id: String(t.user?.id ?? ''), name: t.user?.username ?? 'SoundCloud' },
+    durationSec: Math.round((t.full_duration || t.duration || 0) / 1000),
+    coverUrl: art(t.artwork_url ?? t.user?.avatar_url),
+    isrc: t.permalink_url,
+    source: 'soundcloud',
+  };
+}
+
+/**
+ * A set (playlist or album) by its page URL. SoundCloud sends the first few
+ * tracks in full and the rest as bare ids, which come in batches of 50.
+ */
+export async function playlist(pageUrl: string): Promise<{ name: string; coverUrl?: string; tracks: ScImportTrack[] }> {
+  let url = pageUrl;
+  if (/^https?:\/\/on\.soundcloud\.com\//i.test(url)) {
+    // Short share links redirect to the real page.
+    const res = await fetch(url, { headers: { 'User-Agent': UA }, redirect: 'follow', signal: AbortSignal.timeout(20_000) });
+    url = res.url;
+  }
+  const set = await apiGet<{ kind?: string; title?: string; artwork_url?: string | null; tracks?: ScApiTrack[] }>(
+    `${API}/resolve?url=${encodeURIComponent(url.replace(/[?#].*$/, ''))}`,
+  );
+  if (set.kind !== 'playlist' || !set.tracks)
+    throw new Error(L('это не плейлист и не альбом SoundCloud', 'this is not a SoundCloud playlist or album'));
+  const full = new Map<number, ScApiTrack>();
+  for (const t of set.tracks) if (t.title) full.set(t.id, t);
+  const missing = set.tracks.filter((t) => !t.title).map((t) => t.id);
+  for (let i = 0; i < missing.length; i += 50) {
+    const batch = await apiGet<ScApiTrack[]>(`${API}/tracks?ids=${missing.slice(i, i + 50).join(',')}`);
+    for (const t of batch) full.set(t.id, t);
+  }
+  const tracks = set.tracks
+    .map((t) => full.get(t.id))
+    .map((t) => (t ? mapApiTrack(t) : null))
+    .filter((t): t is ScImportTrack => !!t);
+  return { name: set.title ?? 'SoundCloud', coverUrl: art(set.artwork_url), tracks };
+}
+
 /* ---------- HLS → one file ---------- */
 
 export function parsePlaylist(base: string, text: string): { init: string | null; segments: string[] } {

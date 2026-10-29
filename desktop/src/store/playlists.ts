@@ -13,8 +13,8 @@ type PlaylistsState = {
   justCreated: string | null;
   load: () => Promise<void>;
   get: (id: string) => Playlist | undefined;
-  /** Creates a playlist (optionally with tracks) and returns its id. */
-  create: (tracks?: Track[]) => string;
+  /** Creates a playlist (optionally with tracks and a name) and returns its id. */
+  create: (tracks?: Track[], name?: string) => string;
   rename: (id: string, name: string) => void;
   remove: (id: string) => void;
   add: (id: string, tracks: Track[]) => void;
@@ -65,17 +65,18 @@ export const usePlaylists = create<PlaylistsState>((set, get) => {
       set({ playlists, loaded: true });
     },
     get: (id) => get().playlists.find((p) => p.id === id),
-    create: (tracks = []) => {
+    create: (tracks = [], name) => {
       const n = get().playlists.length + 1;
       const now = Date.now();
       const playlist: Playlist = {
         id: newId(),
-        name: t('playlist.defaultName', { n }),
+        name: name?.trim().slice(0, 100) || t('playlist.defaultName', { n }),
         createdAt: now,
         updatedAt: now,
         tracks: tracks.map(snapshot),
       };
-      set((s) => ({ playlists: [playlist, ...s.playlists], justCreated: playlist.id }));
+      // A named (imported) playlist does not open with the name field focused.
+      set((s) => ({ playlists: [playlist, ...s.playlists], justCreated: name ? s.justCreated : playlist.id }));
       save();
       return playlist.id;
     },

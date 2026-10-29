@@ -14,6 +14,8 @@ import * as cookies from './cookies';
 import * as http from './http';
 import * as library from './library';
 import * as media from './media';
+import * as soundcloud from './soundcloud';
+import * as spotify from './spotify';
 import { playlistsFile, workDir } from './paths';
 import * as tools from './tools';
 import * as ytdlp from './ytdlp';
@@ -38,6 +40,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
   media_file: (a) => media.fileUrl(a.path),
   check_cookies: (a) => cookies.check(a.browser),
   http: (a) => http.request(a.req),
+  import_soundcloud: (a) => soundcloud.playlist(a.url),
+  import_spotify: (a) => spotify.playlist(a.url),
 };
 
 const ready = media.start();

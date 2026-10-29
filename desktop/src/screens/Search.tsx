@@ -2,6 +2,7 @@ import { Link2, Play, SearchX } from 'lucide-react';
 import { useState } from 'react';
 import { useT } from '@/i18n';
 import { formatTime } from '@/lib/format';
+import { importSource } from '@/lib/importer';
 import { useSearch } from '@/lib/queries';
 import type { Track } from '@/lib/types';
 import { useNav } from '@/store/nav';
@@ -9,6 +10,7 @@ import { usePlayer } from '@/store/player';
 import { Cover, SkeletonRows, SourcePill } from '@/components/ui';
 import { Tabs } from '@/components/Tabs';
 import { TrackTable } from '@/components/TrackTable';
+import { ImportScreen } from './Import';
 
 type Tab = 'deezer' | 'soundcloud';
 
@@ -61,7 +63,7 @@ export function Search({ q }: { q?: string }) {
   const go = useNav((s) => s.go);
   const query = q?.trim() ?? '';
   const link = isLink(query);
-  const results = useSearch(!query || link ? null : query, tab);
+  const results = useSearch(!query || link || importSource(query) ? null : query, tab);
   const { t } = useT();
 
   if (!query) {
@@ -86,6 +88,9 @@ export function Search({ q }: { q?: string }) {
       </div>
     );
   }
+
+  // A playlist link: offer to import it rather than play one track.
+  if (importSource(query)) return <ImportScreen url={query} />;
 
   if (link) {
     const lt = linkTrack(query);
