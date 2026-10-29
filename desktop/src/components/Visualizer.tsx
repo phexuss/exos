@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { reducedMotion } from '@/lib/motion';
-import { BANDS, type Frame, subscribe, VU_REF_DB, WAVE } from '@/lib/visualizer';
+import { BANDS, type Frame, subscribe, VU_REF_DB } from '@/lib/visualizer';
 import { useSettings } from '@/store/settings';
 
 export type VizKind = 'bars' | 'wave' | 'vu';
@@ -26,10 +26,32 @@ const BAR_GAP = 3;
 const BAR_RADIUS = 3;
 const BAR_MIN = 2;
 const PEAK_H = 2;
-/** Peak caps fall this fraction of the height per second. */
-const PEAK_FALL = 0.45;
-const WAVE_LINE = 2;
-const WAVE_GAIN = 0.9;
+/** Peak caps wait this long at a peak, then fall faster and faster (heights per second squared). */
+const PEAK_HOLD_S = 0.35;
+const PEAK_GRAVITY = 1.8;
+/** The bars fade towards their base to this opacity. */
+const BAR_BASE_ALPHA = 0.35;
+/**
+ * The needle has weight: a spring (natural frequency, Hz) with a little
+ * less than critical damping, so it swings to a level and settles with a
+ * slight overshoot, like a meter's movement.
+ */
+const NEEDLE_HZ = 1.6;
+const NEEDLE_DAMPING = 0.72;
+/**
+ * The wave: three slow sines, one each for the lows, mids and highs, whose
+ * heights follow the music. Per layer: cycles across the width, drift in
+ * radians per second, line width and opacity.
+ */
+const WAVE_LAYERS = [
+  { cycles: 1.5, drift: 0.9, line: 2.5, alpha: 1 },
+  { cycles: 2.5, drift: -1.3, line: 2, alpha: 0.6 },
+  { cycles: 4, drift: 1.8, line: 1.5, alpha: 0.35 },
+];
+/** Heights settle over this long, so the wave swells with the beat instead of shaking. */
+const WAVE_SETTLE_S = 0.12;
+/** A quiet layer still shows this much of the height. */
+const WAVE_FLOOR = 0.04;
 const NEEDLE_LINE = 1.5;
 const TICK_LINE = 1;
 const RED_LINE = 3;
@@ -59,28 +81,54 @@ function readColours(el: Element, c: Colours, now: number) {
   c.at = now;
 }
 
-function bars(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: number, c: Colours, peaks: Float32Array) {
+type Peaks = { at: Float32Array; hold: Float32Array; speed: Float32Array };
+
+function bars(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: number, c: Colours, pk: Peaks) {
   const gap = BAR_GAP * dpr;
   const bw = (w - gap * (BANDS - 1)) / BANDS;
   const r = Math.min(bw / 2, BAR_RADIUS * dpr);
+  // Whole device pixels, so every bar is the same width at any display scaling.
+  const left = (i: number) => Math.round(i * (bw + gap));
+  const width = (i: number) => Math.round(i * (bw + gap) + bw) - left(i);
   g.fillStyle = c.accent;
   g.beginPath();
   for (let i = 0; i < BANDS; i += 1) {
-    const bh = Math.max(BAR_MIN * dpr, f.bands[i] * h);
-    g.roundRect(i * (bw + gap), h - bh, bw, bh, [r, r, 0, 0]);
+    const bh = Math.round(Math.max(BAR_MIN * dpr, f.bands[i] * h));
+    g.roundRect(left(i), h - bh, width(i), bh, [r, r, 0, 0]);
   }
   g.fill();
+  // Fade the bars towards their base: keep what is drawn, scaled by a vertical ramp.
+  const fade = g.createLinearGradient(0, 0, 0, h);
+  fade.addColorStop(0, 'rgba(0, 0, 0, 1)');
+  fade.addColorStop(1, `rgba(0, 0, 0, ${BAR_BASE_ALPHA})`);
+  g.globalCompositeOperation = 'destination-in';
+  g.fillStyle = fade;
+  g.fillRect(0, 0, w, h);
+  g.globalCompositeOperation = 'source-over';
+
   g.fillStyle = c.text;
   g.beginPath();
   for (let i = 0; i < BANDS; i += 1) {
-    peaks[i] = Math.max(f.bands[i], peaks[i] - PEAK_FALL * f.dt);
-    if (peaks[i] * h < BAR_MIN * dpr * 2) continue;
-    g.rect(i * (bw + gap), h - peaks[i] * h - PEAK_H * dpr * 2, bw, PEAK_H * dpr);
+    const v = f.bands[i];
+    if (v >= pk.at[i]) {
+      pk.at[i] = v;
+      pk.hold[i] = PEAK_HOLD_S;
+      pk.speed[i] = 0;
+    } else if (pk.hold[i] > 0) {
+      pk.hold[i] -= f.dt;
+    } else {
+      pk.speed[i] += PEAK_GRAVITY * f.dt;
+      pk.at[i] = Math.max(v, pk.at[i] - pk.speed[i] * f.dt);
+    }
+    if (pk.at[i] * h < BAR_MIN * dpr * 2) continue;
+    g.rect(left(i), Math.round(h - pk.at[i] * h - PEAK_H * dpr * 2), width(i), Math.round(PEAK_H * dpr));
   }
   g.fill();
 }
 
-function wave(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: number, c: Colours) {
+type WaveState = { phase: Float32Array; amp: Float32Array };
+
+function wave(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: number, c: Colours, st: WaveState) {
   const mid = h / 2;
   g.strokeStyle = c.faint;
   g.lineWidth = TICK_LINE * dpr;
@@ -88,30 +136,45 @@ function wave(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: 
   g.moveTo(0, mid);
   g.lineTo(w, mid);
   g.stroke();
-  // Start at a rising zero crossing, the way a scope triggers, so the shape holds still.
-  const span = WAVE / 2;
-  let start = 0;
-  for (let i = 1; i < WAVE - span; i += 1) {
-    if (f.wave[i - 1] < 0 && f.wave[i] >= 0) {
-      start = i;
-      break;
-    }
-  }
-  const points = Math.max(2, Math.floor(w / (2 * dpr)));
+  const points = Math.max(2, Math.floor(w / (3 * dpr)));
+  const settle = 1 - Math.exp(-f.dt / WAVE_SETTLE_S);
   g.strokeStyle = c.accent;
-  g.lineWidth = WAVE_LINE * dpr;
   g.lineJoin = 'round';
-  g.beginPath();
-  for (let p = 0; p < points; p += 1) {
-    const s = f.wave[start + Math.floor((p / (points - 1)) * (span - 1))];
-    const x = (p / (points - 1)) * w;
-    const yy = mid - Math.max(-1, Math.min(1, s * WAVE_GAIN)) * mid;
-    p ? g.lineTo(x, yy) : g.moveTo(x, yy);
+  g.lineCap = 'round';
+  // Highs first, so the bass line sits on top.
+  for (let k = WAVE_LAYERS.length - 1; k >= 0; k -= 1) {
+    const layer = WAVE_LAYERS[k];
+    st.amp[k] += (f.eq[k] - st.amp[k]) * settle;
+    st.phase[k] = (st.phase[k] + layer.drift * f.dt) % (Math.PI * 2);
+    const amp = (WAVE_FLOOR + (1 - WAVE_FLOOR) * st.amp[k]) * (mid - layer.line * dpr);
+    g.globalAlpha = layer.alpha;
+    g.lineWidth = layer.line * dpr;
+    g.beginPath();
+    for (let p = 0; p < points; p += 1) {
+      const x = p / (points - 1);
+      // Tapered at both ends, so every layer meets the centre line.
+      const taper = Math.sin(Math.PI * x) ** 2;
+      const y = mid - amp * taper * Math.sin(2 * Math.PI * layer.cycles * x + st.phase[k]);
+      p ? g.lineTo(x * w, y) : g.moveTo(x * w, y);
+    }
+    g.stroke();
   }
-  g.stroke();
+  g.globalAlpha = 1;
 }
 
-function meter(g: CanvasRenderingContext2D, level: number, label: string, x: number, w: number, h: number, dpr: number, c: Colours) {
+type Needle = { p: number; v: number };
+
+/** Moves the needle towards `target` as a damped spring; small steps keep it stable on slow frames. */
+function swing(n: Needle, target: number, dt: number) {
+  const w0 = 2 * Math.PI * NEEDLE_HZ;
+  for (let left = dt; left > 0; left -= 1 / 240) {
+    const step = Math.min(left, 1 / 240);
+    n.v += (w0 * w0 * (target - n.p) - 2 * NEEDLE_DAMPING * w0 * n.v) * step;
+    n.p += n.v * step;
+  }
+}
+
+function meter(g: CanvasRenderingContext2D, n: Needle, level: number, label: string, x: number, w: number, h: number, dpr: number, c: Colours, dt: number) {
   const cx = x + w / 2;
   const cy = h;
   const R = Math.min(h * 0.9, (w * 0.9) / (2 * Math.sin(VU_SWEEP)));
@@ -148,13 +211,17 @@ function meter(g: CanvasRenderingContext2D, level: number, label: string, x: num
   }
   g.fillText(label, cx, cy - R * 0.35);
 
-  const p = Math.max(-0.02, Math.min(1.02, vuPos(level - VU_REF_DB)));
-  const [nx, ny] = at(angle(p), R * 0.98);
+  swing(n, Math.max(0, vuPos(level - VU_REF_DB)), dt);
+  // The pins stop the needle just past both ends of the scale.
+  const p = Math.max(-0.03, Math.min(1.03, n.p));
+  const a = angle(p);
+  const [x0, y0] = at(a, R * 0.45);
+  const [nx, ny] = at(a, R * 0.98);
   g.strokeStyle = level - VU_REF_DB > 0 ? c.danger : c.text;
   g.lineWidth = NEEDLE_LINE * dpr;
   g.lineCap = 'round';
   g.beginPath();
-  g.moveTo(cx, cy);
+  g.moveTo(x0, y0);
   g.lineTo(nx, ny);
   g.stroke();
 }
@@ -162,7 +229,12 @@ function meter(g: CanvasRenderingContext2D, level: number, label: string, x: num
 export function Visualizer({ kind, className = '' }: { kind: VizKind; className?: string }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const on = useVizOn();
-  const peaks = useRef(new Float32Array(BANDS));
+  const peaks = useRef<Peaks>({ at: new Float32Array(BANDS), hold: new Float32Array(BANDS), speed: new Float32Array(BANDS) });
+  const needles = useRef<[Needle, Needle]>([
+    { p: 0, v: 0 },
+    { p: 0, v: 0 },
+  ]);
+  const waveState = useRef<WaveState>({ phase: new Float32Array(WAVE_LAYERS.length), amp: new Float32Array(WAVE_LAYERS.length) });
   const colours = useRef<Colours>({ accent: '#818cf8', text: '#fff', faint: '#888', danger: '#f87171', font: 'sans-serif', at: 0 });
 
   useEffect(() => {
@@ -188,14 +260,58 @@ export function Visualizer({ kind, className = '' }: { kind: VizKind; className?
     readColours(el, colours.current, performance.now());
     g.clearRect(0, 0, w, h);
     if (kind === 'bars') bars(g, f, w, h, dpr, colours.current, peaks.current);
-    else if (kind === 'wave') wave(g, f, w, h, dpr, colours.current);
+    else if (kind === 'wave') wave(g, f, w, h, dpr, colours.current, waveState.current);
     else {
       const half = w / 2;
-      meter(g, f.vu[0], 'L', 0, half, h, dpr, colours.current);
-      meter(g, f.vu[1], 'R', half, half, h, dpr, colours.current);
+      meter(g, needles.current[0], f.vu[0], 'L', 0, half, h, dpr, colours.current, f.dt);
+      meter(g, needles.current[1], f.vu[1], 'R', half, half, h, dpr, colours.current, f.dt);
     }
   }, on);
 
   if (!on) return null;
   return <canvas ref={canvas} className={`viz viz--${kind} ${className}`} aria-hidden="true" />;
+}
+
+/* The three bars next to the playing track; sizes match `.eq` in app.css. */
+const EQ_BAR = 3;
+const EQ_GAP = 2;
+const EQ_H = 14;
+const EQ_RADIUS = 1;
+/** Lowest height of a bar, as a fraction of the full one. */
+const EQ_REST = 0.25;
+
+/**
+ * Drawn on a canvas in whole device pixels: thin bars scaled with CSS
+ * transforms land on fractional pixels under display scaling (125%, 150%)
+ * and come out uneven and blurred.
+ */
+export function LiveEq() {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const colours = useRef<Colours>({ accent: '#818cf8', text: '#fff', faint: '#888', danger: '#f87171', font: 'sans-serif', at: 0 });
+  useAudioFrames((f) => {
+    const el = canvas.current;
+    const g = el?.getContext('2d');
+    if (!el || !g) return;
+    const dpr = window.devicePixelRatio || 1;
+    const bw = Math.max(1, Math.round(EQ_BAR * dpr));
+    const gap = Math.max(1, Math.round(EQ_GAP * dpr));
+    const h = Math.round(EQ_H * dpr);
+    const w = bw * 3 + gap * 2;
+    if (el.width !== w || el.height !== h) {
+      el.width = w;
+      el.height = h;
+      el.style.width = `${w / dpr}px`;
+      el.style.height = `${h / dpr}px`;
+    }
+    readColours(el, colours.current, performance.now());
+    g.clearRect(0, 0, w, h);
+    g.fillStyle = colours.current.accent;
+    g.beginPath();
+    for (let i = 0; i < 3; i += 1) {
+      const bh = Math.round(h * (EQ_REST + (1 - EQ_REST) * f.eq[i]));
+      g.roundRect(i * (bw + gap), h - bh, bw, bh, Math.round(EQ_RADIUS * dpr));
+    }
+    g.fill();
+  }, true);
+  return <canvas ref={canvas} className="eq eq--live" aria-hidden="true" />;
 }

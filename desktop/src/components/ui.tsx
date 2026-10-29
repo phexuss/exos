@@ -5,7 +5,7 @@ import type { Source, Track } from '@/lib/types';
 import { useLibrary } from '@/store/library';
 import { imageUrl } from '@/lib/bridge';
 import { useT } from '@/i18n';
-import { useAudioFrames, useVizOn } from './Visualizer';
+import { LiveEq, useVizOn } from './Visualizer';
 
 export function Cover({
   src,
@@ -43,22 +43,11 @@ export function SourcePill({ source }: { source: Source | 'local' }) {
   return <span className={`src-pill ${source}`}>{label}</span>;
 }
 
-/** Lowest height of a bar in the playing-track equalizer, as a fraction of the full one. */
-const EQ_REST = 0.25;
-
 /** Three bars next to the playing track: lows, mids and highs when the visualizer is on, a loop otherwise. */
 export function Eq({ paused }: { paused?: boolean }) {
-  const root = useRef<HTMLSpanElement>(null);
-  const live = useVizOn();
-  useAudioFrames((f) => {
-    const bars = root.current?.children;
-    if (!bars) return;
-    for (let i = 0; i < bars.length; i += 1) {
-      (bars[i] as HTMLElement).style.transform = `scaleY(${EQ_REST + (1 - EQ_REST) * f.eq[i]})`;
-    }
-  }, live);
+  if (useVizOn()) return <LiveEq />;
   return (
-    <span ref={root} className={`eq ${live ? 'eq--live' : paused ? 'paused' : ''}`} aria-hidden>
+    <span className={`eq ${paused ? 'paused' : ''}`} aria-hidden>
       <i />
       <i />
       <i />
