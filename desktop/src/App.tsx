@@ -1,5 +1,5 @@
 import { CircleAlert } from 'lucide-react';
-import { useCallback, useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
 import { Ambient } from '@/components/Ambient';
 import { ContextMenu } from '@/components/ContextMenu';
 import { ScreenBoundary } from '@/components/ErrorBoundary';
@@ -10,26 +10,29 @@ import { Sidebar } from '@/components/Sidebar';
 import { TitleBar } from '@/components/TitleBar';
 import { Toasts } from '@/components/Toasts';
 import { useAccent } from '@/hooks/useAccent';
-import { IS_TAURI } from '@/lib/env';
+import { IS_MAC } from '@/lib/env';
 import { exampleTracks } from '@/lib/mock';
 import { installMotion } from '@/lib/motion';
 
-const IS_MAC = IS_TAURI && /Mac/i.test(navigator.userAgent);
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { Album } from '@/screens/Album';
 import { Artist } from '@/screens/Artist';
-import { Downloads } from '@/screens/Downloads';
 import { Home } from '@/screens/Home';
 import { Library } from '@/screens/Library';
 import { Login } from '@/screens/Login';
 import { Search } from '@/screens/Search';
-import { Settings } from '@/screens/Settings';
 import { useAuth } from '@/store/auth';
 import { useEngine } from '@/store/engine';
 import { useLibrary } from '@/store/library';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
 import { useSettings } from '@/store/settings';
+
+// Screens nobody opens first load on demand (and in the background once the app is idle).
+const loadSettings = () => import('@/screens/Settings');
+const loadDownloads = () => import('@/screens/Downloads');
+const Settings = lazy(() => loadSettings().then((m) => ({ default: m.Settings })));
+const Downloads = lazy(() => loadDownloads().then((m) => ({ default: m.Downloads })));
 
 function EngineBanner() {
   const status = useEngine((s) => s.status);
@@ -89,7 +92,9 @@ function Screen() {
       <div className="scroller" ref={ref}>
         {route.name !== 'settings' && <EngineBanner />}
         <div key={JSON.stringify(route)} className="route" style={{ '--dir': dir } as React.CSSProperties}>
-          <ScreenBoundary>{screen}</ScreenBoundary>
+          <ScreenBoundary>
+            <Suspense fallback={null}>{screen}</Suspense>
+          </ScreenBoundary>
         </div>
       </div>
     </main>
@@ -106,7 +111,10 @@ export function App() {
   useEffect(() => {
     installMotion();
     void useAuth.getState().bootstrap();
-    void useEngine.getState().refresh();
+    // Asking the tools for their versions can wait until the first screen is drawn.
+    const idle = window.requestIdleCallback ?? ((fn: () => void) => setTimeout(fn, 300));
+    idle(() => void useEngine.getState().refresh(), { timeout: 1500 });
+    setTimeout(() => idle(() => void Promise.all([loadSettings(), loadDownloads()])), 4000);
     if (import.meta.env.MODE === 'prototype') {
       // The design preview opens mid-session so every part of the shell is filled.
       setTimeout(() => {

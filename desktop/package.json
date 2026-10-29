@@ -1,32 +1,93 @@
 {
   "name": "exos-desktop",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "description": "EXØS desktop: Deezer + SoundCloud player with a local yt-dlp engine",
+  "author": {
+    "name": "phexuss",
+    "email": "phexuss@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/phexuss/exos",
   "type": "module",
+  "main": "dist-electron/boot.cjs",
+  "desktopName": "exos.desktop",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p . && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc -p .",
-    "tauri": "tauri"
-  },
-  "dependencies": {
-    "@tauri-apps/api": "^2.12.4",
-    "@tauri-apps/plugin-dialog": "^2.8.4",
-    "@tauri-apps/plugin-http": "^2.8.3",
-    "lucide-react": "^1.63.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "zustand": "^5.0.16"
+    "build:ui": "tsc -p . && vite build",
+    "build:electron": "node scripts/build-electron.mjs",
+    "build": "npm run build:ui && npm run build:electron",
+    "start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder",
+    "typecheck": "tsc -p . && tsc -p electron",
+    "test": "node scripts/test-engine.mjs",
+    "preview": "vite preview"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.12.4",
+    "@tanstack/react-virtual": "^3.14.24",
     "@types/node": "^22.20.5",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
+    "@types/yauzl": "^3.4.0",
     "@vitejs/plugin-react": "^4.7.0",
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
+    "lucide-react": "^1.63.0",
+    "motion": "^14.7.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "typescript": "5.8",
     "vite": "^6.4.5",
-    "vite-plugin-singlefile": "^2.3.4"
+    "vite-plugin-singlefile": "^2.3.4",
+    "yauzl": "^3.4.0",
+    "zustand": "^5.0.16"
+  },
+  "build": {
+    "appId": "dev.phexuss.exos",
+    "productName": "EXØS",
+    "executableName": "exos",
+    "artifactName": "exos-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release",
+      "buildResources": "resources"
+    },
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "resources/icon.png",
+      "package.json"
+    ],
+    "asar": true,
+    "electronLanguages": [
+      "en-US",
+      "ru"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "category": "Audio",
+      "icon": "resources/icon.png",
+      "synopsis": "Deezer + SoundCloud player"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    },
+    "mac": {
+      "target": {
+        "target": "dmg",
+        "arch": [
+          "universal"
+        ]
+      },
+      "icon": "resources/icon.icns",
+      "category": "public.app-category.music"
+    }
   }
 }

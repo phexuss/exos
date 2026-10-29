@@ -18,7 +18,7 @@ import { useEffect, useRef } from 'react';
 import { formatTime } from '@/lib/format';
 import { flyPressedCoverTo } from '@/lib/motion';
 import { useNav } from '@/store/nav';
-import { usePlayer } from '@/store/player';
+import { playhead, usePlayer } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { Cover, DownloadButton, Slider, SourcePill } from './ui';
 
@@ -26,11 +26,12 @@ function Seek() {
   const time = usePlayer((s) => s.time);
   const duration = usePlayer((s) => s.duration);
   const loading = usePlayer((s) => s.status === 'loading');
+  const playing = usePlayer((s) => s.status === 'playing');
   const seek = usePlayer((s) => s.seek);
   return (
     <div className="player__seek tabular">
       <span>{formatTime(time)}</span>
-      <Slider value={time} max={duration} onCommit={seek} loading={loading} label="Позиция" />
+      <Slider value={time} max={duration} onCommit={seek} loading={loading} label="Позиция" live={playing ? playhead : undefined} />
       <span>{formatTime(duration)}</span>
     </div>
   );

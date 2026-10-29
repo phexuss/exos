@@ -6,6 +6,7 @@ import { useAuth } from '@/store/auth';
 import { useEngine } from '@/store/engine';
 import { type CookiesBrowser, useSettings } from '@/store/settings';
 import { Toggle } from '@/components/ui';
+import { Tabs } from '@/components/Tabs';
 
 function CookiesCheck({ browser }: { browser: string }) {
   const [state, setState] = useState<{ for: string; busy: boolean; result?: CookieCheck; error?: string }>({
@@ -210,14 +211,14 @@ export function Settings() {
                   открывается вообще везде.
                 </div>
               </div>
-              <div className="tabs">
-                <button type="button" className={s.format === 'm4a' ? 'is-active' : ''} onClick={() => s.set({ format: 'm4a' })}>
-                  M4A
-                </button>
-                <button type="button" className={s.format === 'mp3' ? 'is-active' : ''} onClick={() => s.set({ format: 'mp3' })}>
-                  MP3
-                </button>
-              </div>
+              <Tabs
+                value={s.format}
+                onChange={(format) => s.set({ format })}
+                options={[
+                  { value: 'm4a', label: 'M4A' },
+                  { value: 'mp3', label: 'MP3' },
+                ]}
+              />
             </div>
           </div>
         </section>
@@ -241,6 +242,13 @@ export function Settings() {
                 <div className="row__hint">Акцентный цвет подстраивается под обложку того, что играет.</div>
               </div>
               <Toggle on={s.dynamicAccent} onChange={(v) => s.set({ dynamicAccent: v })} label="Цвет из обложки" />
+            </div>
+            <div className="row">
+              <div>
+                <div className="row__label">Счётчик кадров</div>
+                <div className="row__hint">Показывает в заголовке окна, сколько кадров в секунду рисует приложение.</div>
+              </div>
+              <Toggle on={s.showFps} onChange={(v) => s.set({ showFps: v })} label="Счётчик кадров" />
             </div>
           </div>
         </section>

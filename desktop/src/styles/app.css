@@ -202,7 +202,11 @@ img { display: block; }
 .titlebar__nav { display: flex; gap: 4px; }
 .titlebar__search { flex: 0 1 460px; margin-left: 8px; }
 .titlebar__drag { flex: 1; align-self: stretch; }
+/* The bar moves the frameless window; anything you can click inside it opts out. */
+.titlebar, .drag { -webkit-app-region: drag; app-region: drag; }
+.titlebar :is(button, input, label, a, .kbd), .drag :is(button, input, a) { -webkit-app-region: no-drag; app-region: no-drag; }
 .winctl { display: flex; align-self: stretch; }
+.fps { margin-right: 12px; font-size: 11.5px; padding: 5px 8px; white-space: nowrap; }
 .winctl button {
   width: 46px;
   display: grid;
@@ -285,7 +289,10 @@ img { display: block; }
   text-align: left;
 }
 .nav__item:hover { background: var(--hover); color: var(--text); }
-.nav__item.is-active { background: var(--fill-3); color: var(--text); }
+.nav__item.is-active { color: var(--text); }
+/* The selection is one pill that springs from item to item. */
+.nav__pill { position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--fill-3); }
+.nav__item { isolation: isolate; }
 .nav__item.is-active svg { color: var(--accent); }
 .nav__badge {
   margin-left: auto;
@@ -558,6 +565,11 @@ img { display: block; }
   cursor: default;
 }
 .tt__row:hover { background: var(--hover); }
+/* Rows mounted while scrolling a long list appear in place, without the entrance cascade. */
+.tt--virtual .tt__row { animation: none; }
+/* Rows, cards and queue items are laid out and painted on their own. */
+.tt__row, .rank__row, .queue-item { contain: layout paint style; }
+.card, .quick { contain: layout style; }
 .tt__row.is-selected { background: var(--fill-3); }
 .tt__row.is-current .tt__title { color: var(--accent); }
 .tt__num { position: relative; display: grid; place-items: center; color: var(--text-3); font-variant-numeric: tabular-nums; }
@@ -625,8 +637,9 @@ img { display: block; }
 /* ---------- search ---------- */
 
 .tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--fill-2); }
-.tabs button { height: 30px; padding: 0 14px; border-radius: 999px; font-weight: 500; font-size: 13.5px; color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; }
-.tabs button.is-active { background: var(--fill-4); color: var(--text); }
+.tabs button { position: relative; isolation: isolate; height: 30px; padding: 0 14px; border-radius: 999px; font-weight: 500; font-size: 13.5px; color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; }
+.tabs button.is-active { color: var(--text); }
+.tabs__pill { position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--fill-4); }
 .top-result {
   display: grid;
   grid-template-columns: 1fr;
@@ -781,7 +794,9 @@ img { display: block; }
   flex: 1;
 }
 .slider__rail { position: absolute; left: 0; right: 0; height: 4px; border-radius: 4px; background: var(--fill-5); overflow: hidden; }
-.slider__fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--text); border-radius: 4px; }
+.slider__fill { position: absolute; inset: 0; background: var(--text); border-radius: 4px; transform-origin: 0 50%; transform: scaleX(0); will-change: transform; }
+/* A full-width layer that slides by the played fraction, carrying the thumb at its left edge. */
+.slider__track { position: absolute; inset: 0; pointer-events: none; will-change: transform; display: flex; align-items: center; }
 .slider:hover .slider__fill, .slider.dragging .slider__fill { background: var(--accent); }
 .slider__thumb {
   position: absolute;
@@ -797,7 +812,7 @@ img { display: block; }
 /* Clicking focuses it; the browser ring there reads as a bug, so keyboard focus shows the thumb instead. */
 .slider:focus, .slider:focus-visible { outline: none; }
 .slider:hover .slider__thumb, .slider.dragging .slider__thumb, .slider:focus-visible .slider__thumb { opacity: 1; }
-.slider.loading .slider__rail { background: linear-gradient(90deg, var(--fill-3), var(--fill-6), var(--fill-3)); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+.slider.loading .slider__rail::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--fill-6), transparent); transform: translateX(-100%); animation: sheen 1.2s ease-in-out infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 
 /* ---------- side panel ---------- */
@@ -909,7 +924,6 @@ img { display: block; }
   backdrop-filter: blur(20px);
   box-shadow: inset 0 0 0 1px var(--glass-rim), 0 10px 30px var(--shadow-2);
   font-size: 13.5px;
-  animation: menu-in 180ms var(--ease-out);
 }
 .toast.error { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 50%, transparent), 0 10px 30px var(--shadow-2); }
 
@@ -931,6 +945,7 @@ img { display: block; }
     radial-gradient(50% 50% at 80% 80%, color-mix(in srgb, var(--soundcloud) 25%, transparent), transparent 70%),
     var(--ink);
 }
+.login__winctl { position: fixed; top: 0; left: 0; right: 0; height: var(--titlebar-h); display: flex; justify-content: flex-end; z-index: 5; }
 .login__mark { font-size: 120px; font-weight: 900; letter-spacing: 0.06em; line-height: 0.9; }
 .login__mark span { color: var(--accent); }
 .login__tag { font-size: 20px; color: var(--text-2); max-width: 30ch; }
@@ -949,7 +964,27 @@ img { display: block; }
 .field input:focus { border-color: var(--accent); }
 .form-error { color: var(--danger); font-size: 13.5px; }
 
-.skeleton { background: linear-gradient(90deg, var(--fill-1), var(--fill-3), var(--fill-1)); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; border-radius: 10px; }
+/* Skeletons shimmer with a moving highlight layer (transform only), so the
+   page under them is never repainted while they wait. */
+.skeleton { position: relative; display: block; overflow: hidden; background: var(--fill-2); border-radius: 10px; contain: paint; }
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--fill-3), transparent);
+  transform: translateX(-100%);
+  animation: sheen 1.4s ease-in-out infinite;
+}
+@keyframes sheen { to { transform: translateX(100%); } }
+.sk-rows { display: flex; flex-direction: column; }
+.sk-row { display: grid; grid-template-columns: 40px 42px minmax(0, 1fr) 48px; gap: 14px; align-items: center; height: 58px; padding: 0 12px; }
+.sk-row:not(:has(.sk-cover)) { grid-template-columns: 40px minmax(0, 1fr) 48px; }
+.sk-num { width: 14px; height: 12px; justify-self: center; }
+.sk-cover { width: 42px; height: 42px; border-radius: 8px; }
+.sk-lines { display: flex; flex-direction: column; gap: 8px; }
+.sk-lines .skeleton { height: 12px; border-radius: 6px; }
+.sk-dur { height: 12px; }
+.sk-sleeve { width: 220px; aspect-ratio: 1; border-radius: 12px; }
 
 .banner {
   display: grid;

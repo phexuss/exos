@@ -1,8 +1,9 @@
 /**
  * The local audio engine: yt-dlp (+ ffmpeg, + a JS runtime for YouTube)
- * running on this computer, driven from Rust. Everything here talks to
- * src-tauri; in the browser prototype it is simulated.
+ * running on this computer in Electron's utility process (electron/engine).
+ * In the browser prototype it is simulated.
  */
+import { bridge, call } from './bridge';
 import { IS_MOCK } from './env';
 import type { LocalTrack, Track } from './types';
 
@@ -91,15 +92,11 @@ export function sourceRequest(track: Track, cookiesBrowser?: string): SourceRequ
   };
 }
 
-async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  const core = await import('@tauri-apps/api/core');
-  return core.invoke<T>(cmd, args);
-}
+const invoke = call;
 
-export async function listen<T>(event: string, fn: (payload: T) => void): Promise<() => void> {
-  if (IS_MOCK) return () => {};
-  const ev = await import('@tauri-apps/api/event');
-  return ev.listen<T>(event, (e) => fn(e.payload));
+export function listen<T>(event: string, fn: (payload: T) => void): () => void {
+  if (IS_MOCK || !bridge) return () => {};
+  return bridge.on(event, (p) => fn(p as T));
 }
 
 const mockStatus: EngineStatus = {
@@ -147,21 +144,19 @@ export const engine = {
 };
 
 export async function revealInFolder(path: string): Promise<void> {
-  if (IS_MOCK) return;
-  await invoke<void>('reveal_file', { path });
+  if (IS_MOCK || !bridge) return;
+  await bridge.shell.reveal(path);
 }
 
 /** Opens a folder in the file manager (created if missing). */
 export async function openFolder(path: string): Promise<void> {
-  if (IS_MOCK) return;
-  await invoke<void>('open_folder', { path });
+  if (IS_MOCK || !bridge) return;
+  await bridge.shell.openFolder(path);
 }
 
 export async function pickFolder(): Promise<string | null> {
-  if (IS_MOCK) return null;
-  const dialog = await import('@tauri-apps/plugin-dialog');
-  const picked = await dialog.open({ directory: true, multiple: false });
-  return typeof picked === 'string' ? picked : null;
+  if (IS_MOCK || !bridge) return null;
+  return bridge.shell.pickFolder();
 }
 
 /** URL the <audio> element can play for a file on disk, served by the app's loopback server. */

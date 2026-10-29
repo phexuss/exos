@@ -1,3 +1,4 @@
+import { WindowControls } from '@/components/TitleBar';
 import { type FormEvent, useState } from 'react';
 import { useAuth } from '@/store/auth';
 
@@ -27,7 +28,10 @@ export function Login() {
 
   return (
     <div className="login">
-      <div className="login__art" data-tauri-drag-region>
+      <div className="login__winctl drag">
+        <WindowControls />
+      </div>
+      <div className="login__art drag">
         <div className="login__mark">
           EX<span>Ø</span>S
         </div>

@@ -13,6 +13,8 @@ type SettingsState = {
   /** Pass the browser's YouTube cookies to yt-dlp when YouTube asks to sign in. */
   cookiesBrowser: CookiesBrowser;
   volume: number;
+  /** Frame counter in the title bar. */
+  showFps: boolean;
   set: (patch: Partial<Omit<SettingsState, 'set'>>) => void;
 };
 
@@ -25,6 +27,7 @@ export const useSettings = create<SettingsState>()(
       format: 'm4a',
       cookiesBrowser: '',
       volume: 0.8,
+      showFps: false,
       set: (patch) => set(patch),
     }),
     {

@@ -62,6 +62,9 @@ class FakeAudio implements AudioLike {
 
 const audio: AudioLike = IS_MOCK ? new FakeAudio() : new Audio();
 
+/** The playhead right now, for things drawn every frame. */
+export const playhead = () => audio.currentTime;
+
 export type Panel = 'lyrics' | 'queue' | null;
 export type Repeat = 'off' | 'all' | 'one';
 

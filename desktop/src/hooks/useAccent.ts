@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { Track } from '@/lib/types';
 import { useSettings } from '@/store/settings';
+import { imageUrl } from '@/lib/bridge';
 
 /** Sentinel: drop the inline override so the --accent token from app.css applies. */
 const FALLBACK = '';
@@ -79,7 +80,7 @@ function extract(url: string): Promise<string> {
       }
     };
     img.onerror = () => resolve(FALLBACK);
-    img.src = url;
+    img.src = imageUrl(url) ?? url;
   });
 }
 

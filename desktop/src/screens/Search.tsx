@@ -1,12 +1,12 @@
 import { Link2, Play, SearchX } from 'lucide-react';
 import { useState } from 'react';
 import { formatTime } from '@/lib/format';
-import * as api from '@/lib/services';
+import { useSearch } from '@/lib/queries';
 import type { Track } from '@/lib/types';
-import { useAsync } from '@/hooks/useAsync';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
 import { Cover, SkeletonRows, SourcePill } from '@/components/ui';
+import { Tabs } from '@/components/Tabs';
 import { TrackTable } from '@/components/TrackTable';
 
 type Tab = 'deezer' | 'soundcloud';
@@ -56,15 +56,7 @@ export function Search({ q }: { q?: string }) {
   const go = useNav((s) => s.go);
   const query = q?.trim() ?? '';
   const link = isLink(query);
-  const results = useAsync(
-    () =>
-      !query || link
-        ? Promise.resolve([] as Track[])
-        : tab === 'deezer'
-          ? api.searchDeezer(query)
-          : api.searchSoundCloud(query),
-    [query, tab],
-  );
+  const results = useSearch(!query || link ? null : query, tab);
 
   if (!query) {
     return (
@@ -110,14 +102,14 @@ export function Search({ q }: { q?: string }) {
     <div className="page page-enter">
       <div className="section__head">
         <h1 className="h1 ellipsis">«{query}»</h1>
-        <div className="tabs">
-          <button type="button" className={tab === 'deezer' ? 'is-active' : ''} onClick={() => setTab('deezer')}>
-            Deezer
-          </button>
-          <button type="button" className={tab === 'soundcloud' ? 'is-active' : ''} onClick={() => setTab('soundcloud')}>
-            SoundCloud
-          </button>
-        </div>
+        <Tabs
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'deezer', label: 'Deezer' },
+            { value: 'soundcloud', label: 'SoundCloud' },
+          ]}
+        />
       </div>
       {results.loading ? (
         <SkeletonRows n={8} />

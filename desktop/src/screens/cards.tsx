@@ -1,6 +1,7 @@
 import { Play } from 'lucide-react';
 import { formatCount } from '@/lib/format';
 import type { AlbumCard as Album, ArtistCard as Artist, Track } from '@/lib/types';
+import { onIntent, prefetchAlbum, prefetchArtist } from '@/lib/queries';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
 import { Cover, SourcePill } from '@/components/ui';
@@ -39,7 +40,7 @@ export function TrackCard({ track, list, i }: { track: Track; list: Track[]; i: 
 export function AlbumTile({ album }: { album: Album }) {
   const go = useNav((s) => s.go);
   return (
-    <button type="button" className="card" onClick={() => go({ name: 'album', id: album.id })}>
+    <button type="button" className="card" onClick={() => go({ name: 'album', id: album.id })} {...onIntent(() => prefetchAlbum(album.id))}>
       <div className="card__art">
         <Cover src={album.coverUrl} seed={album.title} label={album.title} />
       </div>
@@ -54,7 +55,12 @@ export function AlbumTile({ album }: { album: Album }) {
 export function ArtistTile({ artist }: { artist: Artist & { fans?: number } }) {
   const go = useNav((s) => s.go);
   return (
-    <button type="button" className="card artist-card" onClick={() => go({ name: 'artist', id: artist.id })}>
+    <button
+      type="button"
+      className="card artist-card"
+      onClick={() => go({ name: 'artist', id: artist.id })}
+      {...onIntent(() => prefetchArtist(artist.id))}
+    >
       <Cover src={artist.pictureUrl} seed={artist.name} label={artist.name} round style={{ width: '100%' }} />
       <div style={{ minWidth: 0, width: '100%' }}>
         <div className="card__title ellipsis">{artist.name}</div>

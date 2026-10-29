@@ -1,16 +1,34 @@
 import { ChevronLeft, ChevronRight, Minus, Search, Square, X } from 'lucide-react';
 import { forwardRef, useEffect, useState } from 'react';
-import { IS_MOCK, IS_TAURI } from '@/lib/env';
+import { bridge } from '@/lib/bridge';
+import { IS_MAC, IS_MOCK } from '@/lib/env';
 import { useNav } from '@/store/nav';
+import { useSettings } from '@/store/settings';
+import { FpsMeter } from './FpsMeter';
 
-async function win() {
-  const { getCurrentWindow } = await import('@tauri-apps/api/window');
-  return getCurrentWindow();
+/** Minimise, maximise and close for the frameless window (macOS keeps its own buttons). */
+export function WindowControls() {
+  if (!bridge || IS_MAC) return null;
+  const { win } = bridge;
+  return (
+    <div className="winctl">
+      <button type="button" aria-label="Свернуть" onClick={() => void win.minimize()}>
+        <Minus size={16} />
+      </button>
+      <button type="button" aria-label="Развернуть" onClick={() => void win.toggleMaximize()}>
+        <Square size={13} />
+      </button>
+      <button type="button" className="close" aria-label="Закрыть" onClick={() => void win.close()}>
+        <X size={17} />
+      </button>
+    </div>
+  );
 }
 
 export const TitleBar = forwardRef<HTMLInputElement>(function TitleBar(_, searchRef) {
   const { back, forward, canBack, canForward, go, route } = useNav();
   const [q, setQ] = useState('');
+  const showFps = useSettings((s) => s.showFps);
 
   useEffect(() => {
     if (route.name === 'search') setQ(route.q ?? '');
@@ -24,8 +42,8 @@ export const TitleBar = forwardRef<HTMLInputElement>(function TitleBar(_, search
   }, [q, go]);
 
   return (
-    <header className="titlebar" data-tauri-drag-region>
-      <div className="titlebar__brand" data-tauri-drag-region>
+    <header className="titlebar" onDoubleClick={(e) => e.target === e.currentTarget && void bridge?.win.toggleMaximize()}>
+      <div className="titlebar__brand">
         <span className="wordmark">
           EX<span>Ø</span>S
         </span>
@@ -63,25 +81,14 @@ export const TitleBar = forwardRef<HTMLInputElement>(function TitleBar(_, search
         />
         <span className="kbd">Ctrl K</span>
       </label>
-      <div className="titlebar__drag" data-tauri-drag-region />
+      <div className="titlebar__drag" />
+      {showFps && <FpsMeter />}
       {IS_MOCK && (
         <span className="kbd" style={{ marginRight: 14, fontSize: 11.5, padding: '5px 8px' }}>
           Макет: данные для примера
         </span>
       )}
-      {IS_TAURI && !/Mac/i.test(navigator.userAgent) && (
-        <div className="winctl">
-          <button type="button" aria-label="Свернуть" onClick={() => void win().then((w) => w.minimize())}>
-            <Minus size={16} />
-          </button>
-          <button type="button" aria-label="Развернуть" onClick={() => void win().then((w) => w.toggleMaximize())}>
-            <Square size={13} />
-          </button>
-          <button type="button" className="close" aria-label="Закрыть" onClick={() => void win().then((w) => w.close())}>
-            <X size={17} />
-          </button>
-        </div>
-      )}
+      <WindowControls />
     </header>
   );
 });

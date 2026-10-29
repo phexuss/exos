@@ -1,21 +1,20 @@
 import { Download, Play, Shuffle } from 'lucide-react';
 import { formatTotal, tracksLabel } from '@/lib/format';
-import * as api from '@/lib/services';
-import { useAsync } from '@/hooks/useAsync';
+import { onIntent, prefetchArtist, useAlbum } from '@/lib/queries';
 import { useLibrary } from '@/store/library';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
-import { Cover, SkeletonRows } from '@/components/ui';
+import { AlbumSkeleton, Cover } from '@/components/ui';
 import { TrackTable } from '@/components/TrackTable';
 
 export function Album({ id }: { id: string }) {
-  const { data, loading, error } = useAsync(() => api.getAlbum(id), [id]);
+  const { data, loading, error } = useAlbum(id);
   const playQueue = usePlayer((s) => s.playQueue);
   const downloadMany = useLibrary((s) => s.downloadMany);
   const missing = useLibrary((s) => (data ? data.tracks.filter((t) => !s.tracks.some((l) => l.id === t.id)).length : 0));
   const go = useNav((s) => s.go);
 
-  if (loading) return <div className="page"><SkeletonRows n={10} /></div>;
+  if (loading) return <AlbumSkeleton />;
   if (error || !data) return <div className="page"><div className="empty"><strong>Альбом не загрузился</strong>{error}</div></div>;
 
   const total = data.tracks.reduce((s, t) => s + t.durationSec, 0);
@@ -27,7 +26,12 @@ export function Album({ id }: { id: string }) {
           <h1 className="detail-head__title">{data.title}</h1>
           <div className="detail-head__meta">
             {data.artistId ? (
-              <button type="button" style={{ fontWeight: 500, color: 'var(--text)' }} onClick={() => go({ name: 'artist', id: data.artistId })}>
+              <button
+                type="button"
+                style={{ fontWeight: 500, color: 'var(--text)' }}
+                onClick={() => go({ name: 'artist', id: data.artistId })}
+                {...onIntent(() => prefetchArtist(data.artistId))}
+              >
                 {data.artistName}
               </button>
             ) : (

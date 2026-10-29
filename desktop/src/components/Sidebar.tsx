@@ -1,4 +1,6 @@
 import { ArrowDownToLine, Home, Library, LogOut, Search, Settings } from 'lucide-react';
+import { motion } from 'motion/react';
+import { snappy } from '@/lib/springs';
 import { useAuth } from '@/store/auth';
 import { useEngine } from '@/store/engine';
 import { useLibrary } from '@/store/library';
@@ -21,6 +23,7 @@ export function Sidebar() {
       onClick={() => go(r)}
       title={label}
     >
+      {route.name === r.name && <motion.span layoutId="nav-pill" className="nav__pill" transition={snappy} />}
       {icon}
       <span>{label}</span>
       {badge ? <em className="nav__badge">{badge}</em> : null}

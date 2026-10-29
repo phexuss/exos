@@ -1,9 +1,8 @@
 import { Play } from 'lucide-react';
 import { useMemo } from 'react';
 import { formatTime } from '@/lib/format';
-import * as api from '@/lib/services';
+import { useChart, useRecent, useSimilar } from '@/lib/queries';
 import type { Track } from '@/lib/types';
-import { useAsync } from '@/hooks/useAsync';
 import { useAuth } from '@/store/auth';
 import { usePlayer } from '@/store/player';
 import { useMenu } from '@/components/ContextMenu';
@@ -77,10 +76,10 @@ function RankList({ tracks }: { tracks: Track[] }) {
 
 export function Home() {
   const user = useAuth((s) => s.user);
-  const chart = useAsync(() => api.getChart(), []);
-  const recent = useAsync(() => api.getCloudRecent().catch(() => [] as Track[]), []);
+  const chart = useChart();
+  const recent = useRecent();
   const seed = recent.data?.[0] ?? chart.data?.tracks[0] ?? null;
-  const similar = useAsync(() => (seed ? api.getSimilar(seed) : Promise.resolve([])), [seed?.id]);
+  const similar = useSimilar(seed);
   const playQueue = usePlayer((s) => s.playQueue);
   const top = chart.data?.tracks ?? [];
   const recentList = useMemo(() => recent.data ?? [], [recent.data]);

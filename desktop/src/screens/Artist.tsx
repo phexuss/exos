@@ -1,24 +1,24 @@
 import { Download, Play } from 'lucide-react';
 import { useState } from 'react';
 import { formatCount, placeholderGradient, tracksLabel } from '@/lib/format';
-import * as api from '@/lib/services';
-import { useAsync } from '@/hooks/useAsync';
+import { imageUrl } from '@/lib/bridge';
+import { useArtist, useArtistAlbums, useArtistTracks } from '@/lib/queries';
 import { useLibrary } from '@/store/library';
 import { usePlayer } from '@/store/player';
-import { SkeletonRows } from '@/components/ui';
+import { ArtistSkeleton, SkeletonRows } from '@/components/ui';
 import { TrackTable } from '@/components/TrackTable';
 import { AlbumTile } from './cards';
 
 export function Artist({ id }: { id: string }) {
-  const artist = useAsync(() => api.getArtist(id), [id]);
-  const tracks = useAsync(() => api.getArtistTracks(id), [id]);
-  const albums = useAsync(() => api.getArtistAlbums(id), [id]);
+  const artist = useArtist(id);
+  const tracks = useArtistTracks(id);
+  const albums = useArtistAlbums(id);
   const [all, setAll] = useState(false);
   const playQueue = usePlayer((s) => s.playQueue);
   const downloadMany = useLibrary((s) => s.downloadMany);
   const top = tracks.data ?? [];
 
-  if (artist.loading) return <div className="page"><SkeletonRows n={8} /></div>;
+  if (artist.loading) return <ArtistSkeleton />;
   if (!artist.data) return <div className="page"><div className="empty"><strong>Артист не загрузился</strong>{artist.error}</div></div>;
   const a = artist.data;
 
@@ -28,7 +28,7 @@ export function Artist({ id }: { id: string }) {
       <header className="artist-banner">
         <div
           className="artist-banner__photo"
-          style={{ backgroundImage: a.pictureUrl ? `url("${a.pictureUrl}")` : placeholderGradient(a.name) }}
+          style={{ backgroundImage: a.pictureUrl ? `url("${imageUrl(a.pictureUrl)}")` : placeholderGradient(a.name) }}
         />
         <div className="artist-banner__body">
           <h1 className="artist-banner__name">{a.name}</h1>

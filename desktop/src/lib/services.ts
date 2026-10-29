@@ -13,6 +13,14 @@ import type {
   User,
 } from './types';
 
+/** Seconds the engine may answer from disk before asking the API again. */
+const TTL = {
+  chart: 30 * 60,
+  search: 10 * 60,
+  catalogue: 24 * 3600,
+  lyrics: 7 * 24 * 3600,
+};
+
 type DzArtist = {
   id: number;
   name: string;
@@ -136,7 +144,7 @@ export async function getChart(): Promise<Chart> {
     tracks: { data: DzTrack[] };
     albums: { data: DzAlbum[] };
     artists: { data: DzArtist[] };
-  }>('/search/chart');
+  }>('/search/chart', undefined, TTL.chart);
   return {
     tracks: raw.tracks.data.map((t) => mapDzTrack(t)),
     albums: raw.albums.data.map(mapDzAlbum),
@@ -146,36 +154,36 @@ export async function getChart(): Promise<Chart> {
 
 export async function searchDeezer(q: string): Promise<Track[]> {
   if (IS_MOCK) return mock.search(q, 'deezer');
-  const raw = await apiGet<{ data: DzTrack[] }>('/search', { q });
+  const raw = await apiGet<{ data: DzTrack[] }>('/search', { q }, TTL.search);
   return raw.data.map((t) => mapDzTrack(t));
 }
 
 export async function searchSoundCloud(q: string): Promise<Track[]> {
   if (IS_MOCK) return mock.search(q, 'soundcloud');
-  const raw = await apiGet<{ data: ScTrack[] }>('/search/soundcloud', { q });
+  const raw = await apiGet<{ data: ScTrack[] }>('/search/soundcloud', { q }, TTL.search);
   return raw.data.map(mapScTrack);
 }
 
 export async function getArtist(id: string): Promise<ArtistDetails> {
   if (IS_MOCK) return mock.artist(id);
-  return mapDzArtist(await apiGet<DzArtist>(`/artists/${id}`));
+  return mapDzArtist(await apiGet<DzArtist>(`/artists/${id}`, undefined, TTL.catalogue));
 }
 
 export async function getArtistTracks(id: string): Promise<Track[]> {
   if (IS_MOCK) return mock.artistTracks(id);
-  const raw = await apiGet<{ data: DzTrack[] }>(`/artists/${id}/tracks`);
+  const raw = await apiGet<{ data: DzTrack[] }>(`/artists/${id}/tracks`, undefined, TTL.catalogue);
   return raw.data.map((t) => mapDzTrack(t));
 }
 
 export async function getArtistAlbums(id: string): Promise<AlbumCard[]> {
   if (IS_MOCK) return mock.artistAlbums(id);
-  const raw = await apiGet<{ data: DzAlbum[] }>(`/artists/${id}/albums`);
+  const raw = await apiGet<{ data: DzAlbum[] }>(`/artists/${id}/albums`, undefined, TTL.catalogue);
   return raw.data.map(mapDzAlbum);
 }
 
 export async function getAlbum(id: string): Promise<AlbumDetail> {
   if (IS_MOCK) return mock.album(id);
-  const raw = await apiGet<DzAlbum & { tracks?: { data: DzTrack[] } }>(`/albums/${id}`);
+  const raw = await apiGet<DzAlbum & { tracks?: { data: DzTrack[] } }>(`/albums/${id}`, undefined, TTL.catalogue);
   const card = mapDzAlbum(raw);
   return {
     ...card,
@@ -196,7 +204,7 @@ export async function getSimilar(track: Track): Promise<SimilarTrack[]> {
       isrc: string | null;
       deezerId: number;
     }[]
-  >('/search/similar', { artist: primaryArtist(track.artist.name), track: track.title });
+  >('/search/similar', { artist: primaryArtist(track.artist.name), track: track.title }, TTL.catalogue);
   return raw.map((s) => ({
     id: String(s.deezerId),
     title: s.title,
@@ -212,11 +220,15 @@ export async function getSimilar(track: Track): Promise<SimilarTrack[]> {
 export async function getLyrics(track: Track): Promise<Lyrics | null> {
   if (IS_MOCK) return mock.lyrics(track);
   try {
-    return await apiGet<Lyrics>('/lyrics', {
-      artist: primaryArtist(track.artist.name),
-      track: track.title,
-      duration: track.durationSec,
-    });
+    return await apiGet<Lyrics>(
+      '/lyrics',
+      {
+        artist: primaryArtist(track.artist.name),
+        track: track.title,
+        duration: track.durationSec,
+      },
+      TTL.lyrics,
+    );
   } catch {
     return null;
   }

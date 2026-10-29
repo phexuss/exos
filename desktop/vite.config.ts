@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 
 // `vite build --mode prototype` produces one self-contained HTML file with
-// mock data (used for the design preview). Tauri uses the normal build.
+// mock data (used for the design preview). The app uses the normal build.
 export default defineConfig(({ mode }) => ({
   plugins: [react(), ...(mode === 'prototype' ? [viteSingleFile()] : [])],
   resolve: {
@@ -12,7 +12,6 @@ export default defineConfig(({ mode }) => ({
   },
   clearScreen: false,
   server: { port: 1420, strictPort: true },
-  envPrefix: ['VITE_', 'TAURI_ENV_'],
   build: {
     target: 'es2021',
     outDir: mode === 'prototype' ? 'dist-prototype' : 'dist',
