@@ -157,7 +157,7 @@ test('playlist import: SoundCloud tracks and Spotify embed pages', () => {
   assert.equal(spotify.parseLink('https://open.spotify.com/track/1'), null);
 
   const next = {
-    props: { pageProps: { state: { data: { entity: {
+    props: { pageProps: { state: { settings: { session: { accessToken: 'BQD-anonymous-web-player-token', isAnonymous: true } }, data: { entity: {
       type: 'playlist',
       name: 'Night drive',
       trackList: [
@@ -169,6 +169,7 @@ test('playlist import: SoundCloud tracks and Spotify embed pages', () => {
   const page = `<html><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(next)}</script></html>`;
   assert.deepEqual(spotify.parseEmbed(page), {
     name: 'Night drive',
+    token: 'BQD-anonymous-web-player-token',
     items: [
       { title: 'Midnight City', artist: 'M83', durationSec: 244 },
       { title: 'Nightcall', artist: 'Kavinsky, Lovefoxxx', durationSec: 258 },
@@ -177,8 +178,42 @@ test('playlist import: SoundCloud tracks and Spotify embed pages', () => {
   // The older embed: base64 JSON in the Web API's own shape.
   const old = { name: 'Old', tracks: { items: [{ track: { name: 'A', artists: [{ name: 'X' }, { name: 'Y' }], duration_ms: 1000 } }] } };
   const oldPage = `<script id="resource" type="application/json">${Buffer.from(JSON.stringify(old)).toString('base64')}</script>`;
-  assert.deepEqual(spotify.parseEmbed(oldPage), { name: 'Old', items: [{ title: 'A', artist: 'X, Y', durationSec: 1 }] });
+  assert.deepEqual(spotify.parseEmbed(oldPage), { name: 'Old', items: [{ title: 'A', artist: 'X, Y', durationSec: 1 }], token: null });
   assert.equal(spotify.parseEmbed('<html>nothing</html>'), null);
+});
+
+test('playlist import: Spotify lists longer than the embed shows', async () => {
+  const realFetch = globalThis.fetch;
+  const track = (i: number) => ({ title: `T${i}`, subtitle: 'A', duration: 1000 });
+  const page = `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
+    props: { pageProps: { state: { settings: { session: { accessToken: 'anon-token-0123456789abcdef' } }, data: { entity: { name: 'Long', trackList: Array.from({ length: 100 }, (_, i) => track(i)) } } } } },
+  })}</script>`;
+  const auth: (string | null)[] = [];
+  let apiUp = true;
+  globalThis.fetch = (async (input: string | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.startsWith('https://open.spotify.com/embed/playlist/abc')) return new Response(page);
+    auth.push(new Headers(init?.headers).get('authorization'));
+    if (!apiUp) return new Response('no', { status: 401 });
+    const offset = Number(new URL(url).searchParams.get('offset'));
+    const items = Array.from({ length: offset === 100 ? 100 : 50 }, (_, i) => ({
+      track: { name: `T${offset + i}`, artists: [{ name: 'A' }], duration_ms: 1000 },
+    }));
+    const next = offset === 100 ? 'https://api.spotify.com/v1/playlists/abc/tracks?offset=200&limit=100' : null;
+    return Response.json({ items, next });
+  }) as typeof fetch;
+  try {
+    const full = await spotify.playlist('https://open.spotify.com/playlist/abc');
+    assert.equal(full.items.length, 250);
+    assert.equal(full.items[249].title, 'T249');
+    assert.equal(full.truncated, false);
+    assert.deepEqual(auth, ['Bearer anon-token-0123456789abcdef', 'Bearer anon-token-0123456789abcdef']);
+    apiUp = false;
+    const cut = await spotify.playlist('https://open.spotify.com/playlist/abc');
+    assert.deepEqual([cut.items.length, cut.truncated], [100, true]);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
 
 test('yt-dlp helpers', () => {

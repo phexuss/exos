@@ -14,7 +14,8 @@ export type ImportSource = 'soundcloud' | 'spotify';
 
 export type ImportProgress = { stage: 'reading' } | { stage: 'matching'; done: number; total: number };
 
-export type ImportResult = { name: string; source: ImportSource; tracks: Track[]; unmatched: number };
+/** `truncated`: Spotify showed only the start of a longer list. */
+export type ImportResult = { name: string; source: ImportSource; tracks: Track[]; unmatched: number; truncated?: boolean };
 
 type SpotifyItem = { title: string; artist: string; durationSec: number };
 
@@ -119,7 +120,8 @@ export async function importPlaylist(url: string, onProgress: (p: ImportProgress
     const set = await call<{ name: string; tracks: Track[] }>('import_soundcloud', { url: url.trim() });
     return { name: set.name, source, tracks: set.tracks, unmatched: 0 };
   }
-  const list = await call<{ name: string; items: SpotifyItem[] }>('import_spotify', { url: url.trim() });
+  const list = await call<{ name: string; items: SpotifyItem[]; truncated: boolean }>('import_spotify', { url: url.trim() });
   const tracks = await matchAll(list.items, onProgress);
-  return { name: list.name, source, tracks, unmatched: tracks.filter((tr) => tr.id.startsWith('sp_')).length };
+  const unmatched = tracks.filter((tr) => tr.id.startsWith('sp_')).length;
+  return { name: list.name, source, tracks, unmatched, truncated: list.truncated };
 }
