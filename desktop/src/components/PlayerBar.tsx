@@ -23,7 +23,6 @@ import { playhead, usePlayer } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { FxPopover } from './FxPopover';
 import { Cover, DownloadButton, Slider, SourcePill } from './ui';
-import { Visualizer } from './Visualizer';
 
 function Seek() {
   const time = usePlayer((s) => s.time);
@@ -95,7 +94,6 @@ export function PlayerBar() {
 
   return (
     <footer className={`player slab ${status === 'playing' ? 'is-playing' : ''}`}>
-      <Visualizer kind="strip" className="player__viz" />
       <div className="player__now" ref={nowRef}>
         {current ? (
           <>

@@ -54,8 +54,6 @@
   --sidebar-w: 240px;
   --panel-w: 360px;
   --player-h: 88px;
-  --viz-strip-h: 40px;
-  --viz-strip-opacity: 0.3;
   --viz-np-h: 96px;
   --gutter: 28px;
   --radius-sm: 8px;
@@ -944,15 +942,6 @@ img { display: block; }
 /* ---------- visualizers ---------- */
 
 .viz { display: block; width: 100%; height: 100%; pointer-events: none; }
-.player__viz {
-  position: absolute;
-  inset: auto 0 0;
-  height: var(--viz-strip-h);
-  z-index: -1;
-  border-radius: 0 0 var(--radius-shell) var(--radius-shell);
-  opacity: var(--viz-strip-opacity);
-  mask-image: linear-gradient(0deg, black, transparent);
-}
 .np.has-viz .np__tilt { width: min(100%, 40vh); }
 .np__viz { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; width: min(100%, 40vh); animation: rise var(--dur-3) var(--ease-spring) both; animation-delay: 160ms; }
 .np__viz .viz { height: var(--viz-np-h); }

@@ -3,7 +3,7 @@ import { reducedMotion } from '@/lib/motion';
 import { BANDS, type Frame, subscribe, VU_REF_DB, WAVE } from '@/lib/visualizer';
 import { useSettings } from '@/store/settings';
 
-export type VizKind = 'bars' | 'wave' | 'vu' | 'strip';
+export type VizKind = 'bars' | 'wave' | 'vu';
 
 /** Visualizers are on unless turned off in settings or the system asks for less motion. */
 export function useVizOn() {
@@ -77,29 +77,6 @@ function bars(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: 
     if (peaks[i] * h < BAR_MIN * dpr * 2) continue;
     g.rect(i * (bw + gap), h - peaks[i] * h - PEAK_H * dpr * 2, bw, PEAK_H * dpr);
   }
-  g.fill();
-}
-
-/** A smooth, mirrored spectrum for the player bar: lows in the middle, highs at the ends. */
-function strip(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, c: Colours) {
-  const n = BANDS * 2;
-  const step = w / (n - 1);
-  const y = (k: number) => {
-    const i = k < BANDS ? BANDS - 1 - k : k - BANDS;
-    return h - f.bands[i] * h;
-  };
-  g.fillStyle = c.accent;
-  g.beginPath();
-  g.moveTo(0, h);
-  g.lineTo(0, y(0));
-  for (let k = 1; k < n; k += 1) {
-    const x0 = (k - 1) * step;
-    const x1 = k * step;
-    g.quadraticCurveTo(x0, y(k - 1), (x0 + x1) / 2, (y(k - 1) + y(k)) / 2);
-  }
-  g.lineTo(w, y(n - 1));
-  g.lineTo(w, h);
-  g.closePath();
   g.fill();
 }
 
@@ -211,7 +188,6 @@ export function Visualizer({ kind, className = '' }: { kind: VizKind; className?
     readColours(el, colours.current, performance.now());
     g.clearRect(0, 0, w, h);
     if (kind === 'bars') bars(g, f, w, h, dpr, colours.current, peaks.current);
-    else if (kind === 'strip') strip(g, f, w, h, colours.current);
     else if (kind === 'wave') wave(g, f, w, h, dpr, colours.current);
     else {
       const half = w / 2;
