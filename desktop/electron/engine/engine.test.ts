@@ -170,6 +170,7 @@ test('playlist import: SoundCloud tracks and Spotify embed pages', () => {
   assert.deepEqual(spotify.parseEmbed(page), {
     name: 'Night drive',
     token: 'BQD-anonymous-web-player-token',
+    listed: 2,
     items: [
       { title: 'Midnight City', artist: 'M83', durationSec: 244 },
       { title: 'Nightcall', artist: 'Kavinsky, Lovefoxxx', durationSec: 258 },
@@ -178,39 +179,53 @@ test('playlist import: SoundCloud tracks and Spotify embed pages', () => {
   // The older embed: base64 JSON in the Web API's own shape.
   const old = { name: 'Old', tracks: { items: [{ track: { name: 'A', artists: [{ name: 'X' }, { name: 'Y' }], duration_ms: 1000 } }] } };
   const oldPage = `<script id="resource" type="application/json">${Buffer.from(JSON.stringify(old)).toString('base64')}</script>`;
-  assert.deepEqual(spotify.parseEmbed(oldPage), { name: 'Old', items: [{ title: 'A', artist: 'X, Y', durationSec: 1 }], token: null });
+  assert.deepEqual(spotify.parseEmbed(oldPage), { name: 'Old', items: [{ title: 'A', artist: 'X, Y', durationSec: 1 }], listed: 1, token: null });
   assert.equal(spotify.parseEmbed('<html>nothing</html>'), null);
 });
 
 test('playlist import: Spotify lists longer than the embed shows', async () => {
   const realFetch = globalThis.fetch;
   const track = (i: number) => ({ title: `T${i}`, subtitle: 'A', duration: 1000 });
-  const page = `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
+  const next = (data: unknown) => `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify(data)}</script>`;
+  const page = next({
     props: { pageProps: { state: { settings: { session: { accessToken: 'anon-token-0123456789abcdef' } }, data: { entity: { name: 'Long', trackList: Array.from({ length: 100 }, (_, i) => track(i)) } } } } },
-  })}</script>`;
+  });
   const auth: (string | null)[] = [];
-  let apiUp = true;
+  let spUp = true;
   globalThis.fetch = (async (input: string | URL, init?: RequestInit) => {
-    const url = String(input);
-    if (url.startsWith('https://open.spotify.com/embed/playlist/abc')) return new Response(page);
-    auth.push(new Headers(init?.headers).get('authorization'));
-    if (!apiUp) return new Response('no', { status: 401 });
-    const offset = Number(new URL(url).searchParams.get('offset'));
-    const items = Array.from({ length: offset === 100 ? 100 : 50 }, (_, i) => ({
-      track: { name: `T${offset + i}`, artists: [{ name: 'A' }], duration_ms: 1000 },
-    }));
-    const next = offset === 100 ? 'https://api.spotify.com/v1/playlists/abc/tracks?offset=200&limit=100' : null;
-    return Response.json({ items, next });
+    const url = new URL(String(input));
+    if (url.pathname === '/embed/playlist/abc') return new Response(page);
+    if (url.pathname.startsWith('/embed/track/')) {
+      const n = Number(url.pathname.split('/').pop()?.slice(1));
+      if (n === 150) return new Response('gone', { status: 404 });
+      return new Response(next({ props: { pageProps: { state: { data: { entity: { type: 'track', name: `T${n}`, artists: [{ name: 'A' }, { name: 'B' }], duration: 2000 } } } } } }));
+    }
+    if (url.hostname === 'spclient.wg.spotify.com') {
+      auth.push(new Headers(init?.headers).get('authorization'));
+      if (!spUp) return new Response('no', { status: 401 });
+      const from = Number(url.searchParams.get('from'));
+      // 199 entries in all: 100 in the embed, then pages of 60 and 39, one of them an episode.
+      const count = from === 100 ? 60 : 39;
+      const items = Array.from({ length: count }, (_, i) => ({ uri: from + i === 120 ? 'spotify:episode:x' : `spotify:track:t${from + i}` }));
+      return Response.json({ length: 199, contents: { pos: from, truncated: false, items } });
+    }
+    return new Response('unexpected', { status: 500 });
   }) as typeof fetch;
   try {
-    const full = await spotify.playlist('https://open.spotify.com/playlist/abc');
-    assert.equal(full.items.length, 250);
-    assert.equal(full.items[249].title, 'T249');
-    assert.equal(full.truncated, false);
+    const long = await spotify.playlist('https://open.spotify.com/playlist/abc');
+    assert.equal(long.items.length, 100);
+    assert.equal(long.rest.length, 98);
+    assert.deepEqual([long.rest[0], long.rest.at(-1), long.truncated], ['t100', 't198', false]);
     assert.deepEqual(auth, ['Bearer anon-token-0123456789abcdef', 'Bearer anon-token-0123456789abcdef']);
-    apiUp = false;
+    const titled = await spotify.tracks(['t101', 't150', 't198']);
+    assert.deepEqual(titled, [
+      { title: 'T101', artist: 'A, B', durationSec: 2 },
+      null,
+      { title: 'T198', artist: 'A, B', durationSec: 2 },
+    ]);
+    spUp = false;
     const cut = await spotify.playlist('https://open.spotify.com/playlist/abc');
-    assert.deepEqual([cut.items.length, cut.truncated], [100, true]);
+    assert.deepEqual([cut.items.length, cut.rest.length, cut.truncated], [100, 0, true]);
   } finally {
     globalThis.fetch = realFetch;
   }

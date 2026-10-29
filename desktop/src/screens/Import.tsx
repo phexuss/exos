@@ -30,6 +30,7 @@ export function ImportScreen({ url: initial = '' }: { url?: string }) {
       toast(t('importer.done', { name: result.name, tracks: tracksLabel(result.tracks.length) }));
       if (result.unmatched) toast(t('importer.unmatched', { n: result.unmatched }));
       if (result.truncated) toast(t('importer.truncated', { n: result.tracks.length }));
+      if (result.lost) toast(t('importer.lost', { n: result.lost }));
       go({ name: 'playlist', id });
     } catch (e) {
       setError(t('importer.failed', { error: e instanceof Error ? e.message : String(e) }));
@@ -41,9 +42,12 @@ export function ImportScreen({ url: initial = '' }: { url?: string }) {
   const status =
     progress?.stage === 'reading'
       ? t('importer.reading')
-      : progress?.stage === 'matching'
-        ? t('importer.matching', { done: progress.done, total: progress.total })
-        : null;
+      : progress?.stage === 'loading'
+        ? t('importer.loading', { done: progress.done, total: progress.total })
+        : progress?.stage === 'matching'
+          ? t('importer.matching', { done: progress.done, total: progress.total })
+          : null;
+  const counted = progress && progress.stage !== 'reading' ? progress : null;
 
   return (
     <div className="page page-enter">
@@ -81,8 +85,8 @@ export function ImportScreen({ url: initial = '' }: { url?: string }) {
         </div>
         {busy && (
           <div className="import__progress" aria-live="polite">
-            <div className={`bar ${progress?.stage === 'matching' ? '' : 'indet'}`}>
-              <i style={{ width: progress?.stage === 'matching' ? `${(progress.done / progress.total) * 100}%` : undefined }} />
+            <div className={`bar ${counted ? '' : 'indet'}`}>
+              <i style={{ width: counted ? `${(counted.done / counted.total) * 100}%` : undefined }} />
             </div>
             <span className="muted tabular">{status}</span>
           </div>

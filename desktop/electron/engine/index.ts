@@ -42,6 +42,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
   http: (a) => http.request(a.req),
   import_soundcloud: (a) => soundcloud.playlist(a.url),
   import_spotify: (a) => spotify.playlist(a.url),
+  spotify_tracks: (a) => spotify.tracks(a.ids),
 };
 
 const ready = media.start();
