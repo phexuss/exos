@@ -21,6 +21,7 @@ import { Artist } from '@/screens/Artist';
 import { Home } from '@/screens/Home';
 import { Library } from '@/screens/Library';
 import { Login } from '@/screens/Login';
+import { ImportScreen } from '@/screens/Import';
 import { PlaylistScreen } from '@/screens/Playlist';
 import { Search } from '@/screens/Search';
 import { useAuth } from '@/store/auth';
@@ -90,6 +91,9 @@ function Screen() {
       break;
     case 'playlist':
       screen = <PlaylistScreen id={route.id} />;
+      break;
+    case 'import':
+      screen = <ImportScreen url={route.url} />;
       break;
   }
   return (

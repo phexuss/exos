@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Home, Library, LogOut, Plus, Search, Settings } from 'lucide-react';
+import { ArrowDownToLine, Home, Import, Library, LogOut, Plus, Search, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useT } from '@/i18n';
@@ -89,6 +89,15 @@ export function Sidebar() {
       <nav className="nav sidebar__playlists">
         <div className="nav__label nav__label--action">
           <span>{t('playlist.playlists')}</span>
+          <button
+            type="button"
+            className={`icon-btn sm ${route.name === 'import' ? 'is-on' : ''}`}
+            aria-label={t('importer.button')}
+            title={t('importer.button')}
+            onClick={() => go({ name: 'import' })}
+          >
+            <Import size={16} />
+          </button>
           <button
             type="button"
             className="icon-btn sm"

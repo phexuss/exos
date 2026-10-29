@@ -1391,3 +1391,15 @@ img { display: block; }
     transition-duration: 1ms !important;
   }
 }
+
+/* ---------- playlist import ---------- */
+
+.import__intro { margin: 0; max-width: 60ch; }
+.import__form { display: flex; flex-direction: column; gap: 14px; max-width: 760px; }
+.import__row { display: flex; gap: 10px; }
+.import__row input { flex: 1; min-width: 0; }
+.import__row .btn { height: 44px; }
+.import__progress { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; }
+.import__sources { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 32px; margin: 0; max-width: 760px; }
+.import__sources dt { font-weight: 700; margin-bottom: 4px; }
+.import__sources dd { margin: 0; font-size: 14px; line-height: 1.5; }

@@ -14,6 +14,7 @@ const media = await import('./media');
 const api = await import('./http');
 const sc = await import('./soundcloud');
 const yt = await import('./ytdlp');
+const spotify = await import('./spotify');
 
 const data = Buffer.from(Array.from({ length: 5000 }, (_, i) => i % 251));
 let upstreamUp = true;
@@ -126,6 +127,58 @@ test('soundcloud: finds the client id, picks a stream, parses playlists', () => 
   assert.deepEqual(p.segments, ['https://cf-hls-media.sndcdn.com/playlist/abc/seg0.m4s?a=1', 'https://other.example/seg1.m4s']);
   assert.deepEqual(sc.parsePlaylist(base, '#EXTM3U\n#EXTINF:10,\n/media/0/1.mp3\n').segments, ['https://cf-hls-media.sndcdn.com/media/0/1.mp3']);
   assert.throws(() => sc.parsePlaylist(base, '#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI="k"\nseg.ts\n'));
+});
+
+test('playlist import: SoundCloud tracks and Spotify embed pages', () => {
+  assert.deepEqual(
+    sc.mapApiTrack({
+      id: 42,
+      title: 'Song',
+      duration: 30_000,
+      full_duration: 181_400,
+      permalink_url: 'https://soundcloud.com/who/song',
+      artwork_url: 'https://i1.sndcdn.com/artworks-abc-large.jpg',
+      user: { id: 7, username: 'who' },
+    }),
+    {
+      id: 'sc_42',
+      title: 'Song',
+      artist: { id: '7', name: 'who' },
+      durationSec: 181,
+      coverUrl: 'https://i1.sndcdn.com/artworks-abc-t500x500.jpg',
+      isrc: 'https://soundcloud.com/who/song',
+      source: 'soundcloud',
+    },
+  );
+  assert.equal(sc.mapApiTrack({ id: 1 }), null);
+
+  assert.deepEqual(spotify.parseLink('https://open.spotify.com/intl-ru/playlist/37i9dQZF1DX?si=abc'), { kind: 'playlist', id: '37i9dQZF1DX' });
+  assert.deepEqual(spotify.parseLink('spotify:album:4aawyAB9vmqN3uQ7FjRGTy'), { kind: 'album', id: '4aawyAB9vmqN3uQ7FjRGTy' });
+  assert.equal(spotify.parseLink('https://open.spotify.com/track/1'), null);
+
+  const next = {
+    props: { pageProps: { state: { data: { entity: {
+      type: 'playlist',
+      name: 'Night drive',
+      trackList: [
+        { uri: 'spotify:track:1', title: 'Midnight City', subtitle: 'M83', duration: 243_960 },
+        { uri: 'spotify:track:2', title: 'Nightcall', subtitle: 'Kavinsky,\u00a0Lovefoxxx', duration: 258_000 },
+      ],
+    } } } } },
+  };
+  const page = `<html><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(next)}</script></html>`;
+  assert.deepEqual(spotify.parseEmbed(page), {
+    name: 'Night drive',
+    items: [
+      { title: 'Midnight City', artist: 'M83', durationSec: 244 },
+      { title: 'Nightcall', artist: 'Kavinsky, Lovefoxxx', durationSec: 258 },
+    ],
+  });
+  // The older embed: base64 JSON in the Web API's own shape.
+  const old = { name: 'Old', tracks: { items: [{ track: { name: 'A', artists: [{ name: 'X' }, { name: 'Y' }], duration_ms: 1000 } }] } };
+  const oldPage = `<script id="resource" type="application/json">${Buffer.from(JSON.stringify(old)).toString('base64')}</script>`;
+  assert.deepEqual(spotify.parseEmbed(oldPage), { name: 'Old', items: [{ title: 'A', artist: 'X, Y', durationSec: 1 }] });
+  assert.equal(spotify.parseEmbed('<html>nothing</html>'), null);
 });
 
 test('yt-dlp helpers', () => {

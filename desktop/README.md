@@ -73,9 +73,18 @@ A track is kept as a snapshot, so it plays whether it is downloaded or not.
 Tracks are added from the right-click menu or by dragging a row onto a
 playlist in the sidebar; inside a playlist, rows drag into a new order.
 
+**Import** (the button next to + under Playlists, or a playlist link pasted
+into search) copies a SoundCloud set, or a public Spotify playlist or album,
+into a local playlist. SoundCloud sets come from its web API with the same
+client id the player uses. Spotify is read from the embed player page
+(`open.spotify.com/embed/...`), which needs no account but is not an official
+API; it gives titles, artists and lengths, and each track is matched on
+Deezer by title, artist and length. A track Deezer lacks stays as artist +
+title and plays through a YouTube search.
+
 **Lyrics** come from the EXØS server (LRCLIB). When its exact match has no
 text, the app searches LRCLIB itself and takes synced lyrics if any entry has
-them, otherwise plain lyrics, which are shown as text without timing.
+them, otherwise plain lyrics, which are shown all lit, without timing.
 
 The UI is in Russian and English (Settings → Language, or the switch on the
 sign-in screen); the engine answers errors in the same language.
