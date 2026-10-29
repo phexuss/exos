@@ -3,9 +3,12 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useT } from '@/i18n';
 import { outEasing, reducedMotion, springEasing } from '@/lib/motion';
 import { registerNowPlayingCloser, usePlayer } from '@/store/player';
+import { useSettings, type VizStyle } from '@/store/settings';
 import { AmbientArt } from './Ambient';
 import { Lyrics } from './Lyrics';
+import { Tabs } from './Tabs';
 import { Cover, SourcePill } from './ui';
+import { useVizOn, Visualizer } from './Visualizer';
 
 /** Transform that puts `el` exactly over the player bar's cover. */
 function towardsBar(el: HTMLElement): string | null {
@@ -24,6 +27,9 @@ export function NowPlaying() {
   const art = useRef<HTMLDivElement>(null);
   const close = () => usePlayer.getState().setNowPlaying(false);
   const { t } = useT();
+  const viz = useVizOn();
+  const vizStyle = useSettings((s) => s.vizStyle);
+  const setSettings = useSettings((s) => s.set);
 
   // The cover grows out of the player bar and goes back into it.
   useLayoutEffect(() => {
@@ -54,7 +60,7 @@ export function NowPlaying() {
 
   if (!open || !current) return null;
   return (
-    <section className="np" aria-label={t('player.nowPlaying')} ref={root}>
+    <section className={`np ${viz ? 'has-viz' : ''}`} aria-label={t('player.nowPlaying')} ref={root}>
       <div className="np__bg">
         <AmbientArt />
         <div className="ambient__veil" />
@@ -98,6 +104,20 @@ export function NowPlaying() {
             {current.album ? <span className="muted">· {current.album}</span> : null}
           </div>
         </div>
+        {viz && (
+          <div className="np__viz">
+            <Visualizer kind={vizStyle} />
+            <Tabs<VizStyle>
+              value={vizStyle}
+              onChange={(v) => setSettings({ vizStyle: v })}
+              options={[
+                { value: 'bars', label: t('player.vizBars') },
+                { value: 'wave', label: t('player.vizWave') },
+                { value: 'vu', label: t('player.vizVu') },
+              ]}
+            />
+          </div>
+        )}
       </div>
       <div className="np__lyrics">
         <Lyrics big />

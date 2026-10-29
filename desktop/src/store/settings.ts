@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { type Locale, systemLocale } from '@/i18n/locale';
 
+export type VizStyle = 'bars' | 'wave' | 'vu';
+
 export type CookiesBrowser = '' | 'chrome' | 'firefox' | 'edge' | 'brave' | 'opera' | 'vivaldi' | 'safari';
 
 type SettingsState = {
@@ -23,6 +25,10 @@ type SettingsState = {
   reverb: number;
   /** Frame counter in the title bar. */
   showFps: boolean;
+  /** Visualizers that move with the music (player bar, now playing, the playing-track bars). */
+  visualizer: boolean;
+  /** Which one the now playing view shows. */
+  vizStyle: VizStyle;
   set: (patch: Partial<Omit<SettingsState, 'set'>>) => void;
 };
 
@@ -40,6 +46,8 @@ export const useSettings = create<SettingsState>()(
       speed: 1,
       reverb: 0,
       showFps: false,
+      visualizer: true,
+      vizStyle: 'bars',
       set: (patch) => set(patch),
     }),
     {

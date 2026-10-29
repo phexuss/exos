@@ -89,6 +89,13 @@ title and plays through a YouTube search.
 text, the app searches LRCLIB itself and takes synced lyrics if any entry has
 them, otherwise plain lyrics, which are shown all lit, without timing.
 
+**Visualizer** (on by default, Settings → Visualizer): a spectrum,
+oscilloscope or pair of VU meters under the cover in the full window, and
+live bars next to the playing track. It reads the
+audio through Web Audio analysers after the effects and before the volume,
+draws on canvas from one shared loop, and stops drawing once playback is
+paused.
+
 The UI is in Russian and English (Settings → Language, or the switch on the
 sign-in screen); the engine answers errors in the same language.
 
