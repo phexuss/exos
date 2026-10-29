@@ -26,16 +26,12 @@ const RELEASE_S = 0.2;
 const VU_S = 0.3 / 4.6;
 /** dBFS (RMS) that reads 0 VU. Mastered music sits close to it, so loud parts reach the red. */
 export const VU_REF_DB = -10;
-/** Samples of the waveform drawn by the oscilloscope (about 21 ms at 48 kHz). */
-export const WAVE = 1024;
 
 export type Frame = {
   /** Seconds since the previous frame. */
   dt: number;
   /** 0..1 per band, low to high. */
   bands: Float32Array;
-  /** -1..1, the latest WAVE samples. */
-  wave: Float32Array;
   /** Left and right level, dBFS RMS with VU ballistics. */
   vu: Float32Array;
   /** 0..1, lows / mids / highs, for the small equalizer next to a playing track. */
@@ -47,7 +43,6 @@ type Listener = (f: Frame) => void;
 const frame: Frame = {
   dt: 0,
   bands: new Float32Array(BANDS),
-  wave: new Float32Array(WAVE),
   vu: new Float32Array([-90, -90]),
   eq: new Float32Array(3),
 };
@@ -56,7 +51,6 @@ const listeners = new Set<Listener>();
 let raf = 0;
 let last = 0;
 let spectrum: Float32Array<ArrayBuffer> | null = null;
-let time: Float32Array<ArrayBuffer> | null = null;
 let side: Float32Array<ArrayBuffer> | null = null;
 /** Band edges in FFT bins, worked out once the sample rate is known. */
 let edges: Float64Array | null = null;
@@ -90,12 +84,11 @@ const toDb = (x: number) => (x > 1e-6 ? 20 * Math.log10(x) : -120);
  * graph's output latency that is a beat's worth early. Readings wait in this
  * ring until the speakers catch up.
  */
-type Reading = { at: number; bands: Float32Array; wave: Float32Array; l: number; r: number };
+type Reading = { at: number; bands: Float32Array; l: number; r: number };
 const RING = 64;
 const ring: Reading[] = Array.from({ length: RING }, () => ({
   at: 0,
   bands: new Float32Array(BANDS),
-  wave: new Float32Array(WAVE),
   l: -120,
   r: -120,
 }));
@@ -107,13 +100,11 @@ function sample(now: number): Reading | null {
   const { ctx, mono, left, right } = taps;
   if (!edges || !tilt) prepare(ctx.sampleRate, mono.fftSize);
   spectrum ??= new Float32Array(mono.frequencyBinCount);
-  time ??= new Float32Array(mono.fftSize);
   side ??= new Float32Array(left.fftSize);
   const slot = ring[head];
   head = (head + 1) % RING;
   slot.at = now;
   mono.getFloatFrequencyData(spectrum);
-  mono.getFloatTimeDomainData(time);
   const e = edges as Float64Array;
   const k = tilt as Float32Array;
   for (let i = 0; i < BANDS; i += 1) {
@@ -123,8 +114,6 @@ function sample(now: number): Reading | null {
     for (let b = from; b < to && b < spectrum.length; b += 1) db = Math.max(db, spectrum[b]);
     slot.bands[i] = Math.min(1, Math.max(0, (db + k[i] - FLOOR_DB) / (CEIL_DB - FLOOR_DB)));
   }
-  // The newest samples are at the end of the analyser's window.
-  slot.wave.set(time.subarray(time.length - WAVE));
   left.getFloatTimeDomainData(side);
   slot.l = toDb(rms(side));
   right.getFloatTimeDomainData(side);
@@ -148,8 +137,6 @@ function read(dt: number, playing: boolean, now: number) {
   const got = playing ? sample(now) : null;
   if (!playing) for (const r of ring) r.at = 0;
   for (let i = 0; i < BANDS; i += 1) frame.bands[i] = ease(frame.bands[i], got ? got.bands[i] : 0, dt);
-  if (got) frame.wave.set(got.wave);
-  else for (let i = 0; i < WAVE; i += 1) frame.wave[i] *= Math.exp(-dt / RELEASE_S);
   const a = 1 - Math.exp(-dt / VU_S);
   frame.vu[0] += (Math.max(got ? got.l : -120, -90) - frame.vu[0]) * a;
   frame.vu[1] += (Math.max(got ? got.r : -120, -90) - frame.vu[1]) * a;
@@ -166,10 +153,6 @@ function fake(dt: number, playing: boolean, now: number) {
       ? Math.min(1, 0.22 + 0.62 * kick * (1 - x) ** 2 + 0.2 * (0.5 + 0.5 * Math.sin(s * 5.3 + i * 0.7)) * (1 - x * 0.6) + 0.08 * Math.sin(s * 11 + i * 2.1))
       : 0;
     frame.bands[i] = ease(frame.bands[i], Math.max(0, target), dt);
-  }
-  for (let i = 0; i < WAVE; i += 1) {
-    const ph = (i / WAVE) * Math.PI * 2;
-    frame.wave[i] = playing ? (0.25 + 0.4 * kick) * Math.sin(ph * 3 + s * 2) + 0.12 * Math.sin(ph * 17 + s * 9) : 0;
   }
   const a = 1 - Math.exp(-dt / VU_S);
   const level = playing ? VU_REF_DB - 6 + 7 * kick : -90;

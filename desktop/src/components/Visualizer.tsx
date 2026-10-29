@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { reducedMotion } from '@/lib/motion';
-import { BANDS, type Frame, subscribe, VU_REF_DB, WAVE } from '@/lib/visualizer';
+import { BANDS, type Frame, subscribe, VU_REF_DB } from '@/lib/visualizer';
 import { useSettings } from '@/store/settings';
 
 export type VizKind = 'bars' | 'wave' | 'vu';
@@ -28,8 +28,20 @@ const BAR_MIN = 2;
 const PEAK_H = 2;
 /** Peak caps fall this fraction of the height per second. */
 const PEAK_FALL = 0.45;
-const WAVE_LINE = 2;
-const WAVE_GAIN = 0.9;
+/**
+ * The wave: three slow sines, one each for the lows, mids and highs, whose
+ * heights follow the music. Per layer: cycles across the width, drift in
+ * radians per second, line width and opacity.
+ */
+const WAVE_LAYERS = [
+  { cycles: 1.5, drift: 0.9, line: 2.5, alpha: 1 },
+  { cycles: 2.5, drift: -1.3, line: 2, alpha: 0.6 },
+  { cycles: 4, drift: 1.8, line: 1.5, alpha: 0.35 },
+];
+/** Heights settle over this long, so the wave swells with the beat instead of shaking. */
+const WAVE_SETTLE_S = 0.12;
+/** A quiet layer still shows this much of the height. */
+const WAVE_FLOOR = 0.04;
 const NEEDLE_LINE = 1.5;
 const TICK_LINE = 1;
 const RED_LINE = 3;
@@ -83,7 +95,9 @@ function bars(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: 
   g.fill();
 }
 
-function wave(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: number, c: Colours) {
+type WaveState = { phase: Float32Array; amp: Float32Array };
+
+function wave(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: number, c: Colours, st: WaveState) {
   const mid = h / 2;
   g.strokeStyle = c.faint;
   g.lineWidth = TICK_LINE * dpr;
@@ -91,27 +105,30 @@ function wave(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: 
   g.moveTo(0, mid);
   g.lineTo(w, mid);
   g.stroke();
-  // Start at a rising zero crossing, the way a scope triggers, so the shape holds still.
-  const span = WAVE / 2;
-  let start = 0;
-  for (let i = 1; i < WAVE - span; i += 1) {
-    if (f.wave[i - 1] < 0 && f.wave[i] >= 0) {
-      start = i;
-      break;
-    }
-  }
-  const points = Math.max(2, Math.floor(w / (2 * dpr)));
+  const points = Math.max(2, Math.floor(w / (3 * dpr)));
+  const settle = 1 - Math.exp(-f.dt / WAVE_SETTLE_S);
   g.strokeStyle = c.accent;
-  g.lineWidth = WAVE_LINE * dpr;
   g.lineJoin = 'round';
-  g.beginPath();
-  for (let p = 0; p < points; p += 1) {
-    const s = f.wave[start + Math.floor((p / (points - 1)) * (span - 1))];
-    const x = (p / (points - 1)) * w;
-    const yy = mid - Math.max(-1, Math.min(1, s * WAVE_GAIN)) * mid;
-    p ? g.lineTo(x, yy) : g.moveTo(x, yy);
+  g.lineCap = 'round';
+  // Highs first, so the bass line sits on top.
+  for (let k = WAVE_LAYERS.length - 1; k >= 0; k -= 1) {
+    const layer = WAVE_LAYERS[k];
+    st.amp[k] += (f.eq[k] - st.amp[k]) * settle;
+    st.phase[k] = (st.phase[k] + layer.drift * f.dt) % (Math.PI * 2);
+    const amp = (WAVE_FLOOR + (1 - WAVE_FLOOR) * st.amp[k]) * (mid - layer.line * dpr);
+    g.globalAlpha = layer.alpha;
+    g.lineWidth = layer.line * dpr;
+    g.beginPath();
+    for (let p = 0; p < points; p += 1) {
+      const x = p / (points - 1);
+      // Tapered at both ends, so every layer meets the centre line.
+      const taper = Math.sin(Math.PI * x) ** 2;
+      const y = mid - amp * taper * Math.sin(2 * Math.PI * layer.cycles * x + st.phase[k]);
+      p ? g.lineTo(x * w, y) : g.moveTo(x * w, y);
+    }
+    g.stroke();
   }
-  g.stroke();
+  g.globalAlpha = 1;
 }
 
 function meter(g: CanvasRenderingContext2D, level: number, label: string, x: number, w: number, h: number, dpr: number, c: Colours) {
@@ -166,6 +183,7 @@ export function Visualizer({ kind, className = '' }: { kind: VizKind; className?
   const canvas = useRef<HTMLCanvasElement>(null);
   const on = useVizOn();
   const peaks = useRef(new Float32Array(BANDS));
+  const waveState = useRef<WaveState>({ phase: new Float32Array(WAVE_LAYERS.length), amp: new Float32Array(WAVE_LAYERS.length) });
   const colours = useRef<Colours>({ accent: '#818cf8', text: '#fff', faint: '#888', danger: '#f87171', font: 'sans-serif', at: 0 });
 
   useEffect(() => {
@@ -191,7 +209,7 @@ export function Visualizer({ kind, className = '' }: { kind: VizKind; className?
     readColours(el, colours.current, performance.now());
     g.clearRect(0, 0, w, h);
     if (kind === 'bars') bars(g, f, w, h, dpr, colours.current, peaks.current);
-    else if (kind === 'wave') wave(g, f, w, h, dpr, colours.current);
+    else if (kind === 'wave') wave(g, f, w, h, dpr, colours.current, waveState.current);
     else {
       const half = w / 2;
       meter(g, f.vu[0], 'L', 0, half, h, dpr, colours.current);
