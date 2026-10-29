@@ -4,6 +4,7 @@ import 'dart:io';
 import '../../core/env.dart';
 import '../engine.dart';
 import '../mock_engine.dart';
+import 'chunk_proxy.dart';
 import 'cookies.dart';
 import 'paths.dart';
 import 'proc.dart';
@@ -52,7 +53,10 @@ class LocalEngine implements Engine {
   Future<void> autoUpdate() => _tools.autoUpdate();
 
   @override
-  Future<ResolvedStream> resolve(SourceRequest req) => _ytdlp.resolve(req);
+  Future<ResolvedStream> resolve(SourceRequest req) async {
+    final s = await _ytdlp.resolve(req);
+    return ChunkProxy.wants(s.url) ? ChunkProxy.instance.wrap(s) : s;
+  }
 
   @override
   Future<Downloaded> download(DownloadRequest req, void Function(DownloadProgress) onProgress) => _ytdlp.download(req, onProgress);
