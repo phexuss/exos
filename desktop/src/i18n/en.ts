@@ -308,7 +308,7 @@ export const en = {
     fps: 'Frame counter',
     fpsHint: 'Shows in the title bar how many frames per second the app draws.',
     viz: 'Visualizer',
-    vizHint: 'Moves with the music: a spectrum, waveform or VU meters in the full window, and bars next to the playing track.',
+    vizHint: 'Moves with the music: a spectrum, wave or VU meters in the full window.',
     account: 'Account',
     accountFallback: 'EXØS account',
     accountHint:

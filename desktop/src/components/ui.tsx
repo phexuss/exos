@@ -5,7 +5,6 @@ import type { Source, Track } from '@/lib/types';
 import { useLibrary } from '@/store/library';
 import { imageUrl } from '@/lib/bridge';
 import { useT } from '@/i18n';
-import { LiveEq, useVizOn } from './Visualizer';
 
 export function Cover({
   src,
@@ -43,17 +42,7 @@ export function SourcePill({ source }: { source: Source | 'local' }) {
   return <span className={`src-pill ${source}`}>{label}</span>;
 }
 
-/** Three bars next to the playing track: lows, mids and highs when the visualizer is on, a loop otherwise. */
-export function Eq({ paused }: { paused?: boolean }) {
-  if (useVizOn()) return <LiveEq />;
-  return (
-    <span className={`eq ${paused ? 'paused' : ''}`} aria-hidden>
-      <i />
-      <i />
-      <i />
-    </span>
-  );
-}
+export { Eq } from './Eq';
 
 export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (

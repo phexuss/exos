@@ -602,12 +602,8 @@ img { display: block; }
 .tt__dur { color: var(--text-3); font-variant-numeric: tabular-nums; text-align: right; font-size: 13.5px; }
 .tt__src { display: flex; }
 
-.eq { display: inline-flex; gap: 2px; align-items: flex-end; height: 14px; }
-.eq i { width: 3px; height: 14px; background: var(--accent); border-radius: 1px; transform-origin: bottom; animation: eq 900ms ease-in-out infinite; }
-.eq i:nth-child(2) { animation-delay: -300ms; }
-.eq i:nth-child(3) { animation-delay: -600ms; }
-.eq.paused i { animation-play-state: paused; }
-@keyframes eq { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+/* Playing-track bars: drawn by components/Eq.tsx, sized there in whole device pixels. */
+.eq { display: block; image-rendering: pixelated; }
 
 .src-pill {
   display: inline-flex;
@@ -945,8 +941,6 @@ img { display: block; }
 .np.has-viz .np__tilt { width: min(100%, 40vh); }
 .np__viz { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; width: min(100%, 40vh); animation: rise var(--dur-3) var(--ease-spring) both; animation-delay: 160ms; }
 .np__viz .viz { height: var(--viz-np-h); }
-/* Its pixels match the screen's one to one; nearest-neighbour keeps them sharp at a fractional offset. */
-.eq--live { display: block; image-rendering: pixelated; }
 
 /* ---------- context menu, toasts, login ---------- */
 
@@ -1444,7 +1438,6 @@ img { display: block; }
 .slider__fill { transition: background var(--dur-1); }
 .slider__thumb { transition: opacity 120ms, transform var(--dur-1) var(--ease-spring); }
 .slider.dragging .slider__thumb { transform: scale(1.25); }
-.eq i { animation-timing-function: var(--ease-spring); }
 
 /* The ambient artwork drifts slowly, so the window never feels like a still. */
 .ambient__art.is-on, .np__bg .ambient__art.is-on {
