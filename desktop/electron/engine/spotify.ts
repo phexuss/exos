@@ -8,6 +8,9 @@
  * artists and lengths come from it; the window matches them to Deezer, and
  * playback goes the usual way (yt-dlp on YouTube).
  *
+ * The embed lists the first 100 tracks; the rest of a longer playlist comes
+ * from the Web API with the anonymous token the same page hands its player.
+ *
  * This is not an official API: if Spotify reshapes the page, the parser below
  * is the one place to fix.
  */
@@ -71,18 +74,63 @@ function toItem(raw: Json): SpotifyItem | null {
   };
 }
 
-export function parseEmbed(html: string): { name: string; items: SpotifyItem[] } | null {
-  for (const blob of blobs(html)) {
-    const e = findEntity(blob);
-    if (!e) continue;
-    const list: Json[] = e.trackList ?? e.tracks.items;
-    const items = list.map(toItem).filter((x): x is SpotifyItem => !!x);
-    return { name: e.name ?? e.title ?? 'Spotify', items };
+/** The anonymous web-player token the embed page carries for its own player. */
+function findToken(node: unknown, depth = 0): string | null {
+  if (!node || typeof node !== 'object' || depth > 12) return null;
+  const o = node as Json;
+  if (typeof o.accessToken === 'string' && o.accessToken.length > 20) return o.accessToken;
+  for (const v of Object.values(o)) {
+    const hit = findToken(v, depth + 1);
+    if (hit) return hit;
   }
   return null;
 }
 
-export async function playlist(link: string): Promise<{ name: string; items: SpotifyItem[] }> {
+export function parseEmbed(html: string): { name: string; items: SpotifyItem[]; token: string | null } | null {
+  const all = blobs(html);
+  for (const blob of all) {
+    const e = findEntity(blob);
+    if (!e) continue;
+    const list: Json[] = e.trackList ?? e.tracks.items;
+    const items = list.map(toItem).filter((x): x is SpotifyItem => !!x);
+    const token = all.map((b) => findToken(b)).find(Boolean) ?? null;
+    return { name: e.name ?? e.title ?? 'Spotify', items, token };
+  }
+  return null;
+}
+
+/** The embed lists at most this many tracks; longer lists continue through the Web API. */
+export const EMBED_LIMIT = 100;
+const MAX_TRACKS = 10_000;
+
+/**
+ * The rest of a long list from the Web API, with the embed's anonymous token
+ * (a web-player token, so the app restrictions on playlists do not apply).
+ */
+async function rest(kind: 'playlist' | 'album', id: string, token: string, from: number): Promise<SpotifyItem[]> {
+  const out: SpotifyItem[] = [];
+  const page = kind === 'playlist' ? 100 : 50;
+  let next: string | null =
+    `https://api.spotify.com/v1/${kind}s/${id}/tracks?offset=${from}&limit=${page}` +
+    (kind === 'playlist' ? '&additional_types=track' : '');
+  while (next && from + out.length < MAX_TRACKS) {
+    const res = await fetch(next, {
+      headers: { Authorization: `Bearer ${token}`, 'User-Agent': UA },
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const body = (await res.json()) as { items?: Json[]; next?: string | null };
+    for (const raw of body.items ?? []) {
+      const item = toItem(raw);
+      if (item) out.push(item);
+    }
+    next = body.next ?? null;
+  }
+  return out;
+}
+
+/** `truncated`: the list is longer than the embed shows and the rest could not be fetched. */
+export async function playlist(link: string): Promise<{ name: string; items: SpotifyItem[]; truncated: boolean }> {
   const ref = parseLink(link);
   if (!ref) throw new Error(L('не понял ссылку на Spotify', 'not a Spotify playlist or album link'));
   const res = await fetch(`https://open.spotify.com/embed/${ref.kind}/${ref.id}`, {
@@ -97,5 +145,12 @@ export async function playlist(link: string): Promise<{ name: string; items: Spo
   const parsed = parseEmbed(await res.text());
   if (!parsed) throw new Error(L('Spotify поменял страницу, список треков не нашёлся', 'Spotify changed the page; no track list found'));
   if (!parsed.items.length) throw new Error(L('в плейлисте нет треков', 'the playlist has no tracks'));
-  return parsed;
+  const { name, items, token } = parsed;
+  if (items.length < EMBED_LIMIT) return { name, items, truncated: false };
+  if (!token) return { name, items, truncated: true };
+  try {
+    return { name, items: [...items, ...(await rest(ref.kind, ref.id, token, items.length))], truncated: false };
+  } catch {
+    return { name, items, truncated: true };
+  }
 }

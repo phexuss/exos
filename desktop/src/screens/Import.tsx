@@ -29,6 +29,7 @@ export function ImportScreen({ url: initial = '' }: { url?: string }) {
       const id = create(result.tracks, result.name);
       toast(t('importer.done', { name: result.name, tracks: tracksLabel(result.tracks.length) }));
       if (result.unmatched) toast(t('importer.unmatched', { n: result.unmatched }));
+      if (result.truncated) toast(t('importer.truncated', { n: result.tracks.length }));
       go({ name: 'playlist', id });
     } catch (e) {
       setError(t('importer.failed', { error: e instanceof Error ? e.message : String(e) }));

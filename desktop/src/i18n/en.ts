@@ -129,6 +129,7 @@ export const en = {
     done: 'Imported “{name}”: {tracks}',
     unmatched: 'Not found on Deezer: {n}. They play through a YouTube search.',
     failed: 'Could not import: {error}',
+    truncated: 'Spotify gave only the first {n} tracks; the rest did not load.',
     scHint: 'Playlists and albums (links with /sets/). Tracks come as they are, straight from SoundCloud.',
     spHint: 'Public playlists and albums. Spotify gives only titles, so each track is looked up on Deezer; the ones it lacks play from YouTube.',
   },
