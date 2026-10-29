@@ -39,10 +39,12 @@ EXØS is a music player that aggregates tracks from **Deezer** and **SoundCloud*
 
 <div align="center">
 <!-- Screenshots: replace each src with an uploaded image URL. Window shots at 16:10 look best. -->
-<img width="900" alt="EXØS desktop: home" src="DESKTOP_SCREENSHOT_HOME" />
+<img width="900" alt="EXØS desktop: home" src="https://github.com/user-attachments/assets/d402a5cc-f5f2-4d8d-ace4-707cd2da7581" />
 <br />
-<img width="445" alt="EXØS desktop: full-window player with lyrics" src="DESKTOP_SCREENSHOT_PLAYER" />
-<img width="445" alt="EXØS desktop: a playlist imported from Spotify" src="DESKTOP_SCREENSHOT_PLAYLIST" />
+<img width="445" alt="EXØS desktop: full-window player with lyrics"  src="https://github.com/user-attachments/assets/f16d7921-e211-4b0a-8736-d49f3d845138"  />
+
+
+<img width="445" alt="EXØS desktop: a playlist imported from Spotify" src="https://github.com/user-attachments/assets/b2c023bd-7c3d-4ec8-9246-586a1a139c77" />
 </div>
 
 The phone app asks the EXØS server for audio. The desktop app turns that around: **it is a local player**. A computer can run yt-dlp, ffmpeg and a JavaScript runtime by itself, so it does. Audio is found, streamed and downloaded on your machine, from your own IP, and never passes through the server. The server is left with what it is good at: search, lyrics, recommendations and your account.
