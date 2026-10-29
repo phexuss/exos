@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { t } from '@/i18n';
 
 /**
  * Frames per second and the slowest frame over the last second, for checking
@@ -19,7 +20,11 @@ export function FpsMeter() {
       last = now;
       if (now - windowStart >= 1000) {
         const fps = Math.round((frames * 1000) / (now - windowStart));
-        if (ref.current) ref.current.textContent = `${fps} к/с · худший кадр ${worst.toFixed(1)} мс`;
+        if (ref.current)
+          ref.current.textContent = t('window.fps', {
+            fps,
+            ms: worst.toFixed(1),
+          });
         frames = 0;
         worst = 0;
         windowStart = now;

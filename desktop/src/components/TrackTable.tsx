@@ -1,6 +1,7 @@
 import { Clock3, Play } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useLayoutEffect, useRef, useState } from 'react';
+import { useT } from '@/i18n';
 import { formatTime } from '@/lib/format';
 import type { Track } from '@/lib/types';
 import { onIntent, prefetchAlbum, prefetchArtist } from '@/lib/queries';
@@ -27,6 +28,7 @@ export function TrackTable({ tracks, showAlbum = true, showCover = true, compact
   const playing = usePlayer((s) => s.status === 'playing' || s.status === 'loading');
   const playQueue = usePlayer((s) => s.playQueue);
   const virtual = tracks.length >= VIRTUAL_FROM;
+  const { t } = useT();
 
   const row = (t: Track, i: number) => (
     <Row
@@ -47,9 +49,9 @@ export function TrackTable({ tracks, showAlbum = true, showCover = true, compact
     <div className={`tt ${showAlbum ? '' : 'no-album'} ${compact ? 'compact' : ''} ${virtual ? 'tt--virtual' : ''}`} role="grid">
       <div className="tt__head" role="row">
         <span style={{ textAlign: 'center' }}>#</span>
-        <span>Название</span>
-        {showAlbum && <span className="tt__album">Альбом</span>}
-        <span className="tt__src">Источник</span>
+        <span>{t('table.title')}</span>
+        {showAlbum && <span className="tt__album">{t('table.album')}</span>}
+        <span className="tt__src">{t('table.source')}</span>
         <span className="tt__dur">
           <Clock3 size={14} />
         </span>
@@ -122,6 +124,7 @@ const Row = memo(function Row({
 }) {
   const go = useNav((s) => s.go);
   const showMenu = useMenu((s) => s.show);
+  const { t } = useT();
   return (
     <div
       role="row"
@@ -140,7 +143,12 @@ const Row = memo(function Row({
     >
       <span className="tt__num">
         {current ? <Eq paused={!playing} /> : <span className="n">{n}</span>}
-        <button type="button" className="tt__play" aria-label={`Слушать ${track.title}`} onClick={onPlay}>
+        <button
+          type="button"
+          className="tt__play"
+          aria-label={t('common.playTitle', { title: track.title })}
+          onClick={onPlay}
+        >
           <Play size={15} fill="currentColor" />
         </button>
       </span>

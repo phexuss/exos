@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { engine, fileUrl, rememberSource, rememberedSource, type ResolvedStream, sourceRequest } from '@/lib/engine';
+import { t } from '@/i18n';
 import { IS_MOCK } from '@/lib/env';
+import { createFx } from '@/lib/fx';
 import * as api from '@/lib/services';
 import type { Lyrics, Track } from '@/lib/types';
 import { useLibrary } from './library';
@@ -61,6 +63,19 @@ class FakeAudio implements AudioLike {
 }
 
 const audio: AudioLike = IS_MOCK ? new FakeAudio() : new Audio();
+// Effects run the audio through Web Audio, which hears a cross-origin element
+// only when it was loaded with CORS; the engine's media server allows it.
+if (!IS_MOCK) (audio as HTMLAudioElement).crossOrigin = 'anonymous';
+const fx = IS_MOCK ? null : createFx(audio as HTMLAudioElement);
+
+/**
+ * Slider position (0..1) to the element's gain. Loudness is heard on a log
+ * scale, so a linear gain puts nearly all of the range in the first tenth of
+ * the slider. The cube is the curve the system mixers on Linux (PulseAudio,
+ * PipeWire) use: 50% is about -18 dB and 1% is next to silence.
+ */
+const gain = (v: number) => Math.max(0, Math.min(1, v)) ** 3;
+const setOutput = (v: number) => (fx ? fx.setVolume(gain(v)) : (audio.volume = gain(v)));
 
 /** The playhead right now, for things drawn every frame. */
 export const playhead = () => audio.currentTime;
@@ -143,7 +158,7 @@ async function resolveRemote(track: Track, note: (s: string) => void): Promise<s
     let ttl = stream.protocol === 'file' ? FILE_TTL_MS : track.source === 'soundcloud' ? SC_URL_TTL_MS : URL_TTL_MS;
     if (stream.protocol.startsWith('m3u8')) {
       // HLS that only yt-dlp could resolve: pull it into the cache first.
-      note('Собираю трек из HLS…');
+      note(t('player.stitchingHls'));
       url = await fileUrl(await engine.cacheTrack(track.id, sourceRequest(track, browser)));
       ttl = FILE_TTL_MS;
     }
@@ -161,7 +176,7 @@ async function resolveRemote(track: Track, note: (s: string) => void): Promise<s
 async function resolvePlayable(track: Track, note: (s: string) => void): Promise<string> {
   const local = useLibrary.getState().get(track.id);
   if (local) return fileUrl(local.filePath);
-  note(track.source === 'soundcloud' ? 'Получаю поток SoundCloud…' : 'yt-dlp ищет источник…');
+  note(track.source === 'soundcloud' ? t('player.gettingSc') : t('player.ytdlpLooking'));
   return resolveRemote(track, note);
 }
 
@@ -208,7 +223,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
         if (useLibrary.getState().get(track.id)) throw playError;
         // A direct CDN URL can expire or be refused by the webview's
         // decoder; let yt-dlp pull the file into the cache instead.
-        set({ loadingNote: 'Прямая ссылка не сработала, качаю в кеш…' });
+        set({ loadingNote: t('player.cachingInstead') });
         const req = sourceRequest(track, useSettings.getState().cookiesBrowser);
         const cachedUrl = await fileUrl(await engine.cacheTrack(track.id, req));
         if (seq !== loadSeq) return;
@@ -221,7 +236,13 @@ export const usePlayer = create<PlayerState>((set, get) => {
       if (seq !== loadSeq) return;
       urlCache.delete(track.id);
       set({ status: 'paused', loadingNote: null });
-      toast(`Не получилось включить «${track.title}»: ${e instanceof Error ? e.message : e}`, 'error');
+      toast(
+        t('player.playFailed', {
+          title: track.title,
+          error: e instanceof Error ? e.message : String(e),
+        }),
+        'error',
+      );
     }
   };
 
@@ -236,7 +257,14 @@ export const usePlayer = create<PlayerState>((set, get) => {
     if (get().lyricsFor === track.id) set({ lyrics });
   };
 
-  audio.volume = useSettings.getState().volume;
+  setOutput(useSettings.getState().volume);
+  {
+    const { speed, reverb } = useSettings.getState();
+    fx?.setFx({ speed, reverb });
+    useSettings.subscribe((s, prev) => {
+      if (s.speed !== prev.speed || s.reverb !== prev.reverb) fx?.setFx({ speed: s.speed, reverb: s.reverb });
+    });
+  }
   audio.addEventListener('timeupdate', () => set({ time: audio.currentTime }));
   // The catalogue knows the real length; files stitched from HLS chunks can
   // report a few seconds, so the file only wins when the catalogue has nothing.
@@ -248,6 +276,8 @@ export const usePlayer = create<PlayerState>((set, get) => {
   audio.addEventListener('loadedmetadata', syncDuration);
   audio.addEventListener('durationchange', syncDuration);
   audio.addEventListener('play', () => {
+    // An audio context made before any click starts suspended; playing is the click.
+    fx?.reapply();
     set({ status: 'playing', loadingNote: null });
     const { queue, index, repeat } = get();
     schedulePrefetch(queue[index + 1] ?? (repeat === 'all' ? queue[0] : undefined));
@@ -317,13 +347,15 @@ export const usePlayer = create<PlayerState>((set, get) => {
     playNext: (track) => {
       const { queue, index } = get();
       if (!queue.length) return get().playTrack(track);
-      set({ queue: [...queue.slice(0, index + 1), track, ...queue.slice(index + 1)] });
-      toast(`Следующим: ${track.title}`);
+      set({
+        queue: [...queue.slice(0, index + 1), track, ...queue.slice(index + 1)],
+      });
+      toast(t('player.playingNext', { title: track.title }));
     },
     addToQueue: (track) => {
       if (!get().queue.length) return get().playTrack(track);
       set((s) => ({ queue: [...s.queue, track] }));
-      toast(`В очереди: ${track.title}`);
+      toast(t('player.queued', { title: track.title }));
     },
     toggle: () => {
       const { status, current } = get();
@@ -348,7 +380,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
       set({ time: audio.currentTime });
     },
     setVolume: (v) => {
-      audio.volume = v;
+      setOutput(v);
       useSettings.getState().set({ volume: v });
     },
     toggleShuffle: () => {

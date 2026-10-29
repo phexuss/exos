@@ -19,7 +19,7 @@ export type Bridge = {
 export const bridge = (globalThis as { exos?: Bridge }).exos;
 
 export function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  if (!bridge) return Promise.reject(new Error('нет движка'));
+  if (!bridge) return Promise.reject(new Error('no engine'));
   return bridge.call(cmd, args) as Promise<T>;
 }
 

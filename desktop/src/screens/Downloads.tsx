@@ -1,28 +1,30 @@
 import { ArrowDownToLine, RotateCcw, X } from 'lucide-react';
 import { useMemo } from 'react';
+import { t, useT } from '@/i18n';
 import { useLibrary, type DownloadJob } from '@/store/library';
 import { Cover } from '@/components/ui';
 
 function stateLabel(j: DownloadJob): string {
   switch (j.stage) {
     case 'queued':
-      return 'В очереди';
+      return t('download.queued');
     case 'resolving':
-      return 'yt-dlp ищет источник…';
+      return t('download.resolving');
     case 'downloading':
-      return `${Math.round(j.progress * 100)}%${j.speed ? ` · ${j.speed}` : ''}${j.eta ? ` · ещё ${j.eta}` : ''}`;
+      return `${Math.round(j.progress * 100)}%${j.speed ? ` · ${j.speed}` : ''}${j.eta ? ` · ${t('download.left', { eta: j.eta })}` : ''}`;
     case 'converting':
-      return 'ffmpeg конвертирует…';
+      return t('download.converting');
     case 'done':
-      return 'Готово';
+      return t('download.finished');
     case 'error':
-      return j.error ?? 'Ошибка';
+      return j.error ?? t('download.error');
   }
 }
 
 function Job({ job }: { job: DownloadJob }) {
   const cancel = useLibrary((s) => s.cancel);
   const download = useLibrary((s) => s.download);
+  const { t: tr } = useT();
   const t = job.track;
   const indet = job.stage === 'queued' || job.stage === 'resolving' || job.stage === 'converting';
   return (
@@ -39,13 +41,25 @@ function Job({ job }: { job: DownloadJob }) {
         {stateLabel(job)}
       </div>
       {job.stage === 'error' ? (
-        <button type="button" className="icon-btn sm" aria-label="Повторить" title="Повторить" onClick={() => download(t)}>
+        <button
+          type="button"
+          className="icon-btn sm"
+          aria-label={tr('common.retry')}
+          title={tr('common.retry')}
+          onClick={() => download(t)}
+        >
           <RotateCcw size={15} />
         </button>
       ) : job.stage === 'done' ? (
         <span />
       ) : (
-        <button type="button" className="icon-btn sm" aria-label="Отменить" title="Отменить" onClick={() => cancel(t.id)}>
+        <button
+          type="button"
+          className="icon-btn sm"
+          aria-label={tr('common.cancel')}
+          title={tr('common.cancel')}
+          onClick={() => cancel(t.id)}
+        >
           <X size={16} />
         </button>
       )}
@@ -60,27 +74,27 @@ export function Downloads() {
   const clearFinished = useLibrary((s) => s.clearFinished);
   const active = jobs.filter((j) => j.stage !== 'done' && j.stage !== 'error');
   const finished = jobs.filter((j) => j.stage === 'done' || j.stage === 'error');
+  const { t } = useT();
 
   return (
     <div className="page page-enter">
       <header className="section" style={{ gap: 10 }}>
-        <h1 className="h1">Загрузки</h1>
+        <h1 className="h1">{t('downloads.title')}</h1>
         <p className="muted" style={{ margin: 0, maxWidth: '64ch' }}>
-          yt-dlp работает на этом компьютере и качает с твоего IP, сервер EXØS в этом не участвует. Одновременно
-          идут две загрузки, остальные ждут.
+          {t('downloads.intro')}
         </p>
       </header>
       {jobs.length === 0 ? (
         <div className="empty">
           <ArrowDownToLine size={40} />
-          <strong>Сейчас ничего не качается</strong>
-          Скачанное появится в разделе «На компьютере».
+          <strong>{t('downloads.emptyTitle')}</strong>
+          {t('downloads.emptyHint')}
         </div>
       ) : (
         <>
           {active.length > 0 && (
             <section className="section">
-              <h2 className="h2">Сейчас · {active.length}</h2>
+              <h2 className="h2">{t('downloads.now', { n: active.length })}</h2>
               <div>
                 {active.map((j) => (
                   <Job key={j.track.id} job={j} />
@@ -91,9 +105,9 @@ export function Downloads() {
           {finished.length > 0 && (
             <section className="section">
               <div className="section__head">
-                <h2 className="h2">Готово</h2>
+                <h2 className="h2">{t('downloads.done')}</h2>
                 <button type="button" className="link-btn" onClick={clearFinished}>
-                  Очистить список
+                  {t('downloads.clear')}
                 </button>
               </div>
               <div>

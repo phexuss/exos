@@ -1,5 +1,6 @@
 import { Play } from 'lucide-react';
 import { useMemo } from 'react';
+import { type Key, useT } from '@/i18n';
 import { formatTime } from '@/lib/format';
 import { useChart, useRecent, useSimilar } from '@/lib/queries';
 import type { Track } from '@/lib/types';
@@ -9,12 +10,12 @@ import { useMenu } from '@/components/ContextMenu';
 import { Cover, DownloadButton, Eq, SkeletonRows } from '@/components/ui';
 import { AlbumTile, ArtistTile } from './cards';
 
-function greeting(): string {
+function greeting(): Key {
   const h = new Date().getHours();
-  if (h < 5) return 'Доброй ночи';
-  if (h < 12) return 'Доброе утро';
-  if (h < 18) return 'Добрый день';
-  return 'Добрый вечер';
+  if (h < 5) return 'home.night';
+  if (h < 12) return 'home.morning';
+  if (h < 18) return 'home.afternoon';
+  return 'home.evening';
 }
 
 function QuickTile({ track, list, i }: { track: Track; list: Track[]; i: number }) {
@@ -41,6 +42,7 @@ function RankList({ tracks }: { tracks: Track[] }) {
   const currentId = usePlayer((s) => s.current?.id);
   const playing = usePlayer((s) => s.status === 'playing');
   const showMenu = useMenu((s) => s.show);
+  const { t: tr } = useT();
   return (
     <ol className="rank">
       {tracks.map((t, i) => (
@@ -54,7 +56,12 @@ function RankList({ tracks }: { tracks: Track[] }) {
           }}
         >
           <span className="rank__n tabular">{currentId === t.id ? <Eq paused={!playing} /> : i + 1}</span>
-          <button type="button" className="rank__art" aria-label={`Слушать ${t.title}`} onClick={() => playQueue(tracks, i)}>
+          <button
+            type="button"
+            className="rank__art"
+            aria-label={tr('common.playTitle', { title: t.title })}
+            onClick={() => playQueue(tracks, i)}
+          >
             <Cover src={t.coverUrl} seed={t.album ?? t.id} label={t.title} />
             <span className="rank__play">
               <Play size={16} fill="currentColor" />
@@ -84,12 +91,13 @@ export function Home() {
   const top = chart.data?.tracks ?? [];
   const recentList = useMemo(() => recent.data ?? [], [recent.data]);
   const similarList = similar.data ?? [];
+  const { t } = useT();
 
   return (
     <div className="page page-enter">
       <div className="section" style={{ gap: 18 }}>
         <h1 className="h1">
-          {greeting()}
+          {t(greeting())}
           {user?.name ? `, ${user.name}` : ''}
         </h1>
         {recentList.length > 0 && (
@@ -104,16 +112,16 @@ export function Home() {
       <div className="home-split">
         <section className="section" style={{ minWidth: 0 }}>
           <div className="section__head">
-            <h2 className="h2">Чарт Deezer</h2>
+            <h2 className="h2">{t('home.chart')}</h2>
             <button type="button" className="link-btn" onClick={() => playQueue(top, 0)} disabled={!top.length}>
-              Слушать подряд
+              {t('home.playAll')}
             </button>
           </div>
           {chart.loading ? (
             <SkeletonRows n={8} />
           ) : chart.error ? (
             <div className="empty">
-              <strong>Чарт не загрузился</strong>
+              <strong>{t('home.chartFailed')}</strong>
               {chart.error}
             </div>
           ) : (
@@ -123,9 +131,9 @@ export function Home() {
 
         {seed && similarList.length > 0 && (
           <section className="section aside-list" style={{ minWidth: 0 }}>
-            <h2 className="h2">Похоже на «{seed.title}»</h2>
+            <h2 className="h2">{t('home.similar', { title: seed.title })}</h2>
             <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-              Подборка Last.fm по последнему, что ты слушал.
+              {t('home.similarHint')}
             </p>
             <div className="aside-list__items">
               {similarList.slice(0, 8).map((t, i) => (
@@ -138,7 +146,7 @@ export function Home() {
 
       {(chart.data?.albums.length ?? 0) > 0 && (
         <section className="section">
-          <h2 className="h2">Альбомы недели</h2>
+          <h2 className="h2">{t('home.albums')}</h2>
           <div className="grid-cards">
             {chart.data!.albums.slice(0, 12).map((a) => (
               <AlbumTile key={a.id} album={a} />
@@ -149,7 +157,7 @@ export function Home() {
 
       {(chart.data?.artists.length ?? 0) > 0 && (
         <section className="section">
-          <h2 className="h2">Артисты в чарте</h2>
+          <h2 className="h2">{t('home.artists')}</h2>
           <div className="shelf">
             {chart.data!.artists.slice(0, 10).map((a) => (
               <ArtistTile key={a.id} artist={a} />

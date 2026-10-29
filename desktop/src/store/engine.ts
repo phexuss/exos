@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { type EngineStatus, engine, listen, type Tool } from '@/lib/engine';
+import { t } from '@/i18n';
 import { toast } from './toast';
 
 type EngineState = {
@@ -35,9 +36,15 @@ export const useEngine = create<EngineState>((set, get) => {
       set({ installing: { tool, progress: 0 } });
       try {
         await engine.install(tool);
-        toast(`${TOOL_NAMES[tool]} установлен`);
+        toast(t('engine.installed', { tool: TOOL_NAMES[tool] }));
       } catch (e) {
-        toast(`Не удалось установить ${TOOL_NAMES[tool]}: ${e}`, 'error');
+        toast(
+          t('engine.installFailed', {
+            tool: TOOL_NAMES[tool],
+            error: String(e),
+          }),
+          'error',
+        );
       } finally {
         set({ installing: null });
         await get().refresh();
@@ -47,9 +54,9 @@ export const useEngine = create<EngineState>((set, get) => {
       set({ updating: true });
       try {
         const v = await engine.updateYtdlp();
-        toast(`yt-dlp обновлён: ${v}`);
+        toast(t('engine.updated', { version: v }));
       } catch (e) {
-        toast(`Не удалось обновить yt-dlp: ${e}`, 'error');
+        toast(t('engine.updateFailed', { error: String(e) }), 'error');
       } finally {
         set({ updating: false });
         await get().refresh();

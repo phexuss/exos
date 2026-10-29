@@ -1,5 +1,6 @@
 import { CircleAlert } from 'lucide-react';
 import { Component, type ReactNode } from 'react';
+import { t } from '@/i18n';
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };
@@ -23,10 +24,10 @@ export class ScreenBoundary extends Component<Props, State> {
       <div className="page">
         <div className="empty">
           <CircleAlert size={40} />
-          <strong>Экран не открылся</strong>
+          <strong>{t('errors.screen')}</strong>
           <code className="selectable">{error.message}</code>
           <button type="button" className="link-btn" onClick={() => this.setState({ error: null })}>
-            Попробовать снова
+            {t('common.tryAgain')}
           </button>
         </div>
       </div>

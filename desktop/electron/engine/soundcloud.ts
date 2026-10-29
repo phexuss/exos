@@ -16,6 +16,7 @@ import { createWriteStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { dataDir } from './paths';
+import { L } from './i18n';
 
 const API = 'https://api-v2.soundcloud.com';
 export const UA =
@@ -40,9 +41,12 @@ export function findClientId(js: string): string | null {
 /** The public web client's id, scraped from soundcloud.com's JS bundles. */
 async function scrapeClientId(): Promise<string> {
   const res = await get('https://soundcloud.com/', 20_000).catch((e: Error) => {
-    throw new Error(`soundcloud.com не открылся: ${e.message}`);
+    throw new Error(L(`soundcloud.com не открылся: ${e.message}`, `soundcloud.com did not open: ${e.message}`));
   });
-  if (!res.ok) throw new Error(`soundcloud.com не открылся: HTTP ${res.status}`);
+  if (!res.ok)
+    throw new Error(
+      L(`soundcloud.com не открылся: HTTP ${res.status}`, `soundcloud.com did not open: HTTP ${res.status}`),
+    );
   const html = await res.text();
   const scripts = [...html.matchAll(/<script[^>]+src="(https:\/\/[^"]+\.js)"/g)].map((m) => m[1]);
   // The id lives in one of the last bundles.
@@ -52,7 +56,7 @@ async function scrapeClientId(): Promise<string> {
       if (id) return id;
     } catch {}
   }
-  throw new Error('не нашёл client_id SoundCloud');
+  throw new Error(L('не нашёл client_id SoundCloud', 'SoundCloud client_id not found'));
 }
 
 let scraping: Promise<string> | null = null;
@@ -83,14 +87,14 @@ async function apiGet<T>(url: string): Promise<T> {
     const u = new URL(url);
     u.searchParams.set('client_id', id);
     const res = await get(u.toString()).catch((e: Error) => {
-      throw new Error(`SoundCloud не ответил: ${e.message}`);
+      throw new Error(L(`SoundCloud не ответил: ${e.message}`, `SoundCloud did not answer: ${e.message}`));
     });
     if ((res.status === 401 || res.status === 403) && attempt === 0) continue;
-    if (res.status === 404) throw new Error('трек не найден на SoundCloud');
-    if (res.status >= 400) throw new Error(`SoundCloud ответил ${res.status}`);
+    if (res.status === 404) throw new Error(L('трек не найден на SoundCloud', 'track not found on SoundCloud'));
+    if (res.status >= 400) throw new Error(L(`SoundCloud ответил ${res.status}`, `SoundCloud answered ${res.status}`));
     return (await res.json()) as T;
   }
-  throw new Error('SoundCloud не принял client_id');
+  throw new Error(L('SoundCloud не принял client_id', 'SoundCloud refused the client_id'));
 }
 
 /* ---------- track → stream ---------- */
@@ -150,7 +154,7 @@ export async function resolve(pageUrl: string): Promise<Stream> {
     `${API}/resolve?url=${encodeURIComponent(pageUrl)}`,
   );
   const t = pick(info.media?.transcodings ?? []);
-  if (!t) throw new Error('у трека нет подходящего потока');
+  if (!t) throw new Error(L('у трека нет подходящего потока', 'the track has no usable stream'));
   const { kind, codec } = classify(t)!;
   const u = new URL(t.url);
   if (info.track_authorization) u.searchParams.set('track_authorization', info.track_authorization);
@@ -161,27 +165,33 @@ export async function resolve(pageUrl: string): Promise<Stream> {
 /* ---------- HLS → one file ---------- */
 
 export function parsePlaylist(base: string, text: string): { init: string | null; segments: string[] } {
-  if (!text.trimStart().startsWith('#EXTM3U')) throw new Error('это не плейлист HLS');
+  if (!text.trimStart().startsWith('#EXTM3U')) throw new Error(L('это не плейлист HLS', 'not an HLS playlist'));
   let init: string | null = null;
   const segments: string[] = [];
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
-    if (line.startsWith('#EXT-X-KEY') && !line.includes('METHOD=NONE')) throw new Error('поток зашифрован');
-    if (line.startsWith('#EXT-X-BYTERANGE') || line.startsWith('#EXT-X-STREAM-INF')) throw new Error('такой HLS не склеить');
+    if (line.startsWith('#EXT-X-KEY') && !line.includes('METHOD=NONE'))
+      throw new Error(L('поток зашифрован', 'the stream is encrypted'));
+    if (line.startsWith('#EXT-X-BYTERANGE') || line.startsWith('#EXT-X-STREAM-INF'))
+      throw new Error(L('такой HLS не склеить', 'this HLS cannot be stitched'));
     if (line.startsWith('#EXT-X-MAP:')) {
-      if (line.includes('BYTERANGE')) throw new Error('такой HLS не склеить');
+      if (line.includes('BYTERANGE')) throw new Error(L('такой HLS не склеить', 'this HLS cannot be stitched'));
       const uri = /URI="([^"]+)"/.exec(line)?.[1];
-      if (!uri) throw new Error('битый EXT-X-MAP');
+      if (!uri) throw new Error(L('битый EXT-X-MAP', 'broken EXT-X-MAP'));
       init = new URL(uri, base).toString();
     } else if (line && !line.startsWith('#')) segments.push(new URL(line, base).toString());
   }
-  if (!segments.length) throw new Error('пустой плейлист');
+  if (!segments.length) throw new Error(L('пустой плейлист', 'empty playlist'));
   return { init, segments };
 }
 
 async function fetchBytes(url: string, signal?: AbortSignal): Promise<Uint8Array> {
-  const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: signal ?? AbortSignal.timeout(60_000) });
-  if (!res.ok) throw new Error(`кусок потока не скачался: HTTP ${res.status}`);
+  const res = await fetch(url, {
+    headers: { 'User-Agent': UA },
+    signal: signal ?? AbortSignal.timeout(60_000),
+  });
+  if (!res.ok)
+    throw new Error(L(`кусок потока не скачался: HTTP ${res.status}`, `a stream segment failed: HTTP ${res.status}`));
   return new Uint8Array(await res.arrayBuffer());
 }
 
@@ -191,12 +201,13 @@ async function fetchBytes(url: string, signal?: AbortSignal): Promise<Uint8Array
  */
 export async function fetchHls(url: string, ext: string, dest: string, onProgress: (f: number) => void, signal?: AbortSignal) {
   const res = await get(url).catch((e: Error) => {
-    throw new Error(`плейлист не скачался: ${e.message}`);
+    throw new Error(L(`плейлист не скачался: ${e.message}`, `playlist download failed: ${e.message}`));
   });
-  if (!res.ok) throw new Error(`плейлист не скачался: HTTP ${res.status}`);
+  if (!res.ok)
+    throw new Error(L(`плейлист не скачался: HTTP ${res.status}`, `playlist download failed: HTTP ${res.status}`));
   const playlist = parsePlaylist(url, await res.text());
   // AAC in MPEG-TS pieces doesn't play as one file; yt-dlp + ffmpeg handle it.
-  if (ext === 'm4a' && !playlist.init) throw new Error('HLS без init-сегмента');
+  if (ext === 'm4a' && !playlist.init) throw new Error(L('HLS без init-сегмента', 'HLS without an init segment'));
   const urls = [...(playlist.init ? [playlist.init] : []), ...playlist.segments];
   const tmp = `${dest}.part`;
   const file = createWriteStream(tmp);
@@ -229,7 +240,8 @@ export async function fetchHls(url: string, ext: string, dest: string, onProgres
 /** Downloads a progressive stream to `dest`, reporting the fraction done. */
 export async function fetchProgressive(url: string, dest: string, onProgress: (f: number) => void, signal?: AbortSignal) {
   const res = await fetch(url, { headers: { 'User-Agent': UA }, signal });
-  if (!res.ok || !res.body) throw new Error(`поток не скачался: HTTP ${res.status}`);
+  if (!res.ok || !res.body)
+    throw new Error(L(`поток не скачался: HTTP ${res.status}`, `stream download failed: HTTP ${res.status}`));
   const total = Number(res.headers.get('content-length') ?? 0);
   const tmp = `${dest}.part`;
   const file = createWriteStream(tmp);
@@ -244,7 +256,7 @@ export async function fetchProgressive(url: string, dest: string, onProgress: (f
   } catch (e) {
     file.destroy();
     await fs.rm(tmp, { force: true });
-    throw new Error(`обрыв: ${(e as Error).message}`);
+    throw new Error(L(`обрыв: ${(e as Error).message}`, `cut off: ${(e as Error).message}`));
   }
   await fs.rename(tmp, dest);
 }

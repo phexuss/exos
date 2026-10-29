@@ -4,6 +4,7 @@ import { placeholderGradient } from '@/lib/format';
 import type { Source, Track } from '@/lib/types';
 import { useLibrary } from '@/store/library';
 import { imageUrl } from '@/lib/bridge';
+import { useT } from '@/i18n';
 
 export function Cover({
   src,
@@ -36,7 +37,8 @@ export function Cover({
 }
 
 export function SourcePill({ source }: { source: Source | 'local' }) {
-  const label = source === 'deezer' ? 'Deezer' : source === 'soundcloud' ? 'SC' : 'На диске';
+  const { t } = useT();
+  const label = source === 'deezer' ? 'Deezer' : source === 'soundcloud' ? 'SC' : t('common.onDisk');
   return <span className={`src-pill ${source}`}>{label}</span>;
 }
 
@@ -192,10 +194,11 @@ export function DownloadButton({ track }: { track: Track }) {
   const download = useLibrary((s) => s.download);
   const cancel = useLibrary((s) => s.cancel);
   const [hover, setHover] = useState(false);
+  const { t } = useT();
 
   if (downloaded) {
     return (
-      <span className="dl-btn done" title="Скачан на этот компьютер">
+      <span className="dl-btn done" title={t('download.done')}>
         <Check size={18} />
       </span>
     );
@@ -207,7 +210,7 @@ export function DownloadButton({ track }: { track: Track }) {
       <button
         type="button"
         className="dl-btn"
-        title="Отменить скачивание"
+        title={t('download.cancel')}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         onClick={(e) => {
@@ -223,7 +226,7 @@ export function DownloadButton({ track }: { track: Track }) {
     <button
       type="button"
       className="dl-btn"
-      title="Скачать через yt-dlp на этом компьютере"
+      title={t('download.start')}
       onClick={(e) => {
         e.stopPropagation();
         download(track);

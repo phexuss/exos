@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { useT } from '@/i18n';
 import { activeLineIndex, parseLrc } from '@/lib/lrc';
 import { usePlayer } from '@/store/player';
 
@@ -7,6 +8,7 @@ export function Lyrics({ big }: { big?: boolean }) {
   const current = usePlayer((s) => s.current);
   const time = usePlayer((s) => s.time);
   const seek = usePlayer((s) => s.seek);
+  const { t } = useT();
   const lines = useMemo(() => (lyrics?.syncedLyrics ? parseLrc(lyrics.syncedLyrics) : []), [lyrics]);
   const active = activeLineIndex(lines, time);
   // How far into the active line we are, for the karaoke fill.
@@ -22,14 +24,14 @@ export function Lyrics({ big }: { big?: boolean }) {
     el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [active]);
 
-  if (!current) return <div className="empty">Включи что-нибудь, и здесь появится текст.</div>;
-  if (!lyrics) return <div className="empty">Ищу текст…</div>;
+  if (!current) return <div className="empty">{t('lyrics.idle')}</div>;
+  if (!lyrics) return <div className="empty">{t('lyrics.looking')}</div>;
   if (!lines.length && lyrics.plainLyrics) return <div className="lyrics__plain">{lyrics.plainLyrics}</div>;
   if (!lines.length)
     return (
       <div className="empty">
-        <strong>Текста нет</strong>
-        LRCLIB ничего не знает об этом треке.
+        <strong>{t('lyrics.none')}</strong>
+        {t('lyrics.noneHint')}
       </div>
     );
 

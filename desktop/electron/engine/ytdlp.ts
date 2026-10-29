@@ -16,12 +16,13 @@ import { streamCacheDir, workDir } from './paths';
 import { lastErrorLine, output, start } from './proc';
 import * as soundcloud from './soundcloud';
 import * as tools from './tools';
+import { L } from './i18n';
 
 /** YouTube's JS challenge alone can take 10-20 s; give the whole run room. */
 const RESOLVE_TIMEOUT = 90_000;
 const PROGRESS_MARK = 'EXOSPROG';
 const FILE_MARK = 'EXOSFILE';
-const CANCELLED = 'отменено';
+const cancelled = () => L('отменено', 'cancelled');
 
 export type SourceRequest = { query: string; isrc?: string; cookiesBrowser?: string };
 export type DownloadRequest = SourceRequest & {
@@ -30,6 +31,8 @@ export type DownloadRequest = SourceRequest & {
   artist: string;
   album?: string;
   format: string;
+  /** kbit/s, for MP3 only. */
+  bitrate?: number;
   dir: string;
 };
 export type ResolvedStream = { url: string; protocol: string; ext: string; sourceUrl?: string };
@@ -61,11 +64,13 @@ export function resolveSource(req: SourceRequest): string {
   const q = req.query.trim();
   if (isHttp(q)) {
     if (isSoundcloud(q) || isYoutube(q)) return q;
-    throw new Error('поддерживаются только ссылки SoundCloud и YouTube');
+    throw new Error(
+      L('поддерживаются только ссылки SoundCloud и YouTube', 'only SoundCloud and YouTube links are supported'),
+    );
   }
   const isrc = req.isrc?.trim();
   if (isrc && isrc.length === 12) return `ytsearch1:${isrc}`;
-  if (!q) throw new Error('пустой запрос');
+  if (!q) throw new Error(L('пустой запрос', 'empty query'));
   return `ytsearch1:${q}`;
 }
 
@@ -79,7 +84,10 @@ function streamFormat(source: string): string {
 
 async function ctx() {
   const [y, f] = await Promise.all([tools.ytdlp(), tools.ffmpeg()]);
-  if (!y) throw new Error('yt-dlp не установлен. Поставь его в Настройках');
+  if (!y)
+    throw new Error(
+      L('yt-dlp не установлен. Поставь его в Настройках', 'yt-dlp is not installed. Install it in Settings'),
+    );
   return { ytdlp: y.path, ffmpeg: f?.path ?? null };
 }
 
@@ -111,12 +119,25 @@ async function baseArgs(c: { ffmpeg: string | null }, req: SourceRequest, source
 function friendly(err: string): string {
   const lower = err.toLowerCase();
   if (lower.includes('sign in to confirm') || lower.includes('not a bot'))
-    return 'YouTube просит подтвердить, что ты не бот. Выбери браузер в Настройках → Куки браузера для YouTube';
+    return L(
+      'YouTube просит подтвердить, что ты не бот. Выбери браузер в Настройках → Куки браузера для YouTube',
+      'YouTube asks to confirm you are not a bot. Pick a browser in Settings → Browser cookies for YouTube',
+    );
   if (lower.includes('could not copy') && lower.includes('cookie'))
-    return 'Не получилось прочитать куки браузера. Закрой браузер и попробуй снова';
+    return L(
+      'Не получилось прочитать куки браузера. Закрой браузер и попробуй снова',
+      'Could not read the browser cookies. Close the browser and try again',
+    );
   if (lower.includes('requested format is not available') || lower.includes('only images are available'))
-    return 'YouTube не отдал аудио. Проверь, что стоит JS-движок (Настройки), и обнови yt-dlp';
-  if (lower.includes('ffmpeg') && lower.includes('not found')) return 'Для этого трека нужен ffmpeg. Поставь его в Настройках';
+    return L(
+      'YouTube не отдал аудио. Проверь, что стоит JS-движок (Настройки), и обнови yt-dlp',
+      'YouTube gave no audio. Check that a JS runtime is installed (Settings) and update yt-dlp',
+    );
+  if (lower.includes('ffmpeg') && lower.includes('not found'))
+    return L(
+      'Для этого трека нужен ffmpeg. Поставь его в Настройках',
+      'This track needs ffmpeg. Install it in Settings',
+    );
   return err;
 }
 
@@ -187,10 +208,10 @@ export async function resolveStream(req: SourceRequest): Promise<ResolvedStream>
     .split(/\r?\n/)
     .reverse()
     .find((l) => l.includes('\thttp'));
-  if (!line) throw new Error('yt-dlp не вернул ссылку');
+  if (!line) throw new Error(L('yt-dlp не вернул ссылку', 'yt-dlp returned no link'));
   const [protocol = '', ext = '', headersJson = '{}', page = '', ...rest] = line.split('\t');
   const url = rest.join('\t').trim();
-  if (!isHttp(url)) throw new Error('yt-dlp вернул странную ссылку');
+  if (!isHttp(url)) throw new Error(L('yt-dlp вернул странную ссылку', 'yt-dlp returned an odd link'));
   let headers: Record<string, string> = {};
   try {
     headers = JSON.parse(headersJson) as Record<string, string>;
@@ -265,15 +286,18 @@ async function runDownload(id: string, args: string[], scratch: string, signal: 
   });
   const code = await new Promise<number | null>((resolve) => {
     child.on('error', (e) => {
-      log += `\nERROR: не удалось запустить yt-dlp: ${e.message}`;
+      log += `\nERROR: ${L('не удалось запустить yt-dlp', 'could not start yt-dlp')}: ${e.message}`;
       resolve(-1);
     });
     child.on('close', resolve);
   });
   signal.removeEventListener('abort', kill);
-  if (signal.aborted) throw new Error(CANCELLED);
+  if (signal.aborted) throw new Error(cancelled());
   if (code !== 0) throw new Error(friendly(lastErrorLine(log)));
-  if (!file || !(await exists(file))) throw new Error(friendly(`yt-dlp закончил без файла. ${lastErrorLine(log)}`));
+  if (!file || !(await exists(file)))
+    throw new Error(
+      friendly(`${L('yt-dlp закончил без файла.', 'yt-dlp finished without a file.')} ${lastErrorLine(log)}`),
+    );
   return file;
 }
 
@@ -294,7 +318,7 @@ async function moveFile(from: string, to: string) {
   } catch {
     // Different drive: copy, then remove.
     await fs.copyFile(from, to).catch((e: Error) => {
-      throw new Error(`не удалось сохранить файл: ${e.message}`);
+      throw new Error(L(`не удалось сохранить файл: ${e.message}`, `could not save the file: ${e.message}`));
     });
     await fs.rm(from, { force: true });
   }
@@ -335,10 +359,12 @@ async function freePath(dir: string, stem: string, ext: string): Promise<string>
   return first;
 }
 
+const mp3Bitrate = (req: DownloadRequest) => ([128, 192, 320].includes(req.bitrate ?? 0) ? req.bitrate : 320);
+
 /** Tags (and if asked, re-encodes) a file with ffmpeg, writing `out`. */
 async function ffmpegFinish(ffmpeg: string, input: string, out: string, req: DownloadRequest, toMp3: boolean) {
   const args = ['-hide_banner', '-loglevel', 'error', '-y', '-i', input, '-map', '0:a', '-map_metadata', '-1'];
-  args.push(...(toMp3 ? ['-c:a', 'libmp3lame', '-q:a', '0'] : ['-c:a', 'copy']));
+  args.push(...(toMp3 ? ['-c:a', 'libmp3lame', '-b:a', `${mp3Bitrate(req)}k`] : ['-c:a', 'copy']));
   for (const [key, value] of [
     ['title', req.title],
     ['artist', req.artist],
@@ -360,7 +386,7 @@ async function soundcloudDownload(req: DownloadRequest, page: string, ffmpeg: st
   const onProgress = (f: number) => progress(req.id, 'downloading', Math.min(1, f));
   if (stream.hls) await soundcloud.fetchHls(stream.url, stream.ext, raw, onProgress, signal);
   else await soundcloud.fetchProgressive(stream.url, raw, onProgress, signal);
-  if (signal.aborted) throw new Error(CANCELLED);
+  if (signal.aborted) throw new Error(cancelled());
   if (!ffmpeg) return raw;
   const toMp3 = req.format === 'mp3' && stream.ext !== 'mp3';
   const out = path.join(scratch, `track.${toMp3 ? 'mp3' : stream.ext}`);
@@ -381,7 +407,9 @@ async function soundcloudDownload(req: DownloadRequest, page: string, ffmpeg: st
 /** Moves a finished file into the music folder as "Artist - Title.ext". */
 async function finishDownload(req: DownloadRequest, file: string) {
   await fs.mkdir(req.dir, { recursive: true }).catch((e: Error) => {
-    throw new Error(`не удалось создать папку ${req.dir}: ${e.message}`);
+    throw new Error(
+      L(`не удалось создать папку ${req.dir}: ${e.message}`, `could not create the folder ${req.dir}: ${e.message}`),
+    );
   });
   const ext = path.extname(file).slice(1) || 'm4a';
   const dest = await freePath(req.dir, safeName(`${req.artist} - ${req.title}`), ext);
@@ -402,7 +430,7 @@ export async function downloadTrack(req: DownloadRequest): Promise<{ filePath: s
       const file = await soundcloudDownload(req, source, c.ffmpeg, scratch, ctl.signal);
       return await finishDownload(req, file);
     } catch (e) {
-      if (ctl.signal.aborted) throw new Error(CANCELLED);
+      if (ctl.signal.aborted) throw new Error(cancelled());
       console.error(`soundcloud: ${(e as Error).message}; falling back to yt-dlp`);
     } finally {
       jobs.delete(req.id);
@@ -411,13 +439,23 @@ export async function downloadTrack(req: DownloadRequest): Promise<{ filePath: s
   }
   const hasFfmpeg = !!c.ffmpeg;
   const wantMp3 = req.format === 'mp3';
-  if (wantMp3 && !hasFfmpeg && !sc) throw new Error('Для MP3 нужен ffmpeg. Поставь его в Настройках или выбери M4A');
+  // Opus is what YouTube streams at its best (~160 kbit/s); it needs ffmpeg to land in an .opus file.
+  const wantOpus = req.format === 'opus' && hasFfmpeg && !sc;
+  if (wantMp3 && !hasFfmpeg && !sc)
+    throw new Error(
+      L(
+        'Для MP3 нужен ffmpeg. Поставь его в Настройках или выбери M4A',
+        'MP3 needs ffmpeg. Install it in Settings or choose M4A',
+      ),
+    );
 
   const base = await baseArgs(c, req, source);
   const args = [...base.args];
   const format = sc
     ? streamFormat(source)
-    : hasFfmpeg
+    : wantOpus
+      ? 'bestaudio[acodec=opus]/bestaudio'
+      : hasFfmpeg
       ? 'bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio'
       : // No ffmpeg: take a single file that already plays everywhere.
         'bestaudio[ext=m4a]/bestaudio[acodec^=mp4a][protocol^=http]/bestaudio[protocol^=http]';
@@ -425,9 +463,9 @@ export async function downloadTrack(req: DownloadRequest): Promise<{ filePath: s
   let converts = false;
   if (hasFfmpeg) {
     // Copies AAC as-is into m4a; re-encodes only when the source differs.
-    const target = wantMp3 || sc ? 'mp3' : 'm4a';
+    const target = wantMp3 || sc ? 'mp3' : wantOpus ? 'opus' : 'm4a';
     args.push('-x', '--audio-format', target);
-    if (target === 'mp3') args.push('--audio-quality', '0');
+    if (target === 'mp3') args.push('--audio-quality', `${mp3Bitrate(req)}K`);
     converts = true;
     // Tag the file with the Deezer/SoundCloud metadata, not YouTube's video title.
     args.push('--embed-metadata');

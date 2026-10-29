@@ -37,7 +37,9 @@ export type DownloadRequest = SourceRequest & {
   title: string;
   artist: string;
   album?: string;
-  format: 'm4a' | 'mp3';
+  format: 'opus' | 'm4a' | 'mp3';
+  /** kbit/s, for MP3 only. */
+  bitrate?: number;
   dir: string;
 };
 

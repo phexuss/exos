@@ -9,6 +9,7 @@
 import fs from 'node:fs/promises';
 import type { MessagePortMain } from 'electron';
 import { addPort } from './bus';
+import { setLocale } from './i18n';
 import * as cookies from './cookies';
 import * as http from './http';
 import * as library from './library';
@@ -42,7 +43,13 @@ const ready = media.start();
 function attach(port: MessagePortMain) {
   addPort(port);
   port.on('message', async ({ data }) => {
-    const { id, cmd, args } = data as { id: number; cmd: string; args?: Args };
+    const { id, cmd, args, lang } = data as {
+      id: number;
+      cmd: string;
+      args?: Args;
+      lang?: string;
+    };
+    setLocale(lang);
     try {
       await ready;
       const fn = handlers[cmd];

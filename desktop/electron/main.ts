@@ -40,6 +40,12 @@ if (!app.requestSingleInstanceLock()) app.exit(0);
 // what gives it the monitor's real refresh rate. EXOS_X11=1 forces XWayland
 // for drivers that misbehave.
 if (process.platform === 'linux' && process.env.EXOS_X11 === '1') app.commandLine.appendSwitch('ozone-platform', 'x11');
+// Chromium's Vulkan path is not supported on Wayland; asking for it only
+// logs an error and falls back to GL. Ask for GL from the start.
+if (process.platform === 'linux') {
+  const off = app.commandLine.getSwitchValue('disable-features');
+  app.commandLine.appendSwitch('disable-features', off ? `${off},Vulkan` : 'Vulkan');
+}
 
 const CSP = [
   "default-src 'self'",

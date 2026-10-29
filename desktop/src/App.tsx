@@ -15,6 +15,7 @@ import { exampleTracks } from '@/lib/mock';
 import { installMotion } from '@/lib/motion';
 
 import { useHotkeys } from '@/hooks/useHotkeys';
+import { useT } from '@/i18n';
 import { Album } from '@/screens/Album';
 import { Artist } from '@/screens/Artist';
 import { Home } from '@/screens/Home';
@@ -37,20 +38,19 @@ const Downloads = lazy(() => loadDownloads().then((m) => ({ default: m.Downloads
 function EngineBanner() {
   const status = useEngine((s) => s.status);
   const go = useNav((s) => s.go);
+  const { t } = useT();
   if (!status || (status.ytdlp && status.jsRuntime)) return null;
   return (
     <div className="banner" style={{ margin: '24px var(--gutter) 0' }}>
       <CircleAlert size={22} />
       <div>
-        <div style={{ fontWeight: 500 }}>
-          {status.ytdlp ? 'Для YouTube не хватает JS-движка' : 'Нужно поставить yt-dlp'}
-        </div>
+        <div style={{ fontWeight: 500 }}>{status.ytdlp ? t('engine.needJs') : t('engine.needYtdlp')}</div>
         <div className="muted" style={{ fontSize: 13 }}>
-          Музыка качается и играет через yt-dlp на этом компьютере. Ставится в один клик в Настройках.
+          {t('engine.bannerText')}
         </div>
       </div>
       <button type="button" className="btn primary sm" onClick={() => go({ name: 'settings' })}>
-        Установить
+        {t('common.install')}
       </button>
     </div>
   );
@@ -105,6 +105,7 @@ export function App() {
   const auth = useAuth((s) => s.status);
   const glass = useSettings((s) => s.glassMode);
   const current = usePlayer((s) => s.current);
+  const locale = useSettings((s) => s.locale);
   const searchRef = useRef<HTMLInputElement>(null);
   const focusSearch = useCallback(() => searchRef.current?.focus(), []);
 
@@ -126,6 +127,10 @@ export function App() {
   useEffect(() => {
     if (auth === 'signedIn') void useLibrary.getState().load();
   }, [auth]);
+  // The engine reads the language off <html lang> with every call, for its own messages.
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
   useAccent(current);
   useHotkeys(focusSearch);
 

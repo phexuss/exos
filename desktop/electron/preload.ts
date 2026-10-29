@@ -20,7 +20,13 @@ ipcRenderer.on('engine-port', (e) => {
   // Calls sent to an engine that died will never be answered.
   for (const [id, w] of waiting) {
     if (!queued.some((q) => q.id === id)) {
-      w.reject(new Error('движок перезапустился, попробуй ещё раз'));
+      w.reject(
+        new Error(
+          document.documentElement.lang === 'en'
+            ? 'the engine restarted, try again'
+            : 'движок перезапустился, попробуй ещё раз',
+        ),
+      );
       waiting.delete(id);
     }
   }
@@ -43,7 +49,8 @@ function call(cmd: string, args?: unknown): Promise<unknown> {
   const id = nextId++;
   return new Promise((resolve, reject) => {
     waiting.set(id, { resolve, reject });
-    const msg = { id, cmd, args };
+    // The engine answers errors in the window's language.
+    const msg = { id, cmd, args, lang: document.documentElement.lang };
     if (port) port.postMessage(msg);
     else queued.push(msg);
   });

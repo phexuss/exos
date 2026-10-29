@@ -5,6 +5,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { libraryFile } from './paths';
+import { L } from './i18n';
 
 export async function read(): Promise<unknown[] | null> {
   let text: string;
@@ -17,7 +18,9 @@ export async function read(): Promise<unknown[] | null> {
   try {
     return JSON.parse(text) as unknown[];
   } catch (e) {
-    throw new Error(`library.json повреждён: ${(e as Error).message}`);
+    throw new Error(
+      L(`library.json повреждён: ${(e as Error).message}`, `library.json is damaged: ${(e as Error).message}`),
+    );
   }
 }
 
@@ -33,7 +36,8 @@ const AUDIO_EXTS = ['m4a', 'mp3', 'opus', 'webm', 'ogg', 'flac', 'aac', 'mp4'];
 
 /** Deletes a downloaded audio file; refuses anything that isn't audio. */
 export async function deleteAudio(p: string): Promise<void> {
-  if (!AUDIO_EXTS.includes(path.extname(p).slice(1).toLowerCase())) throw new Error('это не аудиофайл');
+  if (!AUDIO_EXTS.includes(path.extname(p).slice(1).toLowerCase()))
+    throw new Error(L('это не аудиофайл', 'not an audio file'));
   await fs.rm(p, { force: true });
 }
 

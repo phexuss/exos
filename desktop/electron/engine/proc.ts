@@ -1,5 +1,6 @@
 /** Running the tools without flashing a console window on Windows. */
 import { type ChildProcess, spawn } from 'node:child_process';
+import { L } from './i18n';
 
 export function start(program: string, args: string[]): ChildProcess {
   return spawn(program, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -12,7 +13,14 @@ export function output(program: string, args: string[], timeoutMs: number): Prom
     try {
       child = start(program, args);
     } catch (e) {
-      reject(new Error(`не удалось запустить ${program}: ${(e as Error).message}`));
+      reject(
+        new Error(
+          L(
+            `не удалось запустить ${program}: ${(e as Error).message}`,
+            `could not start ${program}: ${(e as Error).message}`,
+          ),
+        ),
+      );
       return;
     }
     const out: Buffer[] = [];
@@ -21,11 +29,18 @@ export function output(program: string, args: string[], timeoutMs: number): Prom
     child.stderr?.on('data', (b: Buffer) => err.push(b));
     const timer = setTimeout(() => {
       child.kill();
-      reject(new Error(`${program} не ответил за ${Math.round(timeoutMs / 1000)} с`));
+      reject(
+        new Error(
+          L(
+            `${program} не ответил за ${Math.round(timeoutMs / 1000)} с`,
+            `${program} did not answer in ${Math.round(timeoutMs / 1000)} s`,
+          ),
+        ),
+      );
     }, timeoutMs);
     child.on('error', (e) => {
       clearTimeout(timer);
-      reject(new Error(`не удалось запустить ${program}: ${e.message}`));
+      reject(new Error(L(`не удалось запустить ${program}: ${e.message}`, `could not start ${program}: ${e.message}`)));
     });
     child.on('close', (code) => {
       clearTimeout(timer);
@@ -42,5 +57,5 @@ export function lastErrorLine(stderr: string): string {
     .map((l) => l.trim())
     .filter(Boolean);
   const line = [...lines].reverse().find((l) => l.startsWith('ERROR')) ?? lines.at(-1);
-  return line ? line.replace(/^ERROR:/, '').trim() : 'неизвестная ошибка';
+  return line ? line.replace(/^ERROR:/, '').trim() : L('неизвестная ошибка', 'unknown error');
 }

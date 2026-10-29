@@ -56,6 +56,21 @@ reconnected.
   answers, and tool checks, the yt-dlp update and cache pruning wait until the
   app is idle. Settings and Downloads load on first use.
 
+## Sound
+
+- **Volume** follows the cube of the slider, like the Linux system mixers:
+  50% is about -18 dB and 1% is next to silence.
+- **Sped up / slowed + reverb** (the waveform button in the player bar) run
+  live on any track: speed is the element's playback rate with the pitch
+  following it, reverb is a Web Audio convolver on a generated hall impulse.
+  Nothing is rendered ahead of time. The audio element loads with CORS so Web
+  Audio can hear it; the engine's media server allows any origin.
+- **Download format**: Opus (YouTube's best, about 160 kbit/s, no
+  re-encoding), M4A (AAC as YouTube serves it) or MP3 at 128/192/320 kbit/s.
+
+The UI is in Russian and English (Settings → Language, or the switch on the
+sign-in screen); the engine answers errors in the same language.
+
 ## Local engine
 
 Three tools, each found on `PATH` or installed by the app into its own data

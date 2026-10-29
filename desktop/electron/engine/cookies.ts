@@ -13,6 +13,7 @@ import path from 'node:path';
 import { dataDir, workDir } from './paths';
 import { output } from './proc';
 import * as tools from './tools';
+import { L } from './i18n';
 
 const FRESH_FOR = 30 * 60_000;
 const EXPORT_TIMEOUT = 60_000;
@@ -42,7 +43,7 @@ function exportCookies(browser: string): Promise<string> {
   exporting ??= (async () => {
     const dest = fileFor(browser);
     const ytdlp = await tools.ytdlp();
-    if (!ytdlp) throw new Error('yt-dlp не установлен');
+    if (!ytdlp) throw new Error(L('yt-dlp не установлен', 'yt-dlp is not installed'));
     const tmp = dest.replace(/\.txt$/, '.new');
     await fs.rm(tmp, { force: true });
     await fs.mkdir(dataDir(), { recursive: true });
@@ -55,12 +56,32 @@ function exportCookies(browser: string): Promise<string> {
     const written = await fs.stat(tmp).then((s) => s.size > 0, () => false);
     if (!written) {
       const lower = why.toLowerCase();
-      if (lower.includes('could not find')) throw new Error(`не нашёл профиль браузера (${browser}). Он установлен и хоть раз запускался?`);
+      if (lower.includes('could not find'))
+        throw new Error(
+          L(
+            `не нашёл профиль браузера (${browser}). Он установлен и хоть раз запускался?`,
+            `browser profile not found (${browser}). Is it installed and has it been opened at least once?`,
+          ),
+        );
       if (lower.includes('could not copy') || lower.includes('database is locked'))
-        throw new Error('браузер держит куки заблокированными. Закрой его и попробуй снова');
+        throw new Error(
+          L(
+            'браузер держит куки заблокированными. Закрой его и попробуй снова',
+            'the browser keeps its cookies locked. Close it and try again',
+          ),
+        );
       if (lower.includes('keyring') || lower.includes('secretstorage') || lower.includes('decrypt'))
-        throw new Error('не получилось расшифровать куки (связка ключей). Попробуй Firefox');
-      throw new Error(!why || lower.includes('at least one url') ? 'yt-dlp не выгрузил куки' : why);
+        throw new Error(
+          L(
+            'не получилось расшифровать куки (связка ключей). Попробуй Firefox',
+            'could not decrypt the cookies (keyring). Try Firefox',
+          ),
+        );
+      throw new Error(
+        !why || lower.includes('at least one url')
+          ? L('yt-dlp не выгрузил куки', 'yt-dlp did not export the cookies')
+          : why,
+      );
     }
     await fs.rename(tmp, dest);
     return dest;

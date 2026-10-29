@@ -2,23 +2,25 @@ import { ChevronLeft, ChevronRight, Minus, Search, Square, X } from 'lucide-reac
 import { forwardRef, useEffect, useState } from 'react';
 import { bridge } from '@/lib/bridge';
 import { IS_MAC, IS_MOCK } from '@/lib/env';
+import { useT } from '@/i18n';
 import { useNav } from '@/store/nav';
 import { useSettings } from '@/store/settings';
 import { FpsMeter } from './FpsMeter';
 
 /** Minimise, maximise and close for the frameless window (macOS keeps its own buttons). */
 export function WindowControls() {
+  const { t } = useT();
   if (!bridge || IS_MAC) return null;
   const { win } = bridge;
   return (
     <div className="winctl">
-      <button type="button" aria-label="Свернуть" onClick={() => void win.minimize()}>
+      <button type="button" aria-label={t('window.minimize')} onClick={() => void win.minimize()}>
         <Minus size={16} />
       </button>
-      <button type="button" aria-label="Развернуть" onClick={() => void win.toggleMaximize()}>
+      <button type="button" aria-label={t('window.maximize')} onClick={() => void win.toggleMaximize()}>
         <Square size={13} />
       </button>
-      <button type="button" className="close" aria-label="Закрыть" onClick={() => void win.close()}>
+      <button type="button" className="close" aria-label={t('window.close')} onClick={() => void win.close()}>
         <X size={17} />
       </button>
     </div>
@@ -29,6 +31,7 @@ export const TitleBar = forwardRef<HTMLInputElement>(function TitleBar(_, search
   const { back, forward, canBack, canForward, go, route } = useNav();
   const [q, setQ] = useState('');
   const showFps = useSettings((s) => s.showFps);
+  const { t } = useT();
 
   useEffect(() => {
     if (route.name === 'search') setQ(route.q ?? '');
@@ -47,12 +50,16 @@ export const TitleBar = forwardRef<HTMLInputElement>(function TitleBar(_, search
         <span className="wordmark">
           EX<span>Ø</span>S
         </span>
-        <span className="muted" style={{ fontSize: 12 }}>
-          desktop
-        </span>
       </div>
       <div className="titlebar__nav">
-        <button type="button" className="icon-btn" disabled={!canBack} onClick={back} aria-label="Назад" title="Назад (Alt+←)">
+        <button
+          type="button"
+          className="icon-btn"
+          disabled={!canBack}
+          onClick={back}
+          aria-label={t('nav.back')}
+          title={`${t('nav.back')} (Alt+←)`}
+        >
           <ChevronLeft size={20} />
         </button>
         <button
@@ -60,8 +67,8 @@ export const TitleBar = forwardRef<HTMLInputElement>(function TitleBar(_, search
           className="icon-btn"
           disabled={!canForward}
           onClick={forward}
-          aria-label="Вперёд"
-          title="Вперёд (Alt+→)"
+          aria-label={t('nav.forward')}
+          title={`${t('nav.forward')} (Alt+→)`}
         >
           <ChevronRight size={20} />
         </button>
@@ -72,7 +79,7 @@ export const TitleBar = forwardRef<HTMLInputElement>(function TitleBar(_, search
           ref={searchRef}
           id="global-search"
           value={q}
-          placeholder="Треки, артисты, альбомы, ссылка SoundCloud"
+          placeholder={t('window.searchPlaceholder')}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => route.name !== 'search' && go({ name: 'search', q: q.trim() || undefined })}
           onKeyDown={(e) => {
@@ -85,7 +92,7 @@ export const TitleBar = forwardRef<HTMLInputElement>(function TitleBar(_, search
       {showFps && <FpsMeter />}
       {IS_MOCK && (
         <span className="kbd" style={{ marginRight: 14, fontSize: 11.5, padding: '5px 8px' }}>
-          Макет: данные для примера
+          {t('window.mock')}
         </span>
       )}
       <WindowControls />

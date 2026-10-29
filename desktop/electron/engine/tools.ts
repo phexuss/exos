@@ -12,6 +12,7 @@ import yauzl from 'yauzl';
 import { emit } from './bus';
 import { binDir, dataDir, defaultMusicDir, exe } from './paths';
 import { output } from './proc';
+import { L } from './i18n';
 
 export type ToolInfo = { path: string; version: string; managed: boolean };
 export type JsRuntime = ToolInfo & { name: string };
@@ -192,10 +193,16 @@ export async function status(): Promise<EngineStatus> {
 }
 
 async function downloadTo(tool: string, url: string, dest: string): Promise<void> {
-  const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(10 * 60_000) }).catch((e) => {
-    throw new Error(`не скачалось ${url}: ${(e as Error).message}`);
+  const res = await fetch(url, {
+    headers: { 'User-Agent': UA },
+    signal: AbortSignal.timeout(10 * 60_000),
+  }).catch((e) => {
+    throw new Error(
+      L(`не скачалось ${url}: ${(e as Error).message}`, `download failed ${url}: ${(e as Error).message}`),
+    );
   });
-  if (!res.ok || !res.body) throw new Error(`не скачалось ${url}: HTTP ${res.status}`);
+  if (!res.ok || !res.body)
+    throw new Error(L(`не скачалось ${url}: HTTP ${res.status}`, `download failed ${url}: HTTP ${res.status}`));
   const total = Number(res.headers.get('content-length') ?? 0);
   let done = 0;
   let lastEmit = 0;
@@ -211,7 +218,7 @@ async function downloadTo(tool: string, url: string, dest: string): Promise<void
     }
   } catch (e) {
     file.destroy();
-    throw new Error(`обрыв загрузки: ${(e as Error).message}`);
+    throw new Error(L(`обрыв загрузки: ${(e as Error).message}`, `download cut off: ${(e as Error).message}`));
   }
   await new Promise<void>((resolve, reject) => file.end((err?: Error | null) => (err ? reject(err) : resolve())));
 }
@@ -268,11 +275,15 @@ async function extractAll(zipPath: string, into: string): Promise<void> {
 
 /** Pulls the named entries (matched by file name, any folder) out of a zip. */
 async function extract(zipPath: string, wanted: string[], into: string): Promise<void> {
-  const n = await unzip(zipPath, (name) => {
-    const base = path.posix.basename(name);
-    return !name.endsWith('/') && wanted.includes(base) ? path.join(into, base) : null;
-  }, true);
-  if (n === 0) throw new Error(`в архиве нет ${wanted.join(', ')}`);
+  const n = await unzip(
+    zipPath,
+    (name) => {
+      const base = path.posix.basename(name);
+      return !name.endsWith('/') && wanted.includes(base) ? path.join(into, base) : null;
+    },
+    true,
+  );
+  if (n === 0) throw new Error(L(`в архиве нет ${wanted.join(', ')}`, `the archive has no ${wanted.join(', ')}`));
 }
 
 const stamp = () => path.join(dataDir(), 'ytdlp-updated');
@@ -280,7 +291,7 @@ const stamp = () => path.join(dataDir(), 'ytdlp-updated');
 async function installYtdlp(): Promise<void> {
   const bin = binDir();
   const asset = ytdlpAsset();
-  if (!asset) throw new Error('под эту систему нет готового yt-dlp');
+  if (!asset) throw new Error(L('под эту систему нет готового yt-dlp', 'no yt-dlp build for this system'));
   const tmp = path.join(bin, 'yt-dlp.zip.part');
   await downloadTo('ytdlp', `https://github.com/yt-dlp/yt-dlp/releases/latest/download/${asset}`, tmp);
   const dist = ytdlpDistDir();
@@ -293,14 +304,16 @@ async function installYtdlp(): Promise<void> {
     await fs.rm(tmp, { force: true });
   }
   const main = ytdlpInDist(fresh);
-  if (!main) throw new Error('в архиве yt-dlp нет исполняемого файла');
+  if (!main) throw new Error(L('в архиве yt-dlp нет исполняемого файла', 'the yt-dlp archive has no executable'));
   if (!isWin) await fs.chmod(main, 0o755);
   // Swap folders. On Windows this fails while a yt-dlp from the old folder is
   // running; the old one then stays and the next start tries again.
   await fs.rm(old, { recursive: true, force: true });
   if (existsSync(dist)) {
     await fs.rename(dist, old).catch((e: Error) => {
-      throw new Error(`yt-dlp сейчас занят, обновлю позже: ${e.message}`);
+      throw new Error(
+        L(`yt-dlp сейчас занят, обновлю позже: ${e.message}`, `yt-dlp is busy, will update later: ${e.message}`),
+      );
     });
   }
   await fs.rename(fresh, dist);
@@ -318,9 +331,9 @@ async function latestYtdlpTag(): Promise<string> {
     signal: AbortSignal.timeout(20_000),
   });
   const location = res.headers.get('location');
-  if (!location) throw new Error('GitHub не ответил редиректом');
+  if (!location) throw new Error(L('GitHub не ответил редиректом', 'GitHub did not answer with a redirect'));
   const tag = location.split('/').pop();
-  if (!tag) throw new Error('нет тега');
+  if (!tag) throw new Error(L('нет тега', 'no tag'));
   return tag;
 }
 
@@ -330,7 +343,7 @@ export async function install(tool: string): Promise<void> {
   if (tool === 'ytdlp') await installYtdlp();
   else if (tool === 'deno') {
     const target = denoTarget();
-    if (!target) throw new Error('под эту систему нет готового Deno');
+    if (!target) throw new Error(L('под эту систему нет готового Deno', 'no Deno build for this system'));
     const tmp = path.join(bin, 'deno.zip.part');
     await downloadTo('deno', `https://github.com/denoland/deno/releases/latest/download/deno-${target}.zip`, tmp);
     try {
@@ -340,7 +353,13 @@ export async function install(tool: string): Promise<void> {
     }
   } else if (tool === 'ffmpeg') {
     const asset = ffmpegAsset();
-    if (!asset) throw new Error('ffmpeg ставится через систему: brew install ffmpeg или пакет ffmpeg');
+    if (!asset)
+      throw new Error(
+        L(
+          'ffmpeg ставится через систему: brew install ffmpeg или пакет ffmpeg',
+          'install ffmpeg through the system: brew install ffmpeg or the ffmpeg package',
+        ),
+      );
     const tmp = path.join(bin, 'ffmpeg.zip.part');
     await downloadTo('ffmpeg', `https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/${asset}`, tmp);
     try {
@@ -348,7 +367,7 @@ export async function install(tool: string): Promise<void> {
     } finally {
       await fs.rm(tmp, { force: true });
     }
-  } else throw new Error(`неизвестный инструмент ${tool}`);
+  } else throw new Error(L(`неизвестный инструмент ${tool}`, `unknown tool ${tool}`));
   emit('engine://install-progress', { tool, progress: 1 });
 }
 
@@ -359,8 +378,14 @@ export async function install(tool: string): Promise<void> {
  */
 export async function updateYtdlp(): Promise<string> {
   const found = locate('yt-dlp');
-  if (!found) throw new Error('yt-dlp не установлен');
-  if (!found.managed) throw new Error(`это системный yt-dlp (${found.path}), обнови его тем же способом, каким ставил`);
+  if (!found) throw new Error(L('yt-dlp не установлен', 'yt-dlp is not installed'));
+  if (!found.managed)
+    throw new Error(
+      L(
+        `это системный yt-dlp (${found.path}), обнови его тем же способом, каким ставил`,
+        `this is the system yt-dlp (${found.path}); update it the way you installed it`,
+      ),
+    );
   const unpacked = found.path.startsWith(ytdlpDistDir());
   if (unpacked) {
     const [latest, current] = await Promise.all([latestYtdlpTag(), versionOf(found.path, ['--version'])]);
@@ -372,7 +397,7 @@ export async function updateYtdlp(): Promise<string> {
   await installYtdlp();
   const now = locate('yt-dlp');
   const v = now && (await versionOf(now.path, ['--version']));
-  if (!v) throw new Error('yt-dlp не запускается');
+  if (!v) throw new Error(L('yt-dlp не запускается', 'yt-dlp does not start'));
   return v;
 }
 

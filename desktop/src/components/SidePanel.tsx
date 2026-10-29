@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useT } from '@/i18n';
 import { glide } from '@/lib/springs';
 import type { Track } from '@/lib/types';
 import { formatTime } from '@/lib/format';
@@ -23,7 +24,8 @@ function Queue() {
   const index = usePlayer((s) => s.index);
   const playing = usePlayer((s) => s.status === 'playing');
   const p = usePlayer.getState();
-  if (!queue.length) return <div className="empty">Очередь пустая.</div>;
+  const { t: tr } = useT();
+  if (!queue.length) return <div className="empty">{tr('queue.empty')}</div>;
   const keys = stableKeys(queue);
   const upNext = queue.slice(index + 1);
   // Removing or reordering slides the rest into place instead of jumping.
@@ -48,7 +50,12 @@ function Queue() {
       {i === index ? (
         <Eq paused={!playing} />
       ) : (
-        <button type="button" className="icon-btn sm" aria-label="Убрать из очереди" onClick={() => p.removeFromQueue(i)}>
+        <button
+          type="button"
+          className="icon-btn sm"
+          aria-label={tr('queue.remove')}
+          onClick={() => p.removeFromQueue(i)}
+        >
           <X size={15} />
         </button>
       )}
@@ -57,14 +64,14 @@ function Queue() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <div className="eyebrow" style={{ padding: '8px 8px 4px' }}>
-        Сейчас
+        {tr('queue.now')}
       </div>
       <AnimatePresence initial={false} mode="popLayout">
         {item(queue[index], index)}
       </AnimatePresence>
       {upNext.length > 0 && (
         <div className="eyebrow" style={{ padding: '16px 8px 4px' }}>
-          Дальше · {upNext.length}
+          {tr('queue.upNext', { n: upNext.length })}
         </div>
       )}
       <AnimatePresence initial={false} mode="popLayout">
@@ -77,6 +84,7 @@ function Queue() {
 export function SidePanel() {
   const panel = usePlayer((s) => s.panel);
   const setPanel = usePlayer((s) => s.setPanel);
+  const { t } = useT();
   if (!panel) return null;
   return (
     <aside className="panel slab">
@@ -85,12 +93,17 @@ export function SidePanel() {
           value={panel}
           onChange={setPanel}
           options={[
-            { value: 'lyrics', label: 'Текст' },
-            { value: 'queue', label: 'Очередь' },
+            { value: 'lyrics', label: t('player.lyrics') },
+            { value: 'queue', label: t('player.queue') },
           ]}
         />
         <span style={{ flex: 1 }} />
-        <button type="button" className="icon-btn sm" aria-label="Закрыть панель" onClick={() => setPanel(null)}>
+        <button
+          type="button"
+          className="icon-btn sm"
+          aria-label={t('player.closePanel')}
+          onClick={() => setPanel(null)}
+        >
           <X size={16} />
         </button>
       </div>

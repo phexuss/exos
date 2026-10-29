@@ -11,6 +11,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { apiCacheDir } from './paths';
+import { L } from './i18n';
 
 export type HttpRequest = {
   url: string;
@@ -79,7 +80,9 @@ export async function request(req: HttpRequest): Promise<HttpResponse> {
         const stale = await readEntry(req.url);
         if (stale) return { status: stale.status, body: stale.body, cached: 'stale' };
       }
-      throw new Error(`нет связи с сервером: ${(e as Error).message}`);
+      throw new Error(
+        L(`нет связи с сервером: ${(e as Error).message}`, `no connection to the server: ${(e as Error).message}`),
+      );
     }
   })();
   if (key) inFlight.set(key, run);

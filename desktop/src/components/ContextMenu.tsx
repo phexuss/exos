@@ -1,6 +1,7 @@
 import { Disc3, Download, FolderOpen, ListEnd, ListPlus, Mic2, Play, Trash2, User } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { create } from 'zustand';
+import { useT } from '@/i18n';
 import { revealInFolder } from '@/lib/engine';
 import type { Track } from '@/lib/types';
 import { useLibrary } from '@/store/library';
@@ -24,6 +25,7 @@ export function ContextMenu() {
   const close = useMenu((s) => s.close);
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x: 0, y: 0 });
+  const { t } = useT();
   const local = useLibrary((s) => (open ? s.tracks.find((t) => t.id === open.track.id) : undefined));
 
   useLayoutEffect(() => {
@@ -64,23 +66,23 @@ export function ContextMenu() {
   return (
     <div ref={ref} className="menu" style={{ left: pos.x, top: pos.y }} role="menu">
       <button type="button" onClick={act(open.onPlay ?? (() => p.playTrack(track)))}>
-        <Play size={16} /> Слушать
+        <Play size={16} /> {t('common.play')}
       </button>
       <button type="button" onClick={act(() => p.playNext(track))}>
-        <ListPlus size={16} /> Включить следующим
+        <ListPlus size={16} /> {t('menu.playNext')}
       </button>
       <button type="button" onClick={act(() => p.addToQueue(track))}>
-        <ListEnd size={16} /> В конец очереди
+        <ListEnd size={16} /> {t('menu.addToQueue')}
       </button>
       <hr />
       {track.source === 'deezer' && track.artist.id && (
         <button type="button" onClick={act(() => nav.go({ name: 'artist', id: track.artist.id }))}>
-          <User size={16} /> Открыть артиста
+          <User size={16} /> {t('menu.openArtist')}
         </button>
       )}
       {track.albumId && (
         <button type="button" onClick={act(() => nav.go({ name: 'album', id: track.albumId! }))}>
-          <Disc3 size={16} /> Открыть альбом
+          <Disc3 size={16} /> {t('menu.openAlbum')}
         </button>
       )}
       <button
@@ -90,21 +92,21 @@ export function ContextMenu() {
           p.setPanel('lyrics');
         })}
       >
-        <Mic2 size={16} /> Текст песни
+        <Mic2 size={16} /> {t('menu.lyrics')}
       </button>
       <hr />
       {local ? (
         <>
           <button type="button" onClick={act(() => void revealInFolder(local.filePath))}>
-            <FolderOpen size={16} /> Показать в папке
+            <FolderOpen size={16} /> {t('menu.showInFolder')}
           </button>
           <button type="button" className="danger" onClick={act(() => void lib.remove(track.id))}>
-            <Trash2 size={16} /> Удалить с компьютера
+            <Trash2 size={16} /> {t('menu.deleteLocal')}
           </button>
         </>
       ) : (
         <button type="button" onClick={act(() => lib.download(track))}>
-          <Download size={16} /> Скачать
+          <Download size={16} /> {t('menu.download')}
         </button>
       )}
     </div>

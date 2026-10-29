@@ -17,6 +17,7 @@ import fs from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import { imageCacheDir } from './paths';
+import { L } from './i18n';
 
 const AUDIO_EXTS = ['m4a', 'mp3', 'mp4', 'aac', 'opus', 'ogg', 'oga', 'webm', 'flac', 'wav'];
 /** Upstream requests ask for at most this much at a time. */
@@ -60,7 +61,7 @@ export function start(): Promise<string> {
 }
 
 function register(source: Source): string {
-  if (!base) throw new Error('плеер ещё не готов');
+  if (!base) throw new Error(L('плеер ещё не готов', 'the player is not ready yet'));
   // Keep the map from growing forever over a long session.
   if (tokens.size > 500) tokens.clear();
   const token = randomBytes(12).toString('hex');
@@ -72,9 +73,9 @@ const extOf = (p: string) => path.extname(p).slice(1).toLowerCase();
 
 /** A URL the player can load for a file on disk. */
 export async function fileUrl(p: string): Promise<string> {
-  if (!AUDIO_EXTS.includes(extOf(p))) throw new Error('это не аудиофайл');
+  if (!AUDIO_EXTS.includes(extOf(p))) throw new Error(L('это не аудиофайл', 'not an audio file'));
   const st = await fs.stat(p).catch(() => null);
-  if (!st?.isFile()) throw new Error('файл не найден');
+  if (!st?.isFile()) throw new Error(L('файл не найден', 'file not found'));
   return register({ kind: 'file', path: p });
 }
 
