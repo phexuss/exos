@@ -26,8 +26,18 @@ const BAR_GAP = 3;
 const BAR_RADIUS = 3;
 const BAR_MIN = 2;
 const PEAK_H = 2;
-/** Peak caps fall this fraction of the height per second. */
-const PEAK_FALL = 0.45;
+/** Peak caps wait this long at a peak, then fall faster and faster (heights per second squared). */
+const PEAK_HOLD_S = 0.35;
+const PEAK_GRAVITY = 1.8;
+/** The bars fade towards their base to this opacity. */
+const BAR_BASE_ALPHA = 0.35;
+/**
+ * The needle has weight: a spring (natural frequency, Hz) with a little
+ * less than critical damping, so it swings to a level and settles with a
+ * slight overshoot, like a meter's movement.
+ */
+const NEEDLE_HZ = 1.6;
+const NEEDLE_DAMPING = 0.72;
 /**
  * The wave: three slow sines, one each for the lows, mids and highs, whose
  * heights follow the music. Per layer: cycles across the width, drift in
@@ -71,7 +81,9 @@ function readColours(el: Element, c: Colours, now: number) {
   c.at = now;
 }
 
-function bars(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: number, c: Colours, peaks: Float32Array) {
+type Peaks = { at: Float32Array; hold: Float32Array; speed: Float32Array };
+
+function bars(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: number, c: Colours, pk: Peaks) {
   const gap = BAR_GAP * dpr;
   const bw = (w - gap * (BANDS - 1)) / BANDS;
   const r = Math.min(bw / 2, BAR_RADIUS * dpr);
@@ -85,12 +97,31 @@ function bars(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: 
     g.roundRect(left(i), h - bh, width(i), bh, [r, r, 0, 0]);
   }
   g.fill();
+  // Fade the bars towards their base: keep what is drawn, scaled by a vertical ramp.
+  const fade = g.createLinearGradient(0, 0, 0, h);
+  fade.addColorStop(0, 'rgba(0, 0, 0, 1)');
+  fade.addColorStop(1, `rgba(0, 0, 0, ${BAR_BASE_ALPHA})`);
+  g.globalCompositeOperation = 'destination-in';
+  g.fillStyle = fade;
+  g.fillRect(0, 0, w, h);
+  g.globalCompositeOperation = 'source-over';
+
   g.fillStyle = c.text;
   g.beginPath();
   for (let i = 0; i < BANDS; i += 1) {
-    peaks[i] = Math.max(f.bands[i], peaks[i] - PEAK_FALL * f.dt);
-    if (peaks[i] * h < BAR_MIN * dpr * 2) continue;
-    g.rect(left(i), Math.round(h - peaks[i] * h - PEAK_H * dpr * 2), width(i), Math.round(PEAK_H * dpr));
+    const v = f.bands[i];
+    if (v >= pk.at[i]) {
+      pk.at[i] = v;
+      pk.hold[i] = PEAK_HOLD_S;
+      pk.speed[i] = 0;
+    } else if (pk.hold[i] > 0) {
+      pk.hold[i] -= f.dt;
+    } else {
+      pk.speed[i] += PEAK_GRAVITY * f.dt;
+      pk.at[i] = Math.max(v, pk.at[i] - pk.speed[i] * f.dt);
+    }
+    if (pk.at[i] * h < BAR_MIN * dpr * 2) continue;
+    g.rect(left(i), Math.round(h - pk.at[i] * h - PEAK_H * dpr * 2), width(i), Math.round(PEAK_H * dpr));
   }
   g.fill();
 }
@@ -131,7 +162,19 @@ function wave(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: 
   g.globalAlpha = 1;
 }
 
-function meter(g: CanvasRenderingContext2D, level: number, label: string, x: number, w: number, h: number, dpr: number, c: Colours) {
+type Needle = { p: number; v: number };
+
+/** Moves the needle towards `target` as a damped spring; small steps keep it stable on slow frames. */
+function swing(n: Needle, target: number, dt: number) {
+  const w0 = 2 * Math.PI * NEEDLE_HZ;
+  for (let left = dt; left > 0; left -= 1 / 240) {
+    const step = Math.min(left, 1 / 240);
+    n.v += (w0 * w0 * (target - n.p) - 2 * NEEDLE_DAMPING * w0 * n.v) * step;
+    n.p += n.v * step;
+  }
+}
+
+function meter(g: CanvasRenderingContext2D, n: Needle, level: number, label: string, x: number, w: number, h: number, dpr: number, c: Colours, dt: number) {
   const cx = x + w / 2;
   const cy = h;
   const R = Math.min(h * 0.9, (w * 0.9) / (2 * Math.sin(VU_SWEEP)));
@@ -168,13 +211,17 @@ function meter(g: CanvasRenderingContext2D, level: number, label: string, x: num
   }
   g.fillText(label, cx, cy - R * 0.35);
 
-  const p = Math.max(-0.02, Math.min(1.02, vuPos(level - VU_REF_DB)));
-  const [nx, ny] = at(angle(p), R * 0.98);
+  swing(n, Math.max(0, vuPos(level - VU_REF_DB)), dt);
+  // The pins stop the needle just past both ends of the scale.
+  const p = Math.max(-0.03, Math.min(1.03, n.p));
+  const a = angle(p);
+  const [x0, y0] = at(a, R * 0.45);
+  const [nx, ny] = at(a, R * 0.98);
   g.strokeStyle = level - VU_REF_DB > 0 ? c.danger : c.text;
   g.lineWidth = NEEDLE_LINE * dpr;
   g.lineCap = 'round';
   g.beginPath();
-  g.moveTo(cx, cy);
+  g.moveTo(x0, y0);
   g.lineTo(nx, ny);
   g.stroke();
 }
@@ -182,7 +229,11 @@ function meter(g: CanvasRenderingContext2D, level: number, label: string, x: num
 export function Visualizer({ kind, className = '' }: { kind: VizKind; className?: string }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const on = useVizOn();
-  const peaks = useRef(new Float32Array(BANDS));
+  const peaks = useRef<Peaks>({ at: new Float32Array(BANDS), hold: new Float32Array(BANDS), speed: new Float32Array(BANDS) });
+  const needles = useRef<[Needle, Needle]>([
+    { p: 0, v: 0 },
+    { p: 0, v: 0 },
+  ]);
   const waveState = useRef<WaveState>({ phase: new Float32Array(WAVE_LAYERS.length), amp: new Float32Array(WAVE_LAYERS.length) });
   const colours = useRef<Colours>({ accent: '#818cf8', text: '#fff', faint: '#888', danger: '#f87171', font: 'sans-serif', at: 0 });
 
@@ -212,8 +263,8 @@ export function Visualizer({ kind, className = '' }: { kind: VizKind; className?
     else if (kind === 'wave') wave(g, f, w, h, dpr, colours.current, waveState.current);
     else {
       const half = w / 2;
-      meter(g, f.vu[0], 'L', 0, half, h, dpr, colours.current);
-      meter(g, f.vu[1], 'R', half, half, h, dpr, colours.current);
+      meter(g, needles.current[0], f.vu[0], 'L', 0, half, h, dpr, colours.current, f.dt);
+      meter(g, needles.current[1], f.vu[1], 'R', half, half, h, dpr, colours.current, f.dt);
     }
   }, on);
 

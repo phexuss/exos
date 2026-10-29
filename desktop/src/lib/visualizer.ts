@@ -19,11 +19,16 @@ const FLOOR_DB = -78;
 const CEIL_DB = -18;
 /** Music loses energy towards the highs; this much per octave above 1 kHz is added back so the right side moves too. */
 const TILT_DB_PER_OCTAVE = 3;
-/** Bars jump up quickly and fall slowly; time constants in seconds. */
-const ATTACK_S = 0.02;
-const RELEASE_S = 0.2;
-/** A VU meter reaches 99% of a step in 300 ms; that is about 4.6 time constants. */
-const VU_S = 0.3 / 4.6;
+/** Bars rise fast and fall slowly; time constants in seconds. Shorter ones read every FFT wobble as a jump. */
+const ATTACK_S = 0.045;
+const RELEASE_S = 0.28;
+/** Each band is blended with its neighbours this much, so the outline reads as a shape, not a zigzag. */
+const SPREAD = 0.2;
+/**
+ * A VU meter averages power over about 300 ms; this is the averaging time
+ * constant. The needle's own swing is in the drawing (Visualizer.tsx).
+ */
+const VU_POWER_S = 0.15;
 /** dBFS (RMS) that reads 0 VU. Mastered music sits close to it, so loud parts reach the red. */
 export const VU_REF_DB = -10;
 
@@ -55,6 +60,9 @@ let side: Float32Array<ArrayBuffer> | null = null;
 /** Band edges in FFT bins, worked out once the sample rate is known. */
 let edges: Float64Array | null = null;
 let tilt: Float32Array | null = null;
+const raw = new Float32Array(BANDS);
+/** Mean-square level per channel, averaged over VU_POWER_S. */
+const power = new Float64Array(2);
 
 const ease = (cur: number, target: number, dt: number) => {
   const tau = target > cur ? ATTACK_S : RELEASE_S;
@@ -110,9 +118,17 @@ function sample(now: number): Reading | null {
   for (let i = 0; i < BANDS; i += 1) {
     const from = Math.floor(e[i]);
     const to = Math.max(from + 1, Math.ceil(e[i + 1]));
-    let db = -Infinity;
-    for (let b = from; b < to && b < spectrum.length; b += 1) db = Math.max(db, spectrum[b]);
-    slot.bands[i] = Math.min(1, Math.max(0, (db + k[i] - FLOOR_DB) / (CEIL_DB - FLOOR_DB)));
+    // Mean power across the band's bins: a single loud bin no longer flicks the bar.
+    let sum = 0;
+    let n = 0;
+    for (let b = from; b < to && b < spectrum.length; b += 1, n += 1) sum += 10 ** (spectrum[b] / 10);
+    const db = n ? 10 * Math.log10(sum / n || 1e-12) : -120;
+    raw[i] = Math.min(1, Math.max(0, (db + k[i] - FLOOR_DB) / (CEIL_DB - FLOOR_DB)));
+  }
+  for (let i = 0; i < BANDS; i += 1) {
+    const a = raw[Math.max(0, i - 1)];
+    const b = raw[Math.min(BANDS - 1, i + 1)];
+    slot.bands[i] = raw[i] * (1 - 2 * SPREAD) + (a + b) * SPREAD;
   }
   left.getFloatTimeDomainData(side);
   slot.l = toDb(rms(side));
@@ -137,9 +153,16 @@ function read(dt: number, playing: boolean, now: number) {
   const got = playing ? sample(now) : null;
   if (!playing) for (const r of ring) r.at = 0;
   for (let i = 0; i < BANDS; i += 1) frame.bands[i] = ease(frame.bands[i], got ? got.bands[i] : 0, dt);
-  const a = 1 - Math.exp(-dt / VU_S);
-  frame.vu[0] += (Math.max(got ? got.l : -120, -90) - frame.vu[0]) * a;
-  frame.vu[1] += (Math.max(got ? got.r : -120, -90) - frame.vu[1]) * a;
+  vuFrom(got ? got.l : -120, got ? got.r : -120, dt);
+}
+
+/** Averages power, not decibels, the way a VU meter's rectifier does. */
+function vuFrom(l: number, r: number, dt: number) {
+  const a = 1 - Math.exp(-dt / VU_POWER_S);
+  power[0] += (10 ** (l / 10) - power[0]) * a;
+  power[1] += (10 ** (r / 10) - power[1]) * a;
+  frame.vu[0] = Math.max(-90, 10 * Math.log10(power[0] || 1e-12));
+  frame.vu[1] = Math.max(-90, 10 * Math.log10(power[1] || 1e-12));
 }
 
 /** In the browser preview there is no audio: a steady groove so the drawings can be seen. */
@@ -154,10 +177,8 @@ function fake(dt: number, playing: boolean, now: number) {
       : 0;
     frame.bands[i] = ease(frame.bands[i], Math.max(0, target), dt);
   }
-  const a = 1 - Math.exp(-dt / VU_S);
-  const level = playing ? VU_REF_DB - 6 + 7 * kick : -90;
-  frame.vu[0] += (level - frame.vu[0]) * a;
-  frame.vu[1] += (level - 1.5 - frame.vu[1]) * a;
+  const level = playing ? VU_REF_DB - 6 + 7 * kick : -120;
+  vuFrom(level, level - 1.5, dt);
 }
 
 function settled() {
