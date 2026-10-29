@@ -15,15 +15,17 @@ export const BANDS = 48;
 const LOW_HZ = 40;
 const HIGH_HZ = 16_000;
 /** Spectrum range shown, dBFS, after the tilt below. */
-const FLOOR_DB = -78;
-const CEIL_DB = -18;
+const FLOOR_DB = -66;
+const CEIL_DB = -24;
+/** Above 1, the low part of the range is pressed down, so bars spend less time half full and peaks stand out. */
+const CONTRAST = 1.5;
 /** Music loses energy towards the highs; this much per octave above 1 kHz is added back so the right side moves too. */
 const TILT_DB_PER_OCTAVE = 3;
 /** Bars rise fast and fall slowly; time constants in seconds. Shorter ones read every FFT wobble as a jump. */
-const ATTACK_S = 0.045;
-const RELEASE_S = 0.28;
+const ATTACK_S = 0.03;
+const RELEASE_S = 0.2;
 /** Each band is blended with its neighbours this much, so the outline reads as a shape, not a zigzag. */
-const SPREAD = 0.2;
+const SPREAD = 0.12;
 /**
  * A VU meter averages power over about 300 ms; this is the averaging time
  * constant. The needle's own swing is in the drawing (Visualizer.tsx).
@@ -39,7 +41,7 @@ export type Frame = {
   bands: Float32Array;
   /** Left and right level, dBFS RMS with VU ballistics. */
   vu: Float32Array;
-  /** 0..1, lows / mids / highs, for the small equalizer next to a playing track. */
+  /** 0..1, lows / mids / highs, for the wave's three layers. */
   eq: Float32Array;
 };
 
@@ -123,7 +125,7 @@ function sample(now: number): Reading | null {
     let n = 0;
     for (let b = from; b < to && b < spectrum.length; b += 1, n += 1) sum += 10 ** (spectrum[b] / 10);
     const db = n ? 10 * Math.log10(sum / n || 1e-12) : -120;
-    raw[i] = Math.min(1, Math.max(0, (db + k[i] - FLOOR_DB) / (CEIL_DB - FLOOR_DB)));
+    raw[i] = Math.min(1, Math.max(0, (db + k[i] - FLOOR_DB) / (CEIL_DB - FLOOR_DB))) ** CONTRAST;
   }
   for (let i = 0; i < BANDS; i += 1) {
     const a = raw[Math.max(0, i - 1)];
