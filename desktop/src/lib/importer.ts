@@ -12,10 +12,19 @@ import type { Track } from './types';
 
 export type ImportSource = 'soundcloud' | 'spotify';
 
-export type ImportProgress = { stage: 'reading' } | { stage: 'matching'; done: number; total: number };
+export type ImportProgress =
+  | { stage: 'reading' }
+  | { stage: 'loading' | 'matching'; done: number; total: number };
 
-/** `truncated`: Spotify showed only the start of a longer list. */
-export type ImportResult = { name: string; source: ImportSource; tracks: Track[]; unmatched: number; truncated?: boolean };
+/** `truncated`: Spotify showed only the start of a longer list. `lost`: tracks past it whose titles did not load. */
+export type ImportResult = {
+  name: string;
+  source: ImportSource;
+  tracks: Track[];
+  unmatched: number;
+  truncated?: boolean;
+  lost?: number;
+};
 
 type SpotifyItem = { title: string; artist: string; durationSec: number };
 
@@ -120,8 +129,18 @@ export async function importPlaylist(url: string, onProgress: (p: ImportProgress
     const set = await call<{ name: string; tracks: Track[] }>('import_soundcloud', { url: url.trim() });
     return { name: set.name, source, tracks: set.tracks, unmatched: 0 };
   }
-  const list = await call<{ name: string; items: SpotifyItem[]; truncated: boolean }>('import_spotify', { url: url.trim() });
-  const tracks = await matchAll(list.items, onProgress);
+  const list = await call<{ name: string; items: SpotifyItem[]; rest: string[]; truncated: boolean }>('import_spotify', {
+    url: url.trim(),
+  });
+  // Past the first 100, Spotify gives bare ids; each one's title is read in small batches to show progress.
+  const items = [...list.items];
+  let lost = 0;
+  for (let i = 0; i < list.rest.length; i += 12) {
+    onProgress({ stage: 'loading', done: i, total: list.rest.length });
+    const batch = await call<(SpotifyItem | null)[]>('spotify_tracks', { ids: list.rest.slice(i, i + 12) });
+    for (const item of batch) item ? items.push(item) : (lost += 1);
+  }
+  const tracks = await matchAll(items, onProgress);
   const unmatched = tracks.filter((tr) => tr.id.startsWith('sp_')).length;
-  return { name: list.name, source, tracks, unmatched, truncated: list.truncated };
+  return { name: list.name, source, tracks, unmatched, truncated: list.truncated, lost };
 }

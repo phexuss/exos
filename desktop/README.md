@@ -78,10 +78,11 @@ into search) copies a SoundCloud set, or a public Spotify playlist or album,
 into a local playlist. SoundCloud sets come from its web API with the same
 client id the player uses. Spotify is read from the embed player page
 (`open.spotify.com/embed/...`), which needs no account but is not an official
-API; it gives titles, artists and lengths of the first 100 tracks, and the
-rest of a longer list comes from the Web API with the anonymous web-player
-token the same page carries. Each track is matched on
-Deezer by title, artist and length. A track Deezer lacks stays as artist +
+API; it gives titles, artists and lengths of the first 100 tracks. For a
+longer playlist, the ids of the rest come from the playlist service the web
+player reads (`spclient.wg.spotify.com`) with the anonymous token the same
+page carries, and each title from that track's own embed page. Each track is
+matched on Deezer by title, artist and length. A track Deezer lacks stays as artist +
 title and plays through a YouTube search.
 
 **Lyrics** come from the EXØS server (LRCLIB). When its exact match has no
