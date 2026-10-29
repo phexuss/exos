@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:window_manager/window_manager.dart';
@@ -12,7 +15,7 @@ import 'ui/tokens.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (!kMock) MediaKit.ensureInitialized();
+  if (!kMock) MediaKit.ensureInitialized(libmpv: _bundledLibmpv());
   await Prefs.init();
   createStores();
 
@@ -43,4 +46,12 @@ Future<void> main() async {
     await engine.autoUpdate();
     await engineState.refresh();
   });
+}
+
+/// A Linux build can carry its own libmpv in lib/mpv (with its dependencies
+/// next to it), for systems where the mpv package can't be installed.
+String? _bundledLibmpv() {
+  if (kIsWeb || !Platform.isLinux) return null;
+  final lib = File('${File(Platform.resolvedExecutable).parent.path}/lib/mpv/libmpv.so.2');
+  return lib.existsSync() ? lib.path : null;
 }
