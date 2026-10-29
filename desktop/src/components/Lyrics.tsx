@@ -26,7 +26,18 @@ export function Lyrics({ big }: { big?: boolean }) {
 
   if (!current) return <div className="empty">{t('lyrics.idle')}</div>;
   if (!lyrics) return <div className="empty">{t('lyrics.looking')}</div>;
-  if (!lines.length && lyrics.plainLyrics) return <div className="lyrics__plain">{lyrics.plainLyrics}</div>;
+  // Unsynced lyrics: same type as synced ones, all lines lit, nothing follows the playback.
+  if (!lines.length && lyrics.plainLyrics)
+    return (
+      <div className={`lyrics lyrics--plain ${big ? 'big' : ''}`}>
+        {lyrics.plainLyrics.trim().split('\n').map((l, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: static text, lines never reorder
+          <p key={i} className="lyrics__line">
+            {l.trim() || '\u00a0'}
+          </p>
+        ))}
+      </div>
+    );
   if (!lines.length)
     return (
       <div className="empty">

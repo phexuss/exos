@@ -15,28 +15,28 @@ range="${prev:+$prev..}HEAD"
 
 echo "## EXØS desktop ${tag#desktop-v}"
 echo
-echo "### Изменения"
+echo "### What's changed"
 echo
 changes=$(git log --no-merges --format='- %s (%h)' "$range" -- desktop .github/workflows/desktop.yml | head -60)
-echo "${changes:-- Без изменений в desktop/}"
+echo "${changes:-- No changes in desktop/}"
 echo
-echo "### 📦 Установка"
+echo "### 📦 Install"
 echo
-echo "| Система | Файл |"
+echo "| System | File |"
 echo "| --- | --- |"
 for f in "$dir"/*; do
   name=$(basename "$f")
   case "$name" in
     *.exe) os="Windows" ;;
-    *.dmg) os="macOS (Intel и Apple Silicon)" ;;
+    *.dmg) os="macOS (Intel and Apple Silicon)" ;;
     *.AppImage) os="Linux, AppImage" ;;
-    *.tar.gz) os="Linux, архив (распаковать и запустить ./exos)" ;;
+    *.tar.gz) os="Linux, archive (unpack and run ./exos)" ;;
     *) continue ;;
   esac
   echo "| $os | \`$name\` · $(du -h "$f" | cut -f1) |"
 done
 echo
-echo "Сборки не подписаны: Windows покажет SmartScreen (Подробнее → Выполнить в любом случае), macOS попросит открыть через правый клик → Открыть."
+echo "The builds are not signed yet. Windows shows SmartScreen: click More info → Run anyway. On macOS, right-click the app → Open."
 echo
 echo "SHA-256:"
 echo
@@ -46,5 +46,5 @@ echo '```'
 
 if [[ -n "$prev" ]]; then
   echo
-  echo "**Все изменения**: https://github.com/${repo}/compare/${prev}...${tag}"
+  echo "**Full changelog**: https://github.com/${repo}/compare/${prev}...${tag}"
 fi
