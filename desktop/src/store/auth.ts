@@ -7,8 +7,11 @@ import type { User } from '@/lib/types';
 type AuthState = {
   status: 'loading' | 'signedOut' | 'signedIn';
   user: User | null;
+  /** True from a sign-in until the shell has finished opening up. */
+  entering: boolean;
   bootstrap: () => Promise<void>;
-  login: (username: string, password: string) => Promise<void>;
+  /** `beforeEnter` runs once the server said yes, before the app replaces the sign-in screen. */
+  login: (username: string, password: string, beforeEnter?: () => Promise<void>) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -33,6 +36,7 @@ export const useAuth = create<AuthState>((set) => ({
   // Known before the first frame, so a returning user never sees a blank window.
   status: IS_MOCK || hasTokens() ? 'signedIn' : 'signedOut',
   user: cachedUser(),
+  entering: false,
   bootstrap: async () => {
     setUnauthorizedHandler(() => set({ status: 'signedOut', user: null }));
     if (!IS_MOCK && !hasTokens()) {
@@ -50,11 +54,11 @@ export const useAuth = create<AuthState>((set) => ({
       if (!hasTokens()) set({ status: 'signedOut', user: null });
     }
   },
-  login: async (username, password) => {
+  login: async (username, password, beforeEnter) => {
     await api.login(username, password);
-    const user = await api.getMe().catch(() => null);
+    const [user] = await Promise.all([api.getMe().catch(() => null), beforeEnter?.()]);
     rememberUser(user);
-    set({ status: 'signedIn', user });
+    set({ status: 'signedIn', user, entering: true });
   },
   logout: async () => {
     await api.logout();

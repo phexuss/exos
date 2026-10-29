@@ -182,6 +182,8 @@ export const ru: typeof en = {
     password: 'Пароль',
     missing: 'Введи логин и пароль.',
     signingIn: 'Вхожу…',
+    showPassword: 'Показать пароль',
+    hidePassword: 'Скрыть пароль',
     submit: 'Войти',
     noAccount: 'Нет аккаунта? Зарегистрируйся в приложении на телефоне.',
   },
