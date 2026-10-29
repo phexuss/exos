@@ -1,16 +1,16 @@
 /**
- * The list of downloaded tracks lives in one JSON file next to the tools. The
- * window owns its shape; the engine only stores it.
+ * The list of downloaded tracks and the playlists each live in one JSON file
+ * next to the tools. The window owns their shape; the engine only stores them.
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { libraryFile } from './paths';
+import { libraryFile, playlistsFile } from './paths';
 import { L } from './i18n';
 
-export async function read(): Promise<unknown[] | null> {
+export async function read(file = libraryFile()): Promise<unknown[] | null> {
   let text: string;
   try {
-    text = await fs.readFile(libraryFile(), 'utf8');
+    text = await fs.readFile(file, 'utf8');
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw e;
@@ -19,13 +19,15 @@ export async function read(): Promise<unknown[] | null> {
     return JSON.parse(text) as unknown[];
   } catch (e) {
     throw new Error(
-      L(`library.json повреждён: ${(e as Error).message}`, `library.json is damaged: ${(e as Error).message}`),
+      L(
+        `${path.basename(file)} повреждён: ${(e as Error).message}`,
+        `${path.basename(file)} is damaged: ${(e as Error).message}`,
+      ),
     );
   }
 }
 
-export async function write(tracks: unknown): Promise<void> {
-  const file = libraryFile();
+export async function write(tracks: unknown, file = libraryFile()): Promise<void> {
   await fs.mkdir(path.dirname(file), { recursive: true });
   const tmp = `${file}.tmp`;
   await fs.writeFile(tmp, JSON.stringify(tracks));

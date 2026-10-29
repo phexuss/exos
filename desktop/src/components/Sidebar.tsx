@@ -1,11 +1,50 @@
-import { ArrowDownToLine, Home, Library, LogOut, Search, Settings } from 'lucide-react';
+import { ArrowDownToLine, Home, Library, LogOut, Plus, Search, Settings } from 'lucide-react';
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useT } from '@/i18n';
+import { dragged, endDrag } from '@/lib/drag';
 import { snappy } from '@/lib/springs';
+import type { Playlist } from '@/lib/types';
 import { useAuth } from '@/store/auth';
 import { useEngine } from '@/store/engine';
 import { useLibrary } from '@/store/library';
 import { type Route, useNav } from '@/store/nav';
+import { usePlaylists } from '@/store/playlists';
+import { PlaylistCover } from './PlaylistCover';
+
+/** A playlist in the sidebar; tracks dragged from any list drop onto it. */
+function PlaylistItem({ playlist, active }: { playlist: Playlist; active: boolean }) {
+  const go = useNav((s) => s.go);
+  const add = usePlaylists((s) => s.add);
+  const [over, setOver] = useState(false);
+  return (
+    <button
+      type="button"
+      className={`nav__item pl-item ${active ? 'is-active' : ''} ${over ? 'is-drop' : ''}`}
+      onClick={() => go({ name: 'playlist', id: playlist.id })}
+      title={playlist.name}
+      onDragOver={(e) => {
+        if (!dragged()) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        const d = dragged();
+        setOver(false);
+        if (!d) return;
+        e.preventDefault();
+        add(playlist.id, d.tracks);
+        endDrag();
+      }}
+    >
+      {active && <motion.span layoutId="nav-pill" className="nav__pill" transition={snappy} />}
+      <PlaylistCover playlist={playlist} className="pl-item__cover" />
+      <span className="ellipsis">{playlist.name}</span>
+    </button>
+  );
+}
 
 export function Sidebar() {
   const { route, go } = useNav();
@@ -16,6 +55,7 @@ export function Sidebar() {
   const user = useAuth((s) => s.user);
   const logout = useAuth((s) => s.logout);
   const status = useEngine((s) => s.status);
+  const playlists = usePlaylists((s) => s.playlists);
   const { t } = useT();
 
   const item = (r: Route, icon: React.ReactNode, label: string, badge?: number) => (
@@ -46,7 +86,26 @@ export function Sidebar() {
         {item({ name: 'library' }, <Library size={20} />, `${t('nav.library')}${count ? ` · ${count}` : ''}`)}
         {item({ name: 'downloads' }, <ArrowDownToLine size={20} />, t('nav.downloads'), active)}
       </nav>
-      <div className="sidebar__spacer" />
+      <nav className="nav sidebar__playlists">
+        <div className="nav__label nav__label--action">
+          <span>{t('playlist.playlists')}</span>
+          <button
+            type="button"
+            className="icon-btn sm"
+            aria-label={t('playlist.create')}
+            title={t('playlist.create')}
+            onClick={() => go({ name: 'playlist', id: usePlaylists.getState().create() })}
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+        <div className="sidebar__scroll">
+          {playlists.map((pl) => (
+            <PlaylistItem key={pl.id} playlist={pl} active={route.name === 'playlist' && route.id === pl.id} />
+          ))}
+          {!playlists.length && <div className="nav__empty">{t('playlist.none')}</div>}
+        </div>
+      </nav>
       {/* Only asks for attention when a tool is missing; a working engine stays out of the way. */}
       {!ready && status && (
         <button

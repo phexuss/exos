@@ -41,6 +41,7 @@ export const apiCacheDir = () => path.join(cacheRoot(), 'api');
 /** Per-download scratch folders; finished files are moved out of here. */
 export const workDir = () => path.join(dataDir(), 'work');
 export const libraryFile = () => path.join(dataDir(), 'library.json');
+export const playlistsFile = () => path.join(dataDir(), 'playlists.json');
 
 /** The main process knows the OS music folder; it passes it in. */
 export const defaultMusicDir = () =>

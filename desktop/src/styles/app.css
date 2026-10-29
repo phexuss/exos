@@ -309,6 +309,21 @@ img { display: block; }
   place-items: center;
 }
 .sidebar__spacer { flex: 1; }
+.sidebar__playlists { flex: 1; min-height: 0; }
+.sidebar__scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin: 0 -4px; padding: 0 4px; }
+.nav__label--action { display: flex; align-items: center; justify-content: space-between; padding-right: 4px; padding-bottom: 2px; }
+.nav__label--action .icon-btn { color: var(--text-3); }
+.nav__label--action .icon-btn:hover { color: var(--text); }
+.nav__empty { padding: 4px 12px; font-size: 13px; color: var(--text-3); }
+.pl-item { height: 44px; gap: 10px; padding: 0 8px; }
+.pl-item__cover { width: 30px; border-radius: 6px; }
+.pl-item.is-drop { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.pl-cover { display: grid; grid-template-columns: 1fr 1fr; }
+.pl-cover > .cover { width: 100%; border-radius: 0; }
+.pl-cover--empty { display: grid; place-items: center; color: var(--text-3); background: var(--fill-3); }
+.pl-name button { font: inherit; text-align: left; cursor: text; }
+.pl-name__input { width: 100%; background: transparent; border: 0; outline: 0; border-bottom: 2px solid var(--accent); padding: 0; color: var(--text); user-select: text; }
+.tt__row.is-drop { box-shadow: inset 0 2px 0 var(--accent); }
 
 .engine-chip {
   display: grid;
@@ -950,6 +965,10 @@ img { display: block; }
 .menu button:hover { background: var(--fill-3); }
 .menu button.danger { color: var(--danger); }
 .menu hr { border: 0; border-top: 1px solid var(--divider); margin: 4px 6px; }
+.menu__sub { position: relative; }
+.menu__chev { margin-left: auto; color: var(--text-3); }
+.menu--sub { position: absolute; left: calc(100% + 4px); top: -6px; max-height: 50vh; overflow-y: auto; max-width: 260px; }
+.menu--sub.left { left: auto; right: calc(100% + 4px); }
 
 .toasts { position: fixed; z-index: 120; left: 50%; bottom: calc(var(--player-h) + 24px); transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
 .toast {

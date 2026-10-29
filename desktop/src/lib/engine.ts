@@ -5,7 +5,7 @@
  */
 import { bridge, call } from './bridge';
 import { IS_MOCK } from './env';
-import type { LocalTrack, Track } from './types';
+import type { LocalTrack, Playlist, Track } from './types';
 
 export type ToolInfo = { path: string; version: string; managed: boolean };
 
@@ -134,6 +134,9 @@ export const engine = {
     IS_MOCK ? Promise.resolve(null) : invoke<LocalTrack[] | null>('library_read'),
   writeLibrary: (tracks: LocalTrack[]) =>
     IS_MOCK ? Promise.resolve() : invoke<void>('library_write', { tracks }),
+  readPlaylists: () => (IS_MOCK ? Promise.resolve(null) : invoke<Playlist[] | null>('playlists_read')),
+  writePlaylists: (playlists: Playlist[]) =>
+    IS_MOCK ? Promise.resolve() : invoke<void>('playlists_write', { playlists }),
   deleteFile: (path: string) =>
     IS_MOCK ? Promise.resolve() : invoke<void>('delete_file', { path }),
   fileExists: (path: string) =>

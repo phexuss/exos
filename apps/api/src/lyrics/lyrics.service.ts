@@ -34,8 +34,12 @@ export class LyricsService {
           },
         }),
       );
-      await this.cacheManager.set(cacheKey, data, CACHE_TTL_MS.lyrics);
-      return data;
+      // An exact match without any text (often marked instrumental) is not an
+      // answer: another entry of the same song may have the lyrics.
+      if (data?.syncedLyrics || data?.plainLyrics) {
+        await this.cacheManager.set(cacheKey, data, CACHE_TTL_MS.lyrics);
+        return data;
+      }
     } catch (e: unknown) {
       const status =
         (e as { response?: { status?: number } })?.response?.status ?? 0;
@@ -57,15 +61,21 @@ export class LyricsService {
         }),
       );
 
-      if (results && results.length > 0) {
-        const best = duration
-          ? results.reduce((prev, cur) =>
-              Math.abs(cur.duration - duration) <
-              Math.abs(prev.duration - duration)
-                ? cur
-                : prev,
-            )
-          : results[0];
+      const withText = (results ?? []).filter(
+        (r) => r.syncedLyrics || r.plainLyrics,
+      );
+      if (withText.length > 0) {
+        // Synced before plain; among those, the closest in length. Entries more
+        // than 15 s off are usually another version of the song.
+        const off = (r: LRCLibResponse) =>
+          duration ? Math.abs(r.duration - duration) : 0;
+        const near = withText.filter((r) => off(r) <= 15);
+        const pool = near.length ? near : withText;
+        const best = pool.sort(
+          (a, b) =>
+            Number(!a.syncedLyrics) - Number(!b.syncedLyrics) ||
+            off(a) - off(b),
+        )[0];
         this.logger.debug(
           `Lyrics via /search for "${normalizedArtist} - ${normalizedTrack}"`,
         );

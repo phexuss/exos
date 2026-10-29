@@ -1,5 +1,6 @@
 import { apiGet, apiPost, apiRequest, clearTokens, saveTokens } from './api';
-import { IS_MOCK } from './env';
+import { call } from './bridge';
+import { IS_DESKTOP, IS_MOCK } from './env';
 import { primaryArtist } from './format';
 import * as mock from './mock';
 import type {
@@ -217,10 +218,35 @@ export async function getSimilar(track: Track): Promise<SimilarTrack[]> {
   }));
 }
 
+type LrcLibHit = { duration: number; instrumental?: boolean } & Lyrics;
+
+/**
+ * LRCLIB's own search, when the server's exact match came back empty: the
+ * match it picks by length can be an entry without text while another entry
+ * of the same song has synced or at least plain lyrics.
+ */
+async function searchLrcLib(track: Track): Promise<Lyrics | null> {
+  if (!IS_DESKTOP) return null;
+  const q = new URLSearchParams({ artist_name: primaryArtist(track.artist.name), track_name: track.title });
+  const r = await call<{ status: number; body: string }>('http', {
+    req: { url: `https://lrclib.net/api/search?${q}`, ttl: TTL.lyrics },
+  });
+  if (r.status !== 200) return null;
+  const hits = (JSON.parse(r.body) as LrcLibHit[]).filter((h) => h.syncedLyrics || h.plainLyrics);
+  if (!hits.length) return null;
+  const off = (h: LrcLibHit) => (track.durationSec ? Math.abs(h.duration - track.durationSec) : 0);
+  // Synced first, then plain; among equals the one closest in length. Far-off lengths are other songs.
+  const near = hits.filter((h) => off(h) <= 15);
+  const pool = near.length ? near : hits;
+  pool.sort((a, b) => Number(!a.syncedLyrics) - Number(!b.syncedLyrics) || off(a) - off(b));
+  return { syncedLyrics: pool[0].syncedLyrics ?? null, plainLyrics: pool[0].plainLyrics ?? null };
+}
+
 export async function getLyrics(track: Track): Promise<Lyrics | null> {
   if (IS_MOCK) return mock.lyrics(track);
+  let found: Lyrics | null = null;
   try {
-    return await apiGet<Lyrics>(
+    found = await apiGet<Lyrics>(
       '/lyrics',
       {
         artist: primaryArtist(track.artist.name),
@@ -229,9 +255,9 @@ export async function getLyrics(track: Track): Promise<Lyrics | null> {
       },
       TTL.lyrics,
     );
-  } catch {
-    return null;
-  }
+  } catch {}
+  if (found?.syncedLyrics || found?.plainLyrics) return found;
+  return (await searchLrcLib(track).catch(() => null)) ?? found;
 }
 
 /* ---------- cloud library (shared with the phone app) ---------- */

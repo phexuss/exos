@@ -21,12 +21,14 @@ import { Artist } from '@/screens/Artist';
 import { Home } from '@/screens/Home';
 import { Library } from '@/screens/Library';
 import { Login } from '@/screens/Login';
+import { PlaylistScreen } from '@/screens/Playlist';
 import { Search } from '@/screens/Search';
 import { useAuth } from '@/store/auth';
 import { useEngine } from '@/store/engine';
 import { useLibrary } from '@/store/library';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
+import { usePlaylists } from '@/store/playlists';
 import { useSettings } from '@/store/settings';
 
 // Screens nobody opens first load on demand (and in the background once the app is idle).
@@ -86,6 +88,9 @@ function Screen() {
     case 'artist':
       screen = <Artist id={route.id} />;
       break;
+    case 'playlist':
+      screen = <PlaylistScreen id={route.id} />;
+      break;
   }
   return (
     <main className="main">
@@ -125,7 +130,9 @@ export function App() {
     }
   }, []);
   useEffect(() => {
-    if (auth === 'signedIn') void useLibrary.getState().load();
+    if (auth !== 'signedIn') return;
+    void useLibrary.getState().load();
+    void usePlaylists.getState().load();
   }, [auth]);
   // The engine reads the language off <html lang> with every call, for its own messages.
   useEffect(() => {

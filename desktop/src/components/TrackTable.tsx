@@ -5,6 +5,8 @@ import { useT } from '@/i18n';
 import { formatTime } from '@/lib/format';
 import type { Track } from '@/lib/types';
 import { onIntent, prefetchAlbum, prefetchArtist } from '@/lib/queries';
+import { dragged, endDrag, startDrag } from '@/lib/drag';
+import { usePlaylists } from '@/store/playlists';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
 import { useMenu } from './ContextMenu';
@@ -16,19 +18,23 @@ type Props = {
   showCover?: boolean;
   /** Narrow column: title, duration and download only. */
   compact?: boolean;
+  /** Rows of a playlist: they can be removed and dragged into a new order. */
+  playlistId?: string;
+  onRemove?: (index: number) => void;
 };
 
 /** Longer lists only keep the rows near the viewport in the DOM. */
 const VIRTUAL_FROM = 60;
 const ROW_H = 58;
 
-export function TrackTable({ tracks, showAlbum = true, showCover = true, compact }: Props) {
+export function TrackTable({ tracks, showAlbum = true, showCover = true, compact, playlistId, onRemove }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const currentId = usePlayer((s) => s.current?.id);
   const playing = usePlayer((s) => s.status === 'playing' || s.status === 'loading');
   const playQueue = usePlayer((s) => s.playQueue);
   const virtual = tracks.length >= VIRTUAL_FROM;
   const { t } = useT();
+  const [dropAt, setDropAt] = useState<number | null>(null);
 
   const row = (t: Track, i: number) => (
     <Row
@@ -42,6 +48,31 @@ export function TrackTable({ tracks, showAlbum = true, showCover = true, compact
       playing={playing}
       onSelect={() => setSelected(t.id)}
       onPlay={() => playQueue(tracks, i)}
+      onRemove={onRemove ? () => onRemove(i) : undefined}
+      onDragStart={(e) => startDrag(e, { tracks: [t], from: playlistId ? { playlistId, index: i } : undefined })}
+      dropMark={dropAt === i}
+      onDragOver={
+        playlistId
+          ? (e) => {
+              const d = dragged();
+              if (d?.from?.playlistId !== playlistId) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              if (dropAt !== i) setDropAt(i);
+            }
+          : undefined
+      }
+      onDrop={
+        playlistId
+          ? (e) => {
+              const d = dragged();
+              setDropAt(null);
+              if (d?.from?.playlistId !== playlistId) return;
+              e.preventDefault();
+              usePlaylists.getState().move(playlistId, d.from.index, i);
+            }
+          : undefined
+      }
     />
   );
 
@@ -57,7 +88,9 @@ export function TrackTable({ tracks, showAlbum = true, showCover = true, compact
         </span>
         <span />
       </div>
+      <div onDragLeave={(e) => e.currentTarget === e.target && setDropAt(null)} onDragEnd={() => (setDropAt(null), endDrag())}>
       {virtual ? <VirtualRows count={tracks.length} render={(i) => row(tracks[i], i)} /> : tracks.map(row)}
+      </div>
     </div>
   );
 }
@@ -111,6 +144,11 @@ const Row = memo(function Row({
   playing,
   onSelect,
   onPlay,
+  onRemove,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  dropMark,
 }: {
   track: Track;
   n: number;
@@ -121,6 +159,11 @@ const Row = memo(function Row({
   playing: boolean;
   onSelect: () => void;
   onPlay: () => void;
+  onRemove?: () => void;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  dropMark: boolean;
 }) {
   const go = useNav((s) => s.go);
   const showMenu = useMenu((s) => s.show);
@@ -129,7 +172,11 @@ const Row = memo(function Row({
     <div
       role="row"
       tabIndex={0}
-      className={`tt__row ${selected ? 'is-selected' : ''} ${current ? 'is-current' : ''}`}
+      className={`tt__row ${selected ? 'is-selected' : ''} ${current ? 'is-current' : ''} ${dropMark ? 'is-drop' : ''}`}
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
       onClick={onSelect}
       onDoubleClick={onPlay}
       onKeyDown={(e) => {
@@ -138,7 +185,7 @@ const Row = memo(function Row({
       onContextMenu={(e) => {
         e.preventDefault();
         onSelect();
-        showMenu(e.clientX, e.clientY, track, onPlay);
+        showMenu(e.clientX, e.clientY, track, onPlay, onRemove);
       }}
     >
       <span className="tt__num">

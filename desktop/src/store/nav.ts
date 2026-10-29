@@ -7,7 +7,8 @@ export type Route =
   | { name: 'downloads' }
   | { name: 'settings' }
   | { name: 'album'; id: string }
-  | { name: 'artist'; id: string };
+  | { name: 'artist'; id: string }
+  | { name: 'playlist'; id: string };
 
 type NavState = {
   stack: Route[];

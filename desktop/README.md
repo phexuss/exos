@@ -68,6 +68,15 @@ reconnected.
 - **Download format**: Opus (YouTube's best, about 160 kbit/s, no
   re-encoding), M4A (AAC as YouTube serves it) or MP3 at 128/192/320 kbit/s.
 
+**Playlists** live on this computer in `playlists.json` next to `library.json`.
+A track is kept as a snapshot, so it plays whether it is downloaded or not.
+Tracks are added from the right-click menu or by dragging a row onto a
+playlist in the sidebar; inside a playlist, rows drag into a new order.
+
+**Lyrics** come from the EXØS server (LRCLIB). When its exact match has no
+text, the app searches LRCLIB itself and takes synced lyrics if any entry has
+them, otherwise plain lyrics, which are shown as text without timing.
+
 The UI is in Russian and English (Settings → Language, or the switch on the
 sign-in screen); the engine answers errors in the same language.
 
@@ -119,3 +128,13 @@ If a driver misbehaves, `EXOS_X11=1 exos` runs it through XWayland.
 
 CI (`.github/workflows/desktop.yml`) builds the Windows installer, a universal
 macOS dmg, and a Linux AppImage plus tar.gz, unsigned, as workflow artifacts.
+
+## Releases
+
+Bump `version` in `desktop/package.json` and merge to main: the workflow
+builds all three systems and publishes them as a GitHub release under tag
+`desktop-v<version>` (a version with a suffix, like `0.3.0-beta`, is marked
+as a pre-release). The phone app keeps its own `v<version>` tags, and the
+desktop release is never marked "Latest", so links to the latest APK keep
+working. A manual run of the workflow on main releases the current version
+if its tag does not exist yet.

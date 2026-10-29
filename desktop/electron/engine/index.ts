@@ -14,7 +14,7 @@ import * as cookies from './cookies';
 import * as http from './http';
 import * as library from './library';
 import * as media from './media';
-import { workDir } from './paths';
+import { playlistsFile, workDir } from './paths';
 import * as tools from './tools';
 import * as ytdlp from './ytdlp';
 
@@ -31,6 +31,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
   cancel_download: (a) => ytdlp.cancel(a.id),
   library_read: () => library.read(),
   library_write: (a) => library.write(a.tracks),
+  playlists_read: () => library.read(playlistsFile()),
+  playlists_write: (a) => library.write(a.playlists, playlistsFile()),
   delete_file: (a) => library.deleteAudio(a.path),
   file_exists: (a) => library.fileExists(a.path),
   media_file: (a) => media.fileUrl(a.path),
