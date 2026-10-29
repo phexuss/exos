@@ -77,6 +77,9 @@ const fx = IS_MOCK ? null : createFx(audio as HTMLAudioElement);
 const gain = (v: number) => Math.max(0, Math.min(1, v)) ** 3;
 const setOutput = (v: number) => (fx ? fx.setVolume(gain(v)) : (audio.volume = gain(v)));
 
+/** The visualizer's analysers (null in the browser mock, which has no real audio). */
+export const audioTaps = () => fx?.taps() ?? null;
+
 /** The playhead right now, for things drawn every frame. */
 export const playhead = () => audio.currentTime;
 

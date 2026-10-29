@@ -66,6 +66,9 @@ export const en = {
     lyrics: 'Lyrics',
     queue: 'Queue',
     fullWindow: 'Full window',
+    vizBars: 'Spectrum',
+    vizWave: 'Waveform',
+    vizVu: 'VU meters',
     volume: 'Volume',
     mute: 'Mute',
     unmute: 'Unmute',
@@ -304,6 +307,8 @@ export const en = {
     accentHint: 'The accent color follows the artwork of what is playing.',
     fps: 'Frame counter',
     fpsHint: 'Shows in the title bar how many frames per second the app draws.',
+    viz: 'Visualizer',
+    vizHint: 'Moves with the music: a spectrum along the player, a spectrum, waveform or VU meters in the full window, and bars next to the playing track.',
     account: 'Account',
     accountFallback: 'EXØS account',
     accountHint:

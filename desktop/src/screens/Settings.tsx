@@ -287,6 +287,13 @@ export function Settings() {
               </div>
               <Toggle on={s.showFps} onChange={(v) => s.set({ showFps: v })} label={t('settings.fps')} />
             </div>
+            <div className="row">
+              <div>
+                <div className="row__label">{t('settings.viz')}</div>
+                <div className="row__hint">{t('settings.vizHint')}</div>
+              </div>
+              <Toggle on={s.visualizer} onChange={(v) => s.set({ visualizer: v })} label={t('settings.viz')} />
+            </div>
           </div>
         </section>
 
