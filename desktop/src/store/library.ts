@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { type DownloadProgress, engine, listen, onMockProgress, sourceRequest } from '@/lib/engine';
+import { t } from '@/i18n';
 import { IS_MOCK } from '@/lib/env';
 import { exampleTracks } from '@/lib/mock';
 import * as api from '@/lib/services';
@@ -71,6 +72,7 @@ export const useLibrary = create<LibraryState>((set, get) => {
           artist: track.artist.name,
           album: track.album,
           format: settings.format,
+          bitrate: settings.mp3Bitrate,
           dir: settings.musicDir ?? defaultMusicDir,
         }),
         api.getLyrics(track),
@@ -91,7 +93,7 @@ export const useLibrary = create<LibraryState>((set, get) => {
       const message = e instanceof Error ? e.message : String(e);
       if (get().jobs[track.id]) {
         patchJob(track.id, { stage: 'error', error: message });
-        toast(`Не скачалось: ${track.title}. ${message}`, 'error');
+        toast(t('download.failed', { title: track.title, error: message }), 'error');
       }
     } finally {
       pump();
@@ -132,7 +134,7 @@ export const useLibrary = create<LibraryState>((set, get) => {
     downloadMany: (tracks) => {
       const fresh = tracks.filter((t) => !get().isDownloaded(t.id));
       for (const t of fresh) get().download(t);
-      if (fresh.length > 1) toast(`В очереди на скачивание: ${fresh.length}`);
+      if (fresh.length > 1) toast(t('download.queuedMany', { n: fresh.length }));
     },
     cancel: (id) => {
       void engine.cancel(id);

@@ -15,22 +15,33 @@ import {
   LoaderCircle,
 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
+import { useT } from '@/i18n';
 import { formatTime } from '@/lib/format';
 import { flyPressedCoverTo } from '@/lib/motion';
 import { useNav } from '@/store/nav';
-import { usePlayer } from '@/store/player';
+import { playhead, usePlayer } from '@/store/player';
 import { useSettings } from '@/store/settings';
+import { FxPopover } from './FxPopover';
 import { Cover, DownloadButton, Slider, SourcePill } from './ui';
 
 function Seek() {
   const time = usePlayer((s) => s.time);
   const duration = usePlayer((s) => s.duration);
   const loading = usePlayer((s) => s.status === 'loading');
+  const playing = usePlayer((s) => s.status === 'playing');
   const seek = usePlayer((s) => s.seek);
+  const { t } = useT();
   return (
     <div className="player__seek tabular">
       <span>{formatTime(time)}</span>
-      <Slider value={time} max={duration} onCommit={seek} loading={loading} label="Позиция" />
+      <Slider
+        value={time}
+        max={duration}
+        onCommit={seek}
+        loading={loading}
+        label={t('player.position')}
+        live={playing ? playhead : undefined}
+      />
       <span>{formatTime(duration)}</span>
     </div>
   );
@@ -40,13 +51,14 @@ function Volume() {
   const volume = useSettings((s) => s.volume);
   const setVolume = usePlayer((s) => s.setVolume);
   const before = useRef(0.8);
+  const { t } = useT();
   const Icon = volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
   return (
     <div className="volume">
       <button
         type="button"
         className="icon-btn sm"
-        aria-label={volume === 0 ? 'Включить звук' : 'Выключить звук'}
+        aria-label={volume === 0 ? t('player.unmute') : t('player.mute')}
         onClick={() => {
           if (volume > 0) {
             before.current = volume;
@@ -56,7 +68,7 @@ function Volume() {
       >
         <Icon size={18} />
       </button>
-      <Slider value={volume} max={1} onChange={setVolume} onCommit={setVolume} label="Громкость" />
+      <Slider value={volume} max={1} onChange={setVolume} onCommit={setVolume} label={t('player.volume')} />
     </div>
   );
 }
@@ -73,6 +85,7 @@ export function PlayerBar() {
   const go = useNav((s) => s.go);
   const nowRef = useRef<HTMLDivElement>(null);
   const currentId = current?.id;
+  const { t } = useT();
 
   useEffect(() => {
     if (!currentId) return;
@@ -84,7 +97,7 @@ export function PlayerBar() {
       <div className="player__now" ref={nowRef}>
         {current ? (
           <>
-            <button type="button" onClick={() => p.setNowPlaying(true)} aria-label="Открыть плеер на всё окно">
+            <button type="button" onClick={() => p.setNowPlaying(true)} aria-label={t('player.openFull')}>
               <Cover src={current.coverUrl} seed={current.album ?? current.id} label={current.title} />
             </button>
             <div key={current.id} className="player__text" style={{ minWidth: 0 }}>
@@ -108,7 +121,7 @@ export function PlayerBar() {
           </>
         ) : (
           <div className="muted" style={{ gridColumn: '1 / -1', fontSize: 13 }}>
-            Двойной клик по треку, чтобы включить
+            {t('player.doubleClick')}
           </div>
         )}
       </div>
@@ -119,15 +132,29 @@ export function PlayerBar() {
             type="button"
             className={`icon-btn sm ${shuffle ? 'is-on' : ''}`}
             onClick={p.toggleShuffle}
-            aria-label="Перемешать"
-            title="Перемешать"
+            aria-label={t('common.shuffle')}
+            title={t('common.shuffle')}
           >
             <Shuffle size={17} />
           </button>
-          <button type="button" className="icon-btn" onClick={p.prev} disabled={!current} aria-label="Предыдущий" title="Предыдущий (Shift+←)">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={p.prev}
+            disabled={!current}
+            aria-label={t('player.prev')}
+            title={`${t('player.prev')} (Shift+←)`}
+          >
             <SkipBack size={20} fill="currentColor" />
           </button>
-          <button type="button" className={`play-btn ${status}`} onClick={p.toggle} disabled={!current} aria-label={status === 'playing' ? 'Пауза' : 'Играть'} title="Пробел">
+          <button
+            type="button"
+            className={`play-btn ${status}`}
+            onClick={p.toggle}
+            disabled={!current}
+            aria-label={status === 'playing' ? t('player.pause') : t('common.play')}
+            title={t('player.space')}
+          >
             {status === 'loading' ? (
               <LoaderCircle size={20} className="spin-icon" />
             ) : status === 'playing' ? (
@@ -136,15 +163,28 @@ export function PlayerBar() {
               <Play size={20} fill="currentColor" style={{ marginLeft: 2 }} />
             )}
           </button>
-          <button type="button" className="icon-btn" onClick={p.next} disabled={!canNext} aria-label="Следующий" title="Следующий (Shift+→)">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={p.next}
+            disabled={!canNext}
+            aria-label={t('player.next')}
+            title={`${t('player.next')} (Shift+→)`}
+          >
             <SkipForward size={20} fill="currentColor" />
           </button>
           <button
             type="button"
             className={`icon-btn sm ${repeat !== 'off' ? 'is-on' : ''}`}
             onClick={p.cycleRepeat}
-            aria-label="Повтор"
-            title={repeat === 'one' ? 'Повтор трека' : repeat === 'all' ? 'Повтор очереди' : 'Повтор выключен'}
+            aria-label={t('player.repeat')}
+            title={
+              repeat === 'one'
+                ? t('player.repeatOne')
+                : repeat === 'all'
+                  ? t('player.repeatAll')
+                  : t('player.repeatOff')
+            }
           >
             {repeat === 'one' ? <Repeat1 size={17} /> : <Repeat size={17} />}
           </button>
@@ -157,8 +197,8 @@ export function PlayerBar() {
           type="button"
           className={`icon-btn ${panel === 'lyrics' ? 'is-on' : ''}`}
           onClick={() => p.togglePanel('lyrics')}
-          aria-label="Текст"
-          title="Текст (L)"
+          aria-label={t('player.lyrics')}
+          title={`${t('player.lyrics')} (L)`}
         >
           <Mic2 size={18} />
         </button>
@@ -166,19 +206,20 @@ export function PlayerBar() {
           type="button"
           className={`icon-btn ${panel === 'queue' ? 'is-on' : ''}`}
           onClick={() => p.togglePanel('queue')}
-          aria-label="Очередь"
-          title="Очередь (Q)"
+          aria-label={t('player.queue')}
+          title={`${t('player.queue')} (Q)`}
         >
           <ListMusic size={18} />
         </button>
+        <FxPopover />
         <Volume />
         <button
           type="button"
           className="icon-btn"
           disabled={!current}
           onClick={() => p.setNowPlaying(true)}
-          aria-label="На всё окно"
-          title="На всё окно (F)"
+          aria-label={t('player.fullWindow')}
+          title={`${t('player.fullWindow')} (F)`}
         >
           <Maximize2 size={17} />
         </button>

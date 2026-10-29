@@ -1,5 +1,6 @@
 import { ChevronDown } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useT } from '@/i18n';
 import { outEasing, reducedMotion, springEasing } from '@/lib/motion';
 import { registerNowPlayingCloser, usePlayer } from '@/store/player';
 import { AmbientArt } from './Ambient';
@@ -22,6 +23,7 @@ export function NowPlaying() {
   const root = useRef<HTMLElement>(null);
   const art = useRef<HTMLDivElement>(null);
   const close = () => usePlayer.getState().setNowPlaying(false);
+  const { t } = useT();
 
   // The cover grows out of the player bar and goes back into it.
   useLayoutEffect(() => {
@@ -52,12 +54,18 @@ export function NowPlaying() {
 
   if (!open || !current) return null;
   return (
-    <section className="np" aria-label="Сейчас играет" ref={root}>
+    <section className="np" aria-label={t('player.nowPlaying')} ref={root}>
       <div className="np__bg">
         <AmbientArt />
         <div className="ambient__veil" />
       </div>
-      <button type="button" className="icon-btn np__close" onClick={close} aria-label="Свернуть (Esc)" title="Свернуть (Esc)">
+      <button
+        type="button"
+        className="icon-btn np__close"
+        onClick={close}
+        aria-label={t('player.collapse')}
+        title={t('player.collapse')}
+      >
         <ChevronDown size={22} />
       </button>
       <div className="np__art">

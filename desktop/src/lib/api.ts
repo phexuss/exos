@@ -1,18 +1,19 @@
-import { API_BASE_URL, IS_TAURI } from './env';
+import { call } from './bridge';
+import { API_BASE_URL, IS_DESKTOP } from './env';
+
+type Init = { method?: string; headers?: Record<string, string>; body?: string };
+type Fetch = (url: string, init: Init, ttl?: number) => Promise<Response>;
 
 /**
- * The API's CORS list only allows the web app, so inside Tauri requests go
- * through the HTTP plugin (Rust side, no CORS) instead of the webview fetch.
- * The plugin adds `Origin: tauri://localhost` by default, which the API's
- * CORS check rejects; an empty Origin makes it drop the header.
+ * In the app, requests go through the engine (electron/engine/http.ts): the
+ * API's CORS list only has the website, and the engine keeps catalogue
+ * answers on disk. `ttl` (seconds) marks a GET as cacheable there.
  */
-let fetchImpl: typeof fetch = (...args) => fetch(...args);
-if (IS_TAURI) {
-  const pluginFetch = import('@tauri-apps/plugin-http').then((m) => m.fetch);
-  fetchImpl = async (input, init) => {
-    const headers = new Headers(init?.headers);
-    headers.set('Origin', '');
-    return (await pluginFetch)(input, { ...init, headers });
+let fetchImpl: Fetch = (url, init) => fetch(url, init);
+if (IS_DESKTOP) {
+  fetchImpl = async (url, init, ttl) => {
+    const r = await call<{ status: number; body: string }>('http', { req: { ...init, url, ttl } });
+    return new Response([204, 205, 304].includes(r.status) ? null : r.body, { status: r.status });
   };
 }
 
@@ -131,9 +132,9 @@ async function errorFrom(res: Response, path: string): Promise<ApiError> {
 
 export async function apiRequest<T>(
   path: string,
-  opts: { method?: string; body?: unknown; params?: Params; skipAuth?: boolean } = {},
+  opts: { method?: string; body?: unknown; params?: Params; skipAuth?: boolean; ttl?: number } = {},
 ): Promise<T> {
-  const { method = 'GET', body, params, skipAuth } = opts;
+  const { method = 'GET', body, params, skipAuth, ttl } = opts;
   const url = buildUrl(path, params);
   const headers: Record<string, string> = {};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -142,11 +143,15 @@ export async function apiRequest<T>(
     if (token) headers.Authorization = `Bearer ${token}`;
   }
   const send = () =>
-    fetchImpl(url, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
+    fetchImpl(
+      url,
+      {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+      },
+      ttl,
+    );
 
   let res = await send();
   if (res.status === 401 && !skipAuth) {
@@ -163,8 +168,9 @@ export async function apiRequest<T>(
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
-export const apiGet = <T>(path: string, params?: Params) =>
-  apiRequest<T>(path, { params });
+/** `ttl`: seconds the engine may answer from its disk cache (catalogue data only). */
+export const apiGet = <T>(path: string, params?: Params, ttl?: number) =>
+  apiRequest<T>(path, { params, ttl });
 
 export const apiPost = <T>(path: string, body?: unknown, skipAuth = false) =>
   apiRequest<T>(path, { method: 'POST', body, skipAuth });

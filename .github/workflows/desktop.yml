@@ -1,9 +1,19 @@
 name: Desktop app
 
-# Builds the Tauri app in desktop/ for Windows, macOS and Linux and uploads
-# the installers as workflow artifacts (unsigned, for testing).
+# Builds the Electron app in desktop/ for Windows, macOS and Linux.
+#
+# Pull requests: installers as workflow artifacts (for testing).
+# Version bump in desktop/package.json on main, or a manual run: the same
+# installers published as a GitHub release under tag desktop-v<version>.
+# Mobile releases keep their own v<version> tags.
 on:
   pull_request:
+    paths:
+      - desktop/**
+      - .github/workflows/desktop.yml
+      - .github/scripts/desktop-release-notes.sh
+  push:
+    branches: [main]
     paths:
       - desktop/**
       - .github/workflows/desktop.yml
@@ -11,37 +21,60 @@ on:
 
 concurrency:
   group: desktop-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: write
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+      release: ${{ steps.v.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: v
+        run: |
+          version=$(node -p "require('./desktop/package.json').version")
+          tag="desktop-v$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          elif git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "Tag $tag already exists; bump version in desktop/package.json to release."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$version tag=$tag"
+
   build:
+    needs: version
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            name: windows
-            args: ''
+            name: win
           - os: macos-latest
-            name: macos
-            args: '--target universal-apple-darwin'
+            name: mac
           - os: ubuntu-22.04
             name: linux
-            args: '--bundles deb,appimage'
     runs-on: ${{ matrix.os }}
     defaults:
       run:
         working-directory: desktop
     env:
       VITE_API_URL: https://exos-api.phexuss.dev/api
+      # No signing certificates yet; build unsigned.
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/checkout@v4
-
-      - name: Linux build dependencies
-        if: matrix.name == 'linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - uses: actions/setup-node@v4
         with:
@@ -49,25 +82,53 @@ jobs:
           cache: npm
           cache-dependency-path: desktop/package-lock.json
 
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.name == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
-
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: desktop/src-tauri -> target
-
       - run: npm ci
       - run: npm run typecheck
-      - run: npx tauri build ${{ matrix.args }}
+      - run: npm test
+      - run: npm run build
+      - run: npx electron-builder --${{ matrix.name }} --publish never
 
       - uses: actions/upload-artifact@v4
         with:
           name: exos-desktop-${{ matrix.name }}
           if-no-files-found: error
           path: |
-            desktop/src-tauri/target/**/release/bundle/nsis/*.exe
-            desktop/src-tauri/target/**/release/bundle/msi/*.msi
-            desktop/src-tauri/target/**/release/bundle/dmg/*.dmg
-            desktop/src-tauri/target/**/release/bundle/deb/*.deb
-            desktop/src-tauri/target/**/release/bundle/appimage/*.AppImage
+            desktop/release/*.exe
+            desktop/release/*.dmg
+            desktop/release/*.AppImage
+            desktop/release/*.tar.gz
+
+  release:
+    needs: [version, build]
+    if: needs.version.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: exos-desktop-*
+          path: ${{ runner.temp }}/installers
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+          DIR: ${{ runner.temp }}/installers
+        run: |
+          ls -la "$DIR"
+          .github/scripts/desktop-release-notes.sh "$TAG" "$DIR" > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
+          prerelease=""
+          case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
+          # --latest=false: "Latest release" stays the phone APK the website links to.
+          gh release create "$TAG" "$DIR"/* \
+            --target "$GITHUB_SHA" \
+            --title "EXØS desktop $VERSION" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --latest=false \
+            $prerelease

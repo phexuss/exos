@@ -1,5 +1,6 @@
 import { apiGet, apiPost, apiRequest, clearTokens, saveTokens } from './api';
-import { IS_MOCK } from './env';
+import { call } from './bridge';
+import { IS_DESKTOP, IS_MOCK } from './env';
 import { primaryArtist } from './format';
 import * as mock from './mock';
 import type {
@@ -12,6 +13,14 @@ import type {
   Track,
   User,
 } from './types';
+
+/** Seconds the engine may answer from disk before asking the API again. */
+const TTL = {
+  chart: 30 * 60,
+  search: 10 * 60,
+  catalogue: 24 * 3600,
+  lyrics: 7 * 24 * 3600,
+};
 
 type DzArtist = {
   id: number;
@@ -136,7 +145,7 @@ export async function getChart(): Promise<Chart> {
     tracks: { data: DzTrack[] };
     albums: { data: DzAlbum[] };
     artists: { data: DzArtist[] };
-  }>('/search/chart');
+  }>('/search/chart', undefined, TTL.chart);
   return {
     tracks: raw.tracks.data.map((t) => mapDzTrack(t)),
     albums: raw.albums.data.map(mapDzAlbum),
@@ -146,36 +155,36 @@ export async function getChart(): Promise<Chart> {
 
 export async function searchDeezer(q: string): Promise<Track[]> {
   if (IS_MOCK) return mock.search(q, 'deezer');
-  const raw = await apiGet<{ data: DzTrack[] }>('/search', { q });
+  const raw = await apiGet<{ data: DzTrack[] }>('/search', { q }, TTL.search);
   return raw.data.map((t) => mapDzTrack(t));
 }
 
 export async function searchSoundCloud(q: string): Promise<Track[]> {
   if (IS_MOCK) return mock.search(q, 'soundcloud');
-  const raw = await apiGet<{ data: ScTrack[] }>('/search/soundcloud', { q });
+  const raw = await apiGet<{ data: ScTrack[] }>('/search/soundcloud', { q }, TTL.search);
   return raw.data.map(mapScTrack);
 }
 
 export async function getArtist(id: string): Promise<ArtistDetails> {
   if (IS_MOCK) return mock.artist(id);
-  return mapDzArtist(await apiGet<DzArtist>(`/artists/${id}`));
+  return mapDzArtist(await apiGet<DzArtist>(`/artists/${id}`, undefined, TTL.catalogue));
 }
 
 export async function getArtistTracks(id: string): Promise<Track[]> {
   if (IS_MOCK) return mock.artistTracks(id);
-  const raw = await apiGet<{ data: DzTrack[] }>(`/artists/${id}/tracks`);
+  const raw = await apiGet<{ data: DzTrack[] }>(`/artists/${id}/tracks`, undefined, TTL.catalogue);
   return raw.data.map((t) => mapDzTrack(t));
 }
 
 export async function getArtistAlbums(id: string): Promise<AlbumCard[]> {
   if (IS_MOCK) return mock.artistAlbums(id);
-  const raw = await apiGet<{ data: DzAlbum[] }>(`/artists/${id}/albums`);
+  const raw = await apiGet<{ data: DzAlbum[] }>(`/artists/${id}/albums`, undefined, TTL.catalogue);
   return raw.data.map(mapDzAlbum);
 }
 
 export async function getAlbum(id: string): Promise<AlbumDetail> {
   if (IS_MOCK) return mock.album(id);
-  const raw = await apiGet<DzAlbum & { tracks?: { data: DzTrack[] } }>(`/albums/${id}`);
+  const raw = await apiGet<DzAlbum & { tracks?: { data: DzTrack[] } }>(`/albums/${id}`, undefined, TTL.catalogue);
   const card = mapDzAlbum(raw);
   return {
     ...card,
@@ -196,7 +205,7 @@ export async function getSimilar(track: Track): Promise<SimilarTrack[]> {
       isrc: string | null;
       deezerId: number;
     }[]
-  >('/search/similar', { artist: primaryArtist(track.artist.name), track: track.title });
+  >('/search/similar', { artist: primaryArtist(track.artist.name), track: track.title }, TTL.catalogue);
   return raw.map((s) => ({
     id: String(s.deezerId),
     title: s.title,
@@ -209,17 +218,46 @@ export async function getSimilar(track: Track): Promise<SimilarTrack[]> {
   }));
 }
 
+type LrcLibHit = { duration: number; instrumental?: boolean } & Lyrics;
+
+/**
+ * LRCLIB's own search, when the server's exact match came back empty: the
+ * match it picks by length can be an entry without text while another entry
+ * of the same song has synced or at least plain lyrics.
+ */
+async function searchLrcLib(track: Track): Promise<Lyrics | null> {
+  if (!IS_DESKTOP) return null;
+  const q = new URLSearchParams({ artist_name: primaryArtist(track.artist.name), track_name: track.title });
+  const r = await call<{ status: number; body: string }>('http', {
+    req: { url: `https://lrclib.net/api/search?${q}`, ttl: TTL.lyrics },
+  });
+  if (r.status !== 200) return null;
+  const hits = (JSON.parse(r.body) as LrcLibHit[]).filter((h) => h.syncedLyrics || h.plainLyrics);
+  if (!hits.length) return null;
+  const off = (h: LrcLibHit) => (track.durationSec ? Math.abs(h.duration - track.durationSec) : 0);
+  // Synced first, then plain; among equals the one closest in length. Far-off lengths are other songs.
+  const near = hits.filter((h) => off(h) <= 15);
+  const pool = near.length ? near : hits;
+  pool.sort((a, b) => Number(!a.syncedLyrics) - Number(!b.syncedLyrics) || off(a) - off(b));
+  return { syncedLyrics: pool[0].syncedLyrics ?? null, plainLyrics: pool[0].plainLyrics ?? null };
+}
+
 export async function getLyrics(track: Track): Promise<Lyrics | null> {
   if (IS_MOCK) return mock.lyrics(track);
+  let found: Lyrics | null = null;
   try {
-    return await apiGet<Lyrics>('/lyrics', {
-      artist: primaryArtist(track.artist.name),
-      track: track.title,
-      duration: track.durationSec,
-    });
-  } catch {
-    return null;
-  }
+    found = await apiGet<Lyrics>(
+      '/lyrics',
+      {
+        artist: primaryArtist(track.artist.name),
+        track: track.title,
+        duration: track.durationSec,
+      },
+      TTL.lyrics,
+    );
+  } catch {}
+  if (found?.syncedLyrics || found?.plainLyrics) return found;
+  return (await searchLrcLib(track).catch(() => null)) ?? found;
 }
 
 /* ---------- cloud library (shared with the phone app) ---------- */

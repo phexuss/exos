@@ -7,9 +7,10 @@ tag="$1"
 apk="${2:-}"
 repo="${GITHUB_REPOSITORY:-phexuss/exos}"
 
-prev=$(git describe --tags --abbrev=0 HEAD 2>/dev/null || true)
+# Mobile tags only (v1.2.3); the desktop app has its own desktop-v* tags.
+prev=$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD 2>/dev/null || true)
 if [[ "$prev" == "$tag" ]]; then
-  prev=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+  prev=$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD^ 2>/dev/null || true)
 fi
 range="${prev:+$prev..}HEAD"
 

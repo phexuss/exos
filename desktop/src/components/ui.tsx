@@ -1,8 +1,10 @@
 import { Check, Download, X } from 'lucide-react';
-import { type CSSProperties, useRef, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { placeholderGradient } from '@/lib/format';
 import type { Source, Track } from '@/lib/types';
 import { useLibrary } from '@/store/library';
+import { imageUrl } from '@/lib/bridge';
+import { useT } from '@/i18n';
 
 export function Cover({
   src,
@@ -24,7 +26,7 @@ export function Cover({
   return (
     <div className={`cover ${round ? 'round' : ''} ${className}`} style={style}>
       {showImg ? (
-        <img src={src} alt="" loading="lazy" draggable={false} onError={() => setFailed(true)} />
+        <img src={imageUrl(src)} alt="" loading="lazy" draggable={false} onError={() => setFailed(true)} />
       ) : (
         <div className="cover__ph" style={{ background: placeholderGradient(seed) }}>
           <span style={{ fontSize: '42cqw' }}>{(label ?? seed).trim().charAt(0).toUpperCase()}</span>
@@ -35,7 +37,8 @@ export function Cover({
 }
 
 export function SourcePill({ source }: { source: Source | 'local' }) {
-  const label = source === 'deezer' ? 'Deezer' : source === 'soundcloud' ? 'SC' : 'На диске';
+  const { t } = useT();
+  const label = source === 'deezer' ? 'Deezer' : source === 'soundcloud' ? 'SC' : t('common.onDisk');
   return <span className={`src-pill ${source}`}>{label}</span>;
 }
 
@@ -62,7 +65,12 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boo
   );
 }
 
-/** Horizontal slider for seek and volume; drags without fighting the playback clock. */
+/**
+ * Horizontal slider for seek and volume; drags without fighting the playback
+ * clock. With `live`, the fill follows that clock every frame (moving only a
+ * transform), so the seek bar glides at the display's refresh rate instead of
+ * stepping four times a second with the audio element's timeupdate.
+ */
 export function Slider({
   value,
   max,
@@ -70,6 +78,7 @@ export function Slider({
   onCommit,
   loading,
   label,
+  live,
 }: {
   value: number;
   max: number;
@@ -77,11 +86,33 @@ export function Slider({
   onCommit?: (v: number) => void;
   loading?: boolean;
   label: string;
+  live?: () => number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const fill = useRef<HTMLDivElement>(null);
+  const track = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<number | null>(null);
   const shown = drag ?? value;
-  const pct = max > 0 ? Math.max(0, Math.min(100, (shown / max) * 100)) : 0;
+
+  const paint = useCallback(
+    (v: number) => {
+      const f = max > 0 ? Math.max(0, Math.min(1, v / max)) : 0;
+      if (fill.current) fill.current.style.transform = `scaleX(${f})`;
+      if (track.current) track.current.style.transform = `translateX(${f * 100}%)`;
+    },
+    [max],
+  );
+  useLayoutEffect(() => paint(shown), [paint, shown]);
+  useEffect(() => {
+    if (!live || drag !== null) return;
+    let raf = 0;
+    const tick = () => {
+      paint(live());
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [live, drag, paint]);
 
   const valueAt = (clientX: number) => {
     const rect = ref.current!.getBoundingClientRect();
@@ -130,9 +161,11 @@ export function Slider({
       }}
     >
       <div className="slider__rail">
-        <div className="slider__fill" style={{ width: `${pct}%` }} />
+        <div className="slider__fill" ref={fill} />
       </div>
-      <div className="slider__thumb" style={{ left: `${pct}%` }} />
+      <div className="slider__track" ref={track}>
+        <div className="slider__thumb" />
+      </div>
     </div>
   );
 }
@@ -161,10 +194,11 @@ export function DownloadButton({ track }: { track: Track }) {
   const download = useLibrary((s) => s.download);
   const cancel = useLibrary((s) => s.cancel);
   const [hover, setHover] = useState(false);
+  const { t } = useT();
 
   if (downloaded) {
     return (
-      <span className="dl-btn done" title="Скачан на этот компьютер">
+      <span className="dl-btn done" title={t('download.done')}>
         <Check size={18} />
       </span>
     );
@@ -176,7 +210,7 @@ export function DownloadButton({ track }: { track: Track }) {
       <button
         type="button"
         className="dl-btn"
-        title="Отменить скачивание"
+        title={t('download.cancel')}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         onClick={(e) => {
@@ -192,7 +226,7 @@ export function DownloadButton({ track }: { track: Track }) {
     <button
       type="button"
       className="dl-btn"
-      title="Скачать через yt-dlp на этом компьютере"
+      title={t('download.start')}
       onClick={(e) => {
         e.stopPropagation();
         download(track);
@@ -203,12 +237,57 @@ export function DownloadButton({ track }: { track: Track }) {
   );
 }
 
-export function SkeletonRows({ n = 6 }: { n?: number }) {
+/** Grey stand-ins shaped like track rows: cover, two lines, length. */
+export function SkeletonRows({ n = 6, cover = true }: { n?: number; cover?: boolean }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="sk-rows" aria-hidden>
       {Array.from({ length: n }, (_, i) => (
-        <div key={i} className="skeleton" style={{ height: 48, opacity: 1 - i * 0.12 }} />
+        <div key={i} className="sk-row" style={{ opacity: 1 - i * (0.7 / n) }}>
+          <span className="skeleton sk-num" />
+          {cover && <span className="skeleton sk-cover" />}
+          <span className="sk-lines">
+            <span className="skeleton" style={{ width: `${46 + ((i * 37) % 34)}%` }} />
+            <span className="skeleton" style={{ width: `${22 + ((i * 23) % 18)}%` }} />
+          </span>
+          <span className="skeleton sk-dur" />
+        </div>
       ))}
+    </div>
+  );
+}
+
+/** The album page before its data: sleeve, title, actions, rows. */
+export function AlbumSkeleton() {
+  return (
+    <div className="page" aria-busy>
+      <header className="detail-head">
+        <span className="skeleton sk-sleeve" />
+        <div className="detail-head__body">
+          <span className="skeleton" style={{ height: 52, width: '60%' }} />
+          <span className="skeleton" style={{ height: 16, width: '36%' }} />
+        </div>
+      </header>
+      <div className="actions">
+        <span className="skeleton" style={{ width: 56, height: 56, borderRadius: '50%' }} />
+        <span className="skeleton" style={{ width: 200, height: 38, borderRadius: 999 }} />
+      </div>
+      <SkeletonRows n={10} cover={false} />
+    </div>
+  );
+}
+
+/** The artist page before its data: banner, name, popular tracks. */
+export function ArtistSkeleton() {
+  return (
+    <div className="page" aria-busy>
+      <header className="artist-banner">
+        <span className="skeleton artist-banner__photo" style={{ borderRadius: 0 }} />
+        <div className="artist-banner__body" style={{ width: '100%' }}>
+          <span className="skeleton" style={{ height: 84, width: '50%' }} />
+          <span className="skeleton" style={{ height: 16, width: '28%' }} />
+        </div>
+      </header>
+      <SkeletonRows n={5} />
     </div>
   );
 }

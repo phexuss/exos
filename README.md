@@ -77,8 +77,8 @@ EXØS is a cross-platform mobile music player that aggregates tracks from **Deez
 
 | Layer    | Technology                                                    |
 | -------- | ------------------------------------------------------------- |
-| Shell    | Tauri 2 (Rust) · Windows, macOS, Linux                        |
-| UI       | React 18 · Vite · Zustand · Lucide (tokens shared with mobile) |
+| Shell    | Electron · Windows, macOS, Linux; engine in a utility process  |
+| UI       | React 18 · Vite · Zustand · Motion · Lucide (tokens shared with mobile) |
 | Audio    | yt-dlp + Deno + ffmpeg running on the user's own computer     |
 
 Search, lyrics, account and library sync use the API; audio is fetched by yt-dlp locally, from the user's IP. See [`desktop/README.md`](desktop/README.md).

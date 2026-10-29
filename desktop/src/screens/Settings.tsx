@@ -1,17 +1,21 @@
 import { CheckCircle2, CircleAlert, Download, FolderOpen, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { type CookieCheck, engine, openFolder, pickFolder, type Tool, type ToolInfo } from '@/lib/engine';
+import { useT } from '@/i18n';
 import { API_BASE_URL } from '@/lib/env';
 import { useAuth } from '@/store/auth';
 import { useEngine } from '@/store/engine';
 import { type CookiesBrowser, useSettings } from '@/store/settings';
 import { Toggle } from '@/components/ui';
+import { Select } from '@/components/Select';
+import { Tabs } from '@/components/Tabs';
 
 function CookiesCheck({ browser }: { browser: string }) {
   const [state, setState] = useState<{ for: string; busy: boolean; result?: CookieCheck; error?: string }>({
     for: browser,
     busy: false,
   });
+  const { t } = useT();
   const current = state.for === browser ? state : { for: browser, busy: false };
   const run = () => {
     setState({ for: browser, busy: true });
@@ -24,23 +28,27 @@ function CookiesCheck({ browser }: { browser: string }) {
   return (
     <div className="row">
       <div style={{ minWidth: 0 }}>
-        <div className="row__label">Проверить куки</div>
+        <div className="row__label">{t('settings.cookiesCheck')}</div>
         <div className="row__hint">
           {current.error ? (
             <span style={{ color: 'var(--danger)' }}>{current.error}</span>
           ) : r ? (
             r.signedIn ? (
-              `yt-dlp прочитал ${r.count} куки, из них ${r.youtube} от YouTube. Вход в YouTube есть.`
+              t('settings.cookiesOk', { count: r.count, youtube: r.youtube })
             ) : (
-              `yt-dlp прочитал ${r.count} куки, из них ${r.youtube} от YouTube, но входа в YouTube в этом браузере нет. Войди в YouTube и проверь снова.`
+              t('settings.cookiesNoSignIn', {
+                count: r.count,
+                youtube: r.youtube,
+              })
             )
           ) : (
-            'Прочитает куки прямо сейчас и покажет, видит ли yt-dlp вход в YouTube. Дальше они обновляются раз в полчаса.'
+            t('settings.cookiesIdle')
           )}
         </div>
       </div>
       <button type="button" className="btn sm" disabled={current.busy} onClick={run}>
-        <RefreshCw size={14} className={current.busy ? 'spin-icon' : undefined} /> {current.busy ? 'Читаю…' : 'Проверить'}
+        <RefreshCw size={14} className={current.busy ? 'spin-icon' : undefined} />{' '}
+        {current.busy ? t('settings.cookiesChecking') : t('settings.cookiesCheckButton')}
       </button>
     </div>
   );
@@ -66,6 +74,7 @@ function ToolRow({
   const updating = useEngine((s) => s.updating);
   const updateYtdlp = useEngine((s) => s.updateYtdlp);
   const busy = installing?.tool === tool;
+  const { t } = useT();
   return (
     <div className="row">
       <div style={{ minWidth: 0 }}>
@@ -78,7 +87,7 @@ function ToolRow({
         {info && (
           <div className="row__value ellipsis" title={info.path} style={{ marginTop: 4 }}>
             {info.path}
-            {info.managed ? ' · ставит EXØS' : ' · системный'}
+            {` · ${info.managed ? t('settings.managed') : t('settings.system')}`}
           </div>
         )}
       </div>
@@ -88,12 +97,13 @@ function ToolRow({
         ) : info ? (
           tool === 'ytdlp' && (
             <button type="button" className="btn sm" onClick={() => void updateYtdlp()} disabled={updating}>
-              <RefreshCw size={14} className={updating ? 'spin-icon' : ''} /> {updating ? 'Обновляю…' : 'Обновить'}
+              <RefreshCw size={14} className={updating ? 'spin-icon' : ''} />{' '}
+              {updating ? t('common.updating') : t('common.update')}
             </button>
           )
         ) : installable ? (
           <button type="button" className="btn sm primary" onClick={() => void install(tool)}>
-            <Download size={14} /> Установить
+            <Download size={14} /> {t('common.install')}
           </button>
         ) : null}
       </div>
@@ -102,7 +112,6 @@ function ToolRow({
 }
 
 const BROWSERS: [CookiesBrowser, string][] = [
-  ['', 'Не использовать'],
   ['chrome', 'Chrome'],
   ['firefox', 'Firefox'],
   ['edge', 'Edge'],
@@ -118,76 +127,77 @@ export function Settings() {
   const user = useAuth((st) => st.user);
   const logout = useAuth((st) => st.logout);
   const musicDir = s.musicDir ?? status?.musicDir ?? '';
+  const { t } = useT();
 
   return (
     <div className="page page-enter">
-      <h1 className="h1">Настройки</h1>
+      <h1 className="h1">{t('settings.title')}</h1>
       <div className="settings">
         <section>
-          <h2 className="h2 group__title">Локальный движок</h2>
+          <h2 className="h2 group__title">{t('settings.engine')}</h2>
           <div className="group">
             <ToolRow
               tool="ytdlp"
               name="yt-dlp"
               info={status?.ytdlp ?? null}
               installable={status?.installable.ytdlp ?? false}
-              hint="Ищет и качает аудио с YouTube и SoundCloud прямо с этого компьютера. Обновляется сам при запуске."
-              missingHint="Без него нельзя ни слушать, ни скачивать. EXØS поставит свою копию в папку приложения."
+              hint={t('settings.ytdlpHint')}
+              missingHint={t('settings.ytdlpMissing')}
             />
             <ToolRow
               tool="deno"
-              name="JS-движок для YouTube"
+              name={t('settings.jsName')}
               info={status?.jsRuntime ?? null}
               installable={status?.installable.deno ?? false}
-              hint={`YouTube проверяет клиента задачкой на JavaScript, yt-dlp решает её через ${status?.jsRuntime?.name ?? 'Deno'}.`}
-              missingHint="Нужен Deno, Node или Bun. Без него YouTube часто отдаёт ошибку или пустой список форматов."
+              hint={t('settings.jsHint', {
+                name: status?.jsRuntime?.name ?? 'Deno',
+              })}
+              missingHint={t('settings.jsMissing')}
             />
             <ToolRow
               tool="ffmpeg"
               name="ffmpeg"
               info={status?.ffmpeg ?? null}
               installable={status?.installable.ffmpeg ?? false}
-              hint="Склеивает HLS-потоки SoundCloud и конвертирует в mp3."
-              missingHint="Без него не играют треки SoundCloud, которые отдаются только через HLS, и не работает формат mp3. На macOS: brew install ffmpeg, на Linux: пакет ffmpeg."
+              hint={t('settings.ffmpegHint')}
+              missingHint={t('settings.ffmpegMissing')}
             />
             <div className="row">
               <div>
-                <div className="row__label">Куки браузера для YouTube</div>
-                <div className="row__hint">
-                  Если YouTube пишет «Sign in to confirm you’re not a bot», yt-dlp возьмёт куки из браузера, где ты
-                  вошёл в YouTube. Куки не покидают компьютер.
-                </div>
+                <div className="row__label">{t('settings.cookies')}</div>
+                <div className="row__hint">{t('settings.cookiesHint')}</div>
               </div>
-              <select
+              <Select
                 id="cookies-browser"
-                className="select"
                 value={s.cookiesBrowser}
-                onChange={(e) => s.set({ cookiesBrowser: e.target.value as CookiesBrowser })}
-              >
-                {BROWSERS.map(([v, label]) => (
-                  <option key={v} value={v}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+                onChange={(cookiesBrowser) => s.set({ cookiesBrowser })}
+                label={t('settings.cookies')}
+                options={[
+                  {
+                    value: '' as CookiesBrowser,
+                    label: t('settings.cookiesOff'),
+                  },
+                  ...BROWSERS.map(([value, label]) => ({ value, label })),
+                ]}
+              />
             </div>
             {s.cookiesBrowser && <CookiesCheck browser={s.cookiesBrowser} />}
           </div>
         </section>
 
         <section>
-          <h2 className="h2 group__title">Скачивание</h2>
+          <h2 className="h2 group__title">{t('settings.downloading')}</h2>
           <div className="group">
             <div className="row">
               <div style={{ minWidth: 0 }}>
-                <div className="row__label">Папка с музыкой</div>
+                <div className="row__label">{t('settings.musicFolder')}</div>
                 <div className="row__value ellipsis" style={{ marginTop: 4 }}>
                   {musicDir}
                 </div>
               </div>
               <div className="tool-status">
                 <button type="button" className="btn sm" onClick={() => void openFolder(musicDir)}>
-                  <FolderOpen size={14} /> Открыть
+                  <FolderOpen size={14} /> {t('common.open')}
                 </button>
                 <button
                   type="button"
@@ -198,86 +208,120 @@ export function Settings() {
                     })
                   }
                 >
-                  Изменить
+                  {t('common.change')}
                 </button>
               </div>
             </div>
             <div className="row">
               <div>
-                <div className="row__label">Формат</div>
+                <div className="row__label">{t('settings.format')}</div>
                 <div className="row__hint">
-                  M4A (AAC) скачивается с YouTube как есть, без перекодирования. MP3 перекодируется ffmpeg и
-                  открывается вообще везде.
+                  {s.format === 'opus' ? t('settings.formatOpus') : s.format === 'mp3' ? t('settings.formatMp3') : t('settings.formatM4a')}
                 </div>
               </div>
-              <div className="tabs">
-                <button type="button" className={s.format === 'm4a' ? 'is-active' : ''} onClick={() => s.set({ format: 'm4a' })}>
-                  M4A
-                </button>
-                <button type="button" className={s.format === 'mp3' ? 'is-active' : ''} onClick={() => s.set({ format: 'mp3' })}>
-                  MP3
-                </button>
-              </div>
+              <Tabs
+                value={s.format}
+                onChange={(format) => s.set({ format })}
+                options={[
+                  { value: 'opus', label: 'Opus' },
+                  { value: 'm4a', label: 'M4A' },
+                  { value: 'mp3', label: 'MP3' },
+                ]}
+              />
             </div>
+            {s.format === 'mp3' && (
+              <div className="row">
+                <div>
+                  <div className="row__label">{t('settings.bitrate')}</div>
+                  <div className="row__hint">{t('settings.bitrateHint')}</div>
+                </div>
+                <Tabs
+                  value={String(s.mp3Bitrate) as '128' | '192' | '320'}
+                  onChange={(v) => s.set({ mp3Bitrate: Number(v) as 128 | 192 | 320 })}
+                  options={[
+                    { value: '128', label: '128' },
+                    { value: '192', label: '192' },
+                    { value: '320', label: '320' },
+                  ]}
+                />
+              </div>
+            )}
           </div>
         </section>
 
         <section>
-          <h2 className="h2 group__title">Внешний вид</h2>
+          <h2 className="h2 group__title">{t('settings.look')}</h2>
           <div className="group">
             <div className="row">
               <div>
-                <div className="row__label">Стекло</div>
-                <div className="row__hint">
-                  Панели из матового стекла поверх размытой обложки текущего трека. На компьютере размытие считает
-                  видеокарта, поэтому оно включено по умолчанию.
-                </div>
+                <div className="row__label">{t('settings.language')}</div>
+                <div className="row__hint">{t('settings.languageHint')}</div>
               </div>
-              <Toggle on={s.glassMode} onChange={(v) => s.set({ glassMode: v })} label="Стекло" />
+              <Tabs
+                value={s.locale}
+                onChange={(locale) => s.set({ locale })}
+                options={[
+                  { value: 'ru', label: 'Русский' },
+                  { value: 'en', label: 'English' },
+                ]}
+              />
             </div>
             <div className="row">
               <div>
-                <div className="row__label">Цвет из обложки</div>
-                <div className="row__hint">Акцентный цвет подстраивается под обложку того, что играет.</div>
+                <div className="row__label">{t('settings.glass')}</div>
+                <div className="row__hint">{t('settings.glassHint')}</div>
               </div>
-              <Toggle on={s.dynamicAccent} onChange={(v) => s.set({ dynamicAccent: v })} label="Цвет из обложки" />
+              <Toggle on={s.glassMode} onChange={(v) => s.set({ glassMode: v })} label={t('settings.glass')} />
+            </div>
+            <div className="row">
+              <div>
+                <div className="row__label">{t('settings.accent')}</div>
+                <div className="row__hint">{t('settings.accentHint')}</div>
+              </div>
+              <Toggle on={s.dynamicAccent} onChange={(v) => s.set({ dynamicAccent: v })} label={t('settings.accent')} />
+            </div>
+            <div className="row">
+              <div>
+                <div className="row__label">{t('settings.fps')}</div>
+                <div className="row__hint">{t('settings.fpsHint')}</div>
+              </div>
+              <Toggle on={s.showFps} onChange={(v) => s.set({ showFps: v })} label={t('settings.fps')} />
             </div>
           </div>
         </section>
 
         <section>
-          <h2 className="h2 group__title">Аккаунт</h2>
+          <h2 className="h2 group__title">{t('settings.account')}</h2>
           <div className="group">
             <div className="row">
               <div style={{ minWidth: 0 }}>
-                <div className="row__label">{user ? `${user.name} · @${user.username}` : 'Аккаунт EXØS'}</div>
-                <div className="row__hint">
-                  Поиск, тексты и рекомендации идут через сервер EXØS, история и список скачанного синхронизируются с
-                  телефоном. Сам звук сервер не трогает.
+                <div className="row__label">
+                  {user ? `${user.name} · @${user.username}` : t('settings.accountFallback')}
                 </div>
+                <div className="row__hint">{t('settings.accountHint')}</div>
                 <div className="row__value ellipsis" style={{ marginTop: 4 }}>
                   {API_BASE_URL}
                 </div>
               </div>
               <button type="button" className="btn sm danger" onClick={() => void logout()}>
-                Выйти
+                {t('common.signOut')}
               </button>
             </div>
           </div>
         </section>
 
         <section>
-          <h2 className="h2 group__title">Клавиши</h2>
+          <h2 className="h2 group__title">{t('settings.keys')}</h2>
           <div className="group">
             {[
-              ['Пробел', 'Играть / пауза'],
-              ['← →', 'Перемотка на 5 секунд'],
-              ['Shift + ← →', 'Предыдущий / следующий трек'],
-              ['↑ ↓', 'Громкость'],
-              ['Ctrl + K или /', 'Поиск'],
-              ['L · Q', 'Текст · очередь'],
-              ['F · Esc', 'Плеер на всё окно · свернуть'],
-              ['Alt + ← →', 'Назад / вперёд'],
+              [t('settings.keySpace'), t('settings.keyPlay')],
+              ['← →', t('settings.keySeek')],
+              ['Shift + ← →', t('settings.keyPrevNext')],
+              ['↑ ↓', t('settings.keyVolume')],
+              [t('settings.keySearchKeys'), t('settings.keySearch')],
+              ['L · Q', t('settings.keyPanels')],
+              ['F · Esc', t('settings.keyFull')],
+              ['Alt + ← →', t('settings.keyHistory')],
             ].map(([k, v]) => (
               <div className="row" key={k} style={{ padding: '10px 20px' }}>
                 <span>{v}</span>

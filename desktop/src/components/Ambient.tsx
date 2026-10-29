@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { placeholderGradient } from '@/lib/format';
 import { usePlayer } from '@/store/player';
+import { imageUrl } from '@/lib/bridge';
 
 /** Side of the canvas the artwork is shrunk into; stretched to the window it reads as a soft blur. */
 const SIZE = 14;
@@ -28,7 +29,7 @@ function ArtCanvas({ src }: { src: string }) {
       ctx.drawImage(mid, 0, 0, SIZE, SIZE);
       ref.current?.classList.add('is-on');
     };
-    img.src = src;
+    img.src = imageUrl(src) ?? src;
     return () => {
       alive = false;
     };

@@ -1,116 +1,140 @@
 # EXØS desktop
 
-Tauri 2 app for Windows, macOS and Linux. Same account, search, lyrics and
+Electron app for Windows, macOS and Linux. Same account, search, lyrics and
 recommendations as the phone app, but **audio never goes through the EXØS
 server**: yt-dlp runs on the user's computer and fetches from YouTube and
-SoundCloud with the user's own IP. That sidesteps the VPS's bot checks, rate
-limits and IP-bound stream URLs.
+SoundCloud with the user's own IP.
 
 ```
 desktop/
-  src/              React + Vite UI (shares tokens with apps/mobile)
-  src-tauri/        Rust: tool management, yt-dlp runs, library file
+  src/               React UI (Vite)
+  electron/
+    main.ts          main process: window, app:// files, starts the engine
+    preload.ts       the window's bridge: engine calls, window controls
+    engine/          utility process: yt-dlp, SoundCloud, audio proxy, caches
+  resources/         icons
+  scripts/           esbuild bundling, engine tests
 ```
 
-## What runs where
+## How it is split
+
+Electron's main process stays thin. It opens the window, serves the UI from
+`app://` and answers what only it can do (window controls, folder picker, file
+manager). Everything slow runs in the **engine**, a utility process: yt-dlp
+runs and downloads, the audio proxy, SoundCloud, API requests and their caches.
+
+The main process hands the window and the engine the two ends of a
+`MessageChannel`, so the UI talks to the engine directly and asynchronously;
+nothing waits on the main process, and if the engine dies it is restarted and
+reconnected.
 
 | | Goes through |
 | --- | --- |
-| Login, search, charts, artists, albums, lyrics, Last.fm recs, play history sync | `exos-api` (via the Tauri HTTP plugin, so no CORS change on the API) |
+| Login, search, charts, artists, albums, lyrics, Last.fm recs, play history sync | `exos-api`, requested by the engine (the API's CORS list only has the website) |
 | Finding the audio, streaming, downloading | `yt-dlp` on this computer |
 
-The local engine is three tools, each found on `PATH` or installed by the app
-into its own data folder in one click (Settings → Local engine):
+## Why it feels fast
 
-- **yt-dlp**: the official standalone build; our copy runs `yt-dlp -U` in the
-  background at most once a day.
-- **Deno** (or an existing Node/Bun): yt-dlp needs a JS runtime to solve
-  YouTube's challenges; it is passed with `--js-runtimes`.
+- **Disk caches.** Catalogue answers (charts, albums, artists, search, lyrics)
+  are kept on disk by the engine and served while fresh, and served stale when
+  the network or the server fails, so screens you have seen open offline.
+  Cover art is fetched once and served from disk afterwards.
+- **Screens from memory, prefetched on hover.** Each screen's data lives in a
+  small query cache. Resting the pointer on an album or artist starts loading
+  it, so the click usually lands on a screen that is already there.
+- **Skeletons shaped like the page**, never spinners, for the rare cold load.
+  They shimmer with a transform, so nothing under them repaints.
+- **Long lists are virtual.** A track list of 60 or more keeps only the rows
+  near the viewport in the DOM; the library stays smooth at thousands of tracks.
+- **Springs, on the compositor.** Selection pills, tabs, the queue and toasts
+  move on `motion` springs; screens and lists use CSS springs. Everything that
+  animates is a transform or opacity. The seek bar follows the playhead every
+  frame through a transform, not four times a second.
+- **Startup.** The UI is served from `app://` with V8 code caching, the main
+  process and engine use Node's compile cache, the window shows only when the
+  first frame is ready, a returning user gets the app shell before the server
+  answers, and tool checks, the yt-dlp update and cache pruning wait until the
+  app is idle. Settings and Downloads load on first use.
+
+## Sound
+
+- **Volume** follows the cube of the slider, like the Linux system mixers:
+  50% is about -18 dB and 1% is next to silence.
+- **Sped up / slowed + reverb** (the waveform button in the player bar) run
+  live on any track: speed is the element's playback rate with the pitch
+  following it, reverb is a Web Audio convolver on a generated hall impulse.
+  Nothing is rendered ahead of time. The audio element loads with CORS so Web
+  Audio can hear it; the engine's media server allows any origin.
+- **Download format**: Opus (YouTube's best, about 160 kbit/s, no
+  re-encoding), M4A (AAC as YouTube serves it) or MP3 at 128/192/320 kbit/s.
+
+**Playlists** live on this computer in `playlists.json` next to `library.json`.
+A track is kept as a snapshot, so it plays whether it is downloaded or not.
+Tracks are added from the right-click menu or by dragging a row onto a
+playlist in the sidebar; inside a playlist, rows drag into a new order.
+
+**Lyrics** come from the EXØS server (LRCLIB). When its exact match has no
+text, the app searches LRCLIB itself and takes synced lyrics if any entry has
+them, otherwise plain lyrics, which are shown as text without timing.
+
+The UI is in Russian and English (Settings → Language, or the switch on the
+sign-in screen); the engine answers errors in the same language.
+
+## Local engine
+
+Three tools, each found on `PATH` or installed by the app into its own data
+folder in one click (Settings → Local engine):
+
+- **yt-dlp**: the unpacked ("onedir") release build in `bin/yt-dlp-dist`. It
+  starts several times faster than the single-file build. The app checks the
+  latest tag at most daily and swaps the folder.
+- **Deno** (or an existing Node/Bun): yt-dlp needs a JS runtime for YouTube's
+  challenges; it is passed with `--js-runtimes`.
 - **ffmpeg**: needed for SoundCloud's HLS-only tracks and for MP3. One-click
-  install on Windows (yt-dlp's FFmpeg-Builds); on macOS/Linux use
-  `brew install ffmpeg` / the distro package.
+  install on Windows; on macOS/Linux use `brew install ffmpeg` / the distro
+  package.
 
-yt-dlp is installed as the unpacked ("onedir") release build
-(`yt-dlp_win.zip`, `yt-dlp_linux.zip`, `yt-dlp_macos.zip`) into
-`bin/yt-dlp-dist`: the single-file build unpacks a Python runtime to a temp
-folder on every run, which costs seconds per track on Windows. The unpacked
-build can't `-U`, so the app checks the latest tag (from GitHub's
-`releases/latest` redirect) at most daily and swaps the folder. A single-file
-copy left by an older version is replaced on the next start.
+SoundCloud skips yt-dlp: `engine/soundcloud.ts` scrapes the web client id,
+resolves the page URL and picks one transcoding (progressive before HLS, AAC
+before MP3). HLS whose pieces concatenate into a playable file is fetched 8
+pieces at a time. Anything else falls back to yt-dlp.
 
-SoundCloud skips yt-dlp: `soundcloud.rs` scrapes the web client id, resolves
-the page URL and picks one transcoding (progressive before HLS, AAC before
-MP3). Progressive streams go through the loopback proxy; HLS whose pieces
-concatenate into a playable file (MP3 chunks, fMP4 with an init segment) is
-fetched 8 pieces at a time. Anything else falls back to yt-dlp.
+The audio proxy (`engine/media.ts`) serves local files with Range support and
+forwards CDN streams with yt-dlp's headers. googlevideo refuses the
+open-ended `Range: bytes=N-` every player sends, so upstream is always asked
+in closed 10 MiB pieces.
 
-The player resolves the next queued track a few seconds into the current one,
-and remembers which YouTube video a Deezer track resolved to, so replays and
-downloads skip the search.
+Tools, `library.json` and caches live in the same folders as the earlier Tauri
+build (`~/.local/share/dev.phexuss.exos` on Linux,
+`%LOCALAPPDATA%\dev.phexuss.exos` on Windows,
+`~/Library/Application Support/dev.phexuss.exos` on macOS), so nothing has to
+be reinstalled or re-downloaded.
 
-Source choice mirrors `apps/api/src/download/download.service.ts`: Deezer
-tracks resolve as `ytsearch1:<ISRC>` (fallback `artist title`), SoundCloud
-tracks by their page URL.
+## Running
 
-- **Play**: `yt-dlp --print` resolves a direct audio URL plus the headers it
-  used. The `<audio>` element never touches the CDN or Tauri's asset protocol
-  (WebKitGTK won't play media from custom schemes): `media.rs` runs a loopback
-  HTTP server on `127.0.0.1` that proxies CDN streams with yt-dlp's headers and
-  serves files from disk, both with Range support, behind a per-launch secret.
-  HLS sources, or a URL that fails to play, are pulled into the cache first
-  (`cache_track`) and played from disk.
-- **Download**: yt-dlp writes into a scratch folder, `-x --audio-format m4a`
-  (stream copy for YouTube's AAC) or mp3, tagged with the Deezer/SoundCloud
-  title/artist/album, then the file moves to `~/Music/EXØS/Artist - Title.m4a`.
-  Two downloads run at once; the rest queue. Progress comes from
-  `--progress-template`.
-- If YouTube asks to sign in, Settings → "Browser cookies for YouTube" picks a
-  browser. yt-dlp exports its cookies to a file at most every 30 minutes and
-  each run gets a private copy (`--cookies`), instead of re-reading the browser
-  on every run. "Check cookies" shows whether a YouTube sign-in was found.
-
-The downloaded-tracks list is `library.json` in the app data folder; downloads
-are also pushed to `/library/downloads` so they show up on the phone.
-
-## Linux notes
-
-- **Nvidia + Wayland**: WebKitGTK either dies with a Wayland protocol error or
-  can't allocate GBM buffers. When `/proc/driver/nvidia` exists the app sets
-  `__NV_DISABLE_EXPLICIT_SYNC=1` and `WEBKIT_DMABUF_RENDERER_DISABLE_GBM=1`
-  before the webview starts (unless already set).
-- **Refresh rate**: WebKitGTK paces frames with libdrm's `drmWaitVBlank`,
-  which Nvidia's driver doesn't support, so it falls back to a fixed 60 fps
-  timer. The binary exports its own `drmWaitVBlank` (`src/vblank.rs`,
-  `build.rs`) that forwards to libdrm and, only when the driver refuses, sleeps
-  one refresh of the CRTC's mode instead. It also turns off WebKit's
-  `PreferPageRenderingUpdatesNear60FPSEnabled`. `EXOS_VBLANK=0` disables the
-  emulation.
-
-## Develop
-
-```bash
+```sh
 cd desktop
-npm install
-npm run tauri dev      # the app
-npm run dev            # UI only in a browser, with example data
+npm ci
+npm start                    # builds, then opens the app
+npm test                     # engine tests
+npx electron-builder --linux # or --win / --mac; output in release/
 ```
 
-Linux needs `libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev` to build, and
-GStreamer plugins (`gstreamer1.0-plugins-good`, `-bad`, `gstreamer1.0-libav`)
-for the webview to play AAC.
+`npm run dev` runs the UI alone in a browser with example data (the design
+prototype); `npx vite build --mode prototype` makes it one HTML file.
 
-`VITE_API_URL` overrides the API (default `https://exos-api.phexuss.dev/api`).
-A different host also has to be added to the `http:default` scope in
-`src-tauri/capabilities/default.json`.
+On Linux the app runs as a native Wayland client when the session is Wayland.
+If a driver misbehaves, `EXOS_X11=1 exos` runs it through XWayland.
 
-`npx vite build --mode prototype` builds the UI with example data into one
-HTML file (`dist-prototype/index.html`), which is how the design preview was
-made.
+CI (`.github/workflows/desktop.yml`) builds the Windows installer, a universal
+macOS dmg, and a Linux AppImage plus tar.gz, unsigned, as workflow artifacts.
 
-## Build
+## Releases
 
-`npm run tauri build`, or the "Desktop app" workflow, which builds Windows
-(NSIS + MSI), macOS (universal DMG) and Linux (deb + AppImage) installers on
-every PR touching `desktop/` and uploads them as workflow artifacts. They are
-not code-signed yet, so Windows SmartScreen and macOS Gatekeeper will warn
-(macOS: right-click → Open).
+Bump `version` in `desktop/package.json` and merge to main: the workflow
+builds all three systems and publishes them as a GitHub release under tag
+`desktop-v<version>` (a version with a suffix, like `0.3.0-beta`, is marked
+as a pre-release). The phone app keeps its own `v<version>` tags, and the
+desktop release is never marked "Latest", so links to the latest APK keep
+working. A manual run of the workflow on main releases the current version
+if its tag does not exist yet.

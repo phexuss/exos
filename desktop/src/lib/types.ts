@@ -45,3 +45,12 @@ export type SimilarTrack = Track & { match: number };
 export type Lyrics = { syncedLyrics?: string | null; plainLyrics?: string | null };
 
 export type User = { id: string; name: string; username: string; email: string };
+
+/** A playlist kept on this computer; tracks are snapshots, playable whether downloaded or not. */
+export type Playlist = {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  tracks: Track[];
+};
