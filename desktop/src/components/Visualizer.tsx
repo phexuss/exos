@@ -63,11 +63,14 @@ function bars(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: 
   const gap = BAR_GAP * dpr;
   const bw = (w - gap * (BANDS - 1)) / BANDS;
   const r = Math.min(bw / 2, BAR_RADIUS * dpr);
+  // Whole device pixels, so every bar is the same width at any display scaling.
+  const left = (i: number) => Math.round(i * (bw + gap));
+  const width = (i: number) => Math.round(i * (bw + gap) + bw) - left(i);
   g.fillStyle = c.accent;
   g.beginPath();
   for (let i = 0; i < BANDS; i += 1) {
-    const bh = Math.max(BAR_MIN * dpr, f.bands[i] * h);
-    g.roundRect(i * (bw + gap), h - bh, bw, bh, [r, r, 0, 0]);
+    const bh = Math.round(Math.max(BAR_MIN * dpr, f.bands[i] * h));
+    g.roundRect(left(i), h - bh, width(i), bh, [r, r, 0, 0]);
   }
   g.fill();
   g.fillStyle = c.text;
@@ -75,7 +78,7 @@ function bars(g: CanvasRenderingContext2D, f: Frame, w: number, h: number, dpr: 
   for (let i = 0; i < BANDS; i += 1) {
     peaks[i] = Math.max(f.bands[i], peaks[i] - PEAK_FALL * f.dt);
     if (peaks[i] * h < BAR_MIN * dpr * 2) continue;
-    g.rect(i * (bw + gap), h - peaks[i] * h - PEAK_H * dpr * 2, bw, PEAK_H * dpr);
+    g.rect(left(i), Math.round(h - peaks[i] * h - PEAK_H * dpr * 2), width(i), Math.round(PEAK_H * dpr));
   }
   g.fill();
 }
@@ -198,4 +201,48 @@ export function Visualizer({ kind, className = '' }: { kind: VizKind; className?
 
   if (!on) return null;
   return <canvas ref={canvas} className={`viz viz--${kind} ${className}`} aria-hidden="true" />;
+}
+
+/* The three bars next to the playing track; sizes match `.eq` in app.css. */
+const EQ_BAR = 3;
+const EQ_GAP = 2;
+const EQ_H = 14;
+const EQ_RADIUS = 1;
+/** Lowest height of a bar, as a fraction of the full one. */
+const EQ_REST = 0.25;
+
+/**
+ * Drawn on a canvas in whole device pixels: thin bars scaled with CSS
+ * transforms land on fractional pixels under display scaling (125%, 150%)
+ * and come out uneven and blurred.
+ */
+export function LiveEq() {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const colours = useRef<Colours>({ accent: '#818cf8', text: '#fff', faint: '#888', danger: '#f87171', font: 'sans-serif', at: 0 });
+  useAudioFrames((f) => {
+    const el = canvas.current;
+    const g = el?.getContext('2d');
+    if (!el || !g) return;
+    const dpr = window.devicePixelRatio || 1;
+    const bw = Math.max(1, Math.round(EQ_BAR * dpr));
+    const gap = Math.max(1, Math.round(EQ_GAP * dpr));
+    const h = Math.round(EQ_H * dpr);
+    const w = bw * 3 + gap * 2;
+    if (el.width !== w || el.height !== h) {
+      el.width = w;
+      el.height = h;
+      el.style.width = `${w / dpr}px`;
+      el.style.height = `${h / dpr}px`;
+    }
+    readColours(el, colours.current, performance.now());
+    g.clearRect(0, 0, w, h);
+    g.fillStyle = colours.current.accent;
+    g.beginPath();
+    for (let i = 0; i < 3; i += 1) {
+      const bh = Math.round(h * (EQ_REST + (1 - EQ_REST) * f.eq[i]));
+      g.roundRect(i * (bw + gap), h - bh, bw, bh, Math.round(EQ_RADIUS * dpr));
+    }
+    g.fill();
+  }, true);
+  return <canvas ref={canvas} className="eq eq--live" aria-hidden="true" />;
 }

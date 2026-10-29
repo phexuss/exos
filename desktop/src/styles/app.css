@@ -945,7 +945,8 @@ img { display: block; }
 .np.has-viz .np__tilt { width: min(100%, 40vh); }
 .np__viz { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; width: min(100%, 40vh); animation: rise var(--dur-3) var(--ease-spring) both; animation-delay: 160ms; }
 .np__viz .viz { height: var(--viz-np-h); }
-.eq--live i { animation: none; }
+/* Its pixels match the screen's one to one; nearest-neighbour keeps them sharp at a fractional offset. */
+.eq--live { display: block; image-rendering: pixelated; }
 
 /* ---------- context menu, toasts, login ---------- */
 
