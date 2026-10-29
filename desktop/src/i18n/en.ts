@@ -181,6 +181,8 @@ export const en = {
     password: 'Password',
     missing: 'Enter your username and password.',
     signingIn: 'Signing in…',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     submit: 'Sign in',
     noAccount: 'No account? Sign up in the phone app.',
   },

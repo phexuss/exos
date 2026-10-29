@@ -2,7 +2,7 @@
 
 # EXØS
 
-**Aggregated music player — search, stream and download from multiple sources.**
+**Aggregated music player for Android and desktop — search, stream and download from multiple sources.**
 
 [![Expo SDK](https://img.shields.io/badge/Expo_SDK-54-000020?logo=expo)](https://expo.dev)
 [![React Native](https://img.shields.io/badge/React_Native-0.81-61DAFB?logo=react)](https://reactnative.dev)
@@ -20,7 +20,7 @@
 
 ## What is EXØS
 
-EXØS is a cross-platform mobile music player that aggregates tracks from **Deezer** and **SoundCloud**, downloads full audio via **yt-dlp**, and stores it locally for offline playback. Think of it as a self-hosted music client with cloud sync, synced lyrics, and smart recommendations.
+EXØS is a music player that aggregates tracks from **Deezer** and **SoundCloud**, downloads full audio via **yt-dlp**, and stores it locally for offline playback. Think of it as a self-hosted music client with cloud sync, synced lyrics, and smart recommendations. It comes as a phone app and as a [desktop app](#exøs-on-the-desktop) built around a different idea: the computer is the player.
 
 ## Features
 
@@ -34,6 +34,28 @@ EXØS is a cross-platform mobile music player that aggregates tracks from **Deez
 - **Dynamic accent color** — player UI tinted with the dominant album cover color
 - **Offline mode** — full app access without an account (no sync, no profile)
 - **i18n** — English and Russian
+
+## EXØS on the desktop
+
+<div align="center">
+<!-- Screenshots: replace each src with an uploaded image URL. Window shots at 16:10 look best. -->
+<img width="900" alt="EXØS desktop: home" src="DESKTOP_SCREENSHOT_HOME" />
+<br />
+<img width="445" alt="EXØS desktop: full-window player with lyrics" src="DESKTOP_SCREENSHOT_PLAYER" />
+<img width="445" alt="EXØS desktop: a playlist imported from Spotify" src="DESKTOP_SCREENSHOT_PLAYLIST" />
+</div>
+
+The phone app asks the EXØS server for audio. The desktop app turns that around: **it is a local player**. A computer can run yt-dlp, ffmpeg and a JavaScript runtime by itself, so it does. Audio is found, streamed and downloaded on your machine, from your own IP, and never passes through the server. The server is left with what it is good at: search, lyrics, recommendations and your account.
+
+- **Your computer does the work.** The engine installs its own yt-dlp, Deno and ffmpeg in one click, keeps yt-dlp up to date, and plays SoundCloud straight from its API.
+- **Files you own.** Downloads land in a plain music folder as Opus, M4A or MP3 (128, 192 or 320 kbit/s) and open in any player.
+- **Your playlists, wherever they were.** Make playlists here, or bring one over by link from Spotify or SoundCloud. Drag tracks in, drag them into order.
+- **Sound you can bend.** Sped up, slowed + reverb, live on any track. A volume curve that is quiet at 1% the way a mixer is.
+- **Lyrics** synced line by line when they exist, plain when they do not.
+- **Feels native.** Draws at your monitor's refresh rate, keeps what it has seen on disk, preloads what you are about to click.
+- Windows, macOS and Linux · English and Russian · the same account as the phone app.
+
+**Download:** the latest `desktop-v…` release on the [Releases page](https://github.com/phexuss/exos/releases?q=desktop&expanded=true). Builds are not signed yet: on Windows choose More info → Run anyway, on macOS right-click → Open.
 
 ## Tech Stack
 

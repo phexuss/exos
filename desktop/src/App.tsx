@@ -21,6 +21,7 @@ import { Artist } from '@/screens/Artist';
 import { Home } from '@/screens/Home';
 import { Library } from '@/screens/Library';
 import { Login } from '@/screens/Login';
+import { Reveal } from '@/components/Reveal';
 import { ImportScreen } from '@/screens/Import';
 import { PlaylistScreen } from '@/screens/Playlist';
 import { Search } from '@/screens/Search';
@@ -112,6 +113,8 @@ function Screen() {
 
 export function App() {
   const auth = useAuth((s) => s.status);
+  const entering = useAuth((s) => s.entering);
+  const entered = useCallback(() => useAuth.setState({ entering: false }), []);
   const glass = useSettings((s) => s.glassMode);
   const current = usePlayer((s) => s.current);
   const locale = useSettings((s) => s.locale);
@@ -149,7 +152,10 @@ export function App() {
   if (auth === 'signedOut') return <Login />;
 
   return (
-    <div className={`shell ${glass ? 'glass' : 'flat'} ${IS_MAC ? 'is-mac' : ''}`} onContextMenu={(e) => e.preventDefault()}>
+    <div
+      className={`shell ${glass ? 'glass' : 'flat'} ${IS_MAC ? 'is-mac' : ''} ${entering ? 'is-entering' : ''}`}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       {glass && <Ambient />}
       <TitleBar ref={searchRef} />
       <Sidebar />
@@ -159,6 +165,7 @@ export function App() {
       <NowPlaying />
       <ContextMenu />
       <Toasts />
+      {entering && <Reveal onDone={entered} />}
     </div>
   );
 }
