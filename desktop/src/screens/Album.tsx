@@ -1,4 +1,4 @@
-import { Download, Play, Shuffle } from 'lucide-react';
+import { Download, Shuffle } from 'lucide-react';
 import { useT } from '@/i18n';
 import { formatTotal, tracksLabel } from '@/lib/format';
 import { onIntent, prefetchArtist, useAlbum } from '@/lib/queries';
@@ -6,6 +6,7 @@ import { useLibrary } from '@/store/library';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
 import { AlbumSkeleton, Cover } from '@/components/ui';
+import { PlayFab } from '@/components/PlayFab';
 import { TrackTable } from '@/components/TrackTable';
 
 export function Album({ id }: { id: string }) {
@@ -54,14 +55,7 @@ export function Album({ id }: { id: string }) {
         </div>
       </header>
       <div className="actions">
-        <button
-          type="button"
-          className="play-fab"
-          aria-label={t('album.play')}
-          onClick={() => playQueue(data.tracks, 0)}
-        >
-          <Play size={22} fill="currentColor" />
-        </button>
+        <PlayFab tracks={data.tracks} label={t('album.play')} />
         <button
           type="button"
           className="icon-btn"

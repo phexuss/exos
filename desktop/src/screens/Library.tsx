@@ -1,4 +1,4 @@
-import { FolderOpen, HardDriveDownload, Play, Search, Shuffle } from 'lucide-react';
+import { FolderOpen, HardDriveDownload, Search, Shuffle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useT } from '@/i18n';
 import { formatTotal, tracksLabel } from '@/lib/format';
@@ -9,6 +9,7 @@ import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { Select } from '@/components/Select';
+import { PlayFab } from '@/components/PlayFab';
 import { TrackTable } from '@/components/TrackTable';
 
 type Sort = 'recent' | 'title' | 'artist';
@@ -62,14 +63,7 @@ export function Library() {
       ) : (
         <>
           <div className="toolbar">
-            <button
-              type="button"
-              className="play-fab"
-              aria-label={t('library.playAll')}
-              onClick={() => playQueue(shown, 0)}
-            >
-              <Play size={22} fill="currentColor" />
-            </button>
+            <PlayFab tracks={shown} label={t('library.playAll')} />
             <button
               type="button"
               className="icon-btn"

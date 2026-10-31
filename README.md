@@ -44,6 +44,7 @@ The phone app asks the EXØS server for audio. The desktop app turns that around
 - **Your playlists, wherever they were.** Make playlists here, or bring one over by link from Spotify or SoundCloud. Drag tracks in, drag them into order.
 - **Sound you can bend.** Sped up, slowed + reverb, live on any track. A volume curve that is quiet at 1% the way a mixer is.
 - **Lyrics** synced line by line when they exist, plain when they do not.
+- **One library in the cloud.** Sign up right in the app. Everything you download is listed in your account, from the phone too; whatever is missing on this computer downloads again in one click.
 - **Feels native.** Draws at your monitor's refresh rate, keeps what it has seen on disk, preloads what you are about to click.
 - Windows, macOS and Linux · English and Russian · the same account as the phone app.
 

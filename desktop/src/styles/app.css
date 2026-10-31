@@ -1068,6 +1068,13 @@ img { display: block; }
 .login__submit:disabled { opacity: 0.8; }
 .login__spin { animation: spin-plain 0.9s linear infinite; }
 .login__foot { margin: 0; font-size: 13px; color: var(--text-3); }
+.login__step { display: flex; flex-direction: column; gap: 18px; }
+.login__switch { color: var(--accent); font: inherit; font-weight: 500; }
+.login__switch:hover:not(:disabled) { text-decoration: underline; }
+.login__switch:disabled { color: var(--text-3); cursor: default; }
+.login__foot--row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.login__note { color: var(--text-2); font-size: 13.5px; }
+.login__input input.login__code { font-family: var(--mono); font-size: 20px; letter-spacing: 0.4em; }
 
 /* Arrival: the wordmark and the card rise in one after another. */
 .login__mark, .login__tag, .login__sources, .login__card { animation: rise var(--dur-3) var(--ease-spring) backwards; }

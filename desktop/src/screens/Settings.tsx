@@ -2,13 +2,16 @@ import { CheckCircle2, CircleAlert, Download, FolderOpen, RefreshCw } from 'luci
 import { useState } from 'react';
 import { type CookieCheck, engine, openFolder, pickFolder, type Tool, type ToolInfo } from '@/lib/engine';
 import { useT } from '@/i18n';
-import { API_BASE_URL } from '@/lib/env';
+import { API_BASE_URL, IS_MOCK } from '@/lib/env';
 import { useAuth } from '@/store/auth';
 import { useEngine } from '@/store/engine';
 import { type CookiesBrowser, useSettings } from '@/store/settings';
 import { Toggle } from '@/components/ui';
 import { Select } from '@/components/Select';
 import { Tabs } from '@/components/Tabs';
+
+/** Electron's version, from the user agent it reports; empty in a plain browser. */
+const ELECTRON = /Electron\/([\d.]+)/.exec(navigator.userAgent)?.[1] ?? '';
 
 function CookiesCheck({ browser }: { browser: string }) {
   const [state, setState] = useState<{ for: string; busy: boolean; result?: CookieCheck; error?: string }>({
@@ -337,6 +340,34 @@ export function Settings() {
                 </span>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="h2 group__title">{t('settings.about')}</h2>
+          <div className="group">
+            <div className="row">
+              <div style={{ minWidth: 0 }}>
+                <div className="row__label">{t('settings.version', { version: __APP_VERSION__ })}</div>
+                <div className="row__value ellipsis" style={{ marginTop: 4 }}>
+                  {[
+                    __APP_COMMIT__ && t('settings.build', { commit: __APP_COMMIT__ }),
+                    ELECTRON && `Electron ${ELECTRON}`,
+                    IS_MOCK && t('settings.preview'),
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </div>
+              </div>
+              <a
+                className="btn sm"
+                href={`https://github.com/phexuss/exos/releases/tag/desktop-v${__APP_VERSION__}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {t('settings.releaseNotes')}
+              </a>
+            </div>
           </div>
         </section>
       </div>

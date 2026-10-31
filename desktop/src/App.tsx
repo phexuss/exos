@@ -27,6 +27,7 @@ import { PlaylistScreen } from '@/screens/Playlist';
 import { Search } from '@/screens/Search';
 import { useAuth } from '@/store/auth';
 import { useEngine } from '@/store/engine';
+import { useCloud } from '@/store/cloud';
 import { useLibrary } from '@/store/library';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
@@ -36,8 +37,10 @@ import { useSettings } from '@/store/settings';
 // Screens nobody opens first load on demand (and in the background once the app is idle).
 const loadSettings = () => import('@/screens/Settings');
 const loadDownloads = () => import('@/screens/Downloads');
+const loadCloud = () => import('@/screens/Cloud');
 const Settings = lazy(() => loadSettings().then((m) => ({ default: m.Settings })));
 const Downloads = lazy(() => loadDownloads().then((m) => ({ default: m.Downloads })));
+const Cloud = lazy(() => loadCloud().then((m) => ({ default: m.Cloud })));
 
 function EngineBanner() {
   const status = useEngine((s) => s.status);
@@ -80,6 +83,9 @@ function Screen() {
       break;
     case 'downloads':
       screen = <Downloads />;
+      break;
+    case 'cloud':
+      screen = <Cloud />;
       break;
     case 'settings':
       screen = <Settings />;
@@ -138,7 +144,10 @@ export function App() {
   }, []);
   useEffect(() => {
     if (auth !== 'signedIn') return;
-    void useLibrary.getState().load();
+    void useLibrary
+      .getState()
+      .load()
+      .then(() => useCloud.getState().sync(useLibrary.getState().tracks));
     void usePlaylists.getState().load();
   }, [auth]);
   // The engine reads the language off <html lang> with every call, for its own messages.

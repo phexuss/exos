@@ -1,6 +1,7 @@
-import { Download, Play, Shuffle, Trash2 } from 'lucide-react';
+import { Download, Shuffle, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { PlaylistCover } from '@/components/PlaylistCover';
+import { PlayFab } from '@/components/PlayFab';
 import { TrackTable } from '@/components/TrackTable';
 import { useT } from '@/i18n';
 import { formatTotal, tracksLabel } from '@/lib/format';
@@ -96,15 +97,7 @@ export function PlaylistScreen({ id }: { id: string }) {
         </div>
       </header>
       <div className="actions">
-        <button
-          type="button"
-          className="play-fab"
-          aria-label={t('playlist.play')}
-          disabled={!tracks.length}
-          onClick={() => playQueue(tracks, 0)}
-        >
-          <Play size={22} fill="currentColor" />
-        </button>
+        <PlayFab tracks={tracks} label={t('playlist.play')} />
         <button
           type="button"
           className="icon-btn"
