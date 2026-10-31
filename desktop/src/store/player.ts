@@ -6,6 +6,7 @@ import { createFx } from '@/lib/fx';
 import * as api from '@/lib/services';
 import type { Lyrics, Track } from '@/lib/types';
 import { useLibrary } from './library';
+import { useUserLyrics } from './lyrics';
 import { useSettings } from './settings';
 import { toast } from './toast';
 
@@ -126,6 +127,8 @@ type PlayerState = {
   togglePanel: (p: Exclude<Panel, null>) => void;
   setNowPlaying: (open: boolean) => void;
   removeFromQueue: (i: number) => void;
+  /** Reads the current track's lyrics again, after the user set or dropped their own. */
+  reloadLyrics: () => void;
 };
 
 let loadSeq = 0;
@@ -280,6 +283,11 @@ export const usePlayer = create<PlayerState>((set, get) => {
   };
 
   const loadLyrics = async (track: Track) => {
+    const mine = useUserLyrics.getState().get(track.id);
+    if (mine) {
+      set({ lyrics: mine, lyricsFor: track.id });
+      return;
+    }
     const local = useLibrary.getState().get(track.id);
     if (local && (local.syncedLyrics || local.plainLyrics)) {
       set({ lyrics: local, lyricsFor: track.id });
@@ -455,6 +463,10 @@ export const usePlayer = create<PlayerState>((set, get) => {
         return;
       }
       if (!nowPlayingClosing) set({ nowPlayingOpen: open });
+    },
+    reloadLyrics: () => {
+      const { current } = get();
+      if (current) void loadLyrics(current);
     },
     removeFromQueue: (i) =>
       set((s) => {

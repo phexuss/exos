@@ -3,6 +3,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
 import { Ambient } from '@/components/Ambient';
 import { ContextMenu } from '@/components/ContextMenu';
 import { ScreenBoundary } from '@/components/ErrorBoundary';
+import { LyricsEditor } from '@/components/LyricsEditor';
 import { NowPlaying } from '@/components/NowPlaying';
 import { PlayerBar } from '@/components/PlayerBar';
 import { SidePanel } from '@/components/SidePanel';
@@ -29,6 +30,7 @@ import { useAuth } from '@/store/auth';
 import { useEngine } from '@/store/engine';
 import { useCloud } from '@/store/cloud';
 import { useLibrary } from '@/store/library';
+import { useUserLyrics } from '@/store/lyrics';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
 import { usePlaylists } from '@/store/playlists';
@@ -149,6 +151,13 @@ export function App() {
       .load()
       .then(() => useCloud.getState().sync(useLibrary.getState().tracks));
     void usePlaylists.getState().load();
+    void useUserLyrics
+      .getState()
+      .load()
+      .then(() => {
+        const { current } = usePlayer.getState();
+        if (current && useUserLyrics.getState().get(current.id)) usePlayer.getState().reloadLyrics();
+      });
   }, [auth]);
   // The engine reads the language off <html lang> with every call, for its own messages.
   useEffect(() => {
@@ -173,6 +182,7 @@ export function App() {
       <PlayerBar />
       <NowPlaying />
       <ContextMenu />
+      <LyricsEditor />
       <Toasts />
       {entering && <Reveal onDone={entered} />}
     </div>

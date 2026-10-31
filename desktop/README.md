@@ -110,6 +110,15 @@ title and plays through a YouTube search.
 text, the app searches LRCLIB itself and takes synced lyrics if any entry has
 them, otherwise plain lyrics, which are shown all lit, without timing.
 
+**Your own lyrics.** The pencil in the lyrics panel and the full window (or
+"Add lyrics" when nothing was found) opens an editor. Paste plain text or LRC,
+or open/drop an `.lrc`, `.srt` (turned into LRC) or `.txt` file. "Find on
+LRCLIB" searches LRCLIB by any words and shows each entry's text before you
+take it. "Sync to the track" turns plain text into LRC: the track plays and
+Space marks the start of each line, Backspace undoes. Saved lyrics go to
+`lyrics.json` next to the library and win over found ones for that track;
+"Use found lyrics" drops them. They stay on this computer.
+
 **Visualizer** (on by default, Settings → Visualizer): a spectrum,
 wave or pair of VU meters under the cover in the full window. It reads the
 audio through Web Audio analysers after the effects and before the volume,

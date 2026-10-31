@@ -9,6 +9,7 @@ import type {
   ArtistDetails,
   Chart,
   LocalTrack,
+  LrcLibEntry,
   Lyrics,
   SimilarTrack,
   Track,
@@ -287,6 +288,18 @@ export async function getLyrics(track: Track): Promise<Lyrics | null> {
   } catch {}
   if (found?.syncedLyrics || found?.plainLyrics) return found;
   return (await searchLrcLib(track).catch(() => null)) ?? found;
+}
+
+/** Free-text LRCLIB search for the lyrics editor, for when the automatic match picked the wrong song. */
+export async function findLyrics(query: string): Promise<LrcLibEntry[]> {
+  const q = query.trim();
+  if (!q) return [];
+  if (IS_MOCK) return mock.lrclib(q);
+  const r = await call<{ status: number; body: string }>('http', {
+    req: { url: `https://lrclib.net/api/search?${new URLSearchParams({ q })}`, ttl: TTL.lyrics },
+  });
+  if (r.status !== 200) throw new Error(`LRCLIB ${r.status}`);
+  return (JSON.parse(r.body) as LrcLibEntry[]).filter((h) => h.syncedLyrics || h.plainLyrics || h.instrumental);
 }
 
 /* ---------- cloud library (shared with the phone app) ---------- */

@@ -16,7 +16,7 @@ import * as library from './library';
 import * as media from './media';
 import * as soundcloud from './soundcloud';
 import * as spotify from './spotify';
-import { playlistsFile, workDir } from './paths';
+import { lyricsFile, playlistsFile, workDir } from './paths';
 import * as tools from './tools';
 import * as ytdlp from './ytdlp';
 
@@ -35,6 +35,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
   library_write: (a) => library.write(a.tracks),
   playlists_read: () => library.read(playlistsFile()),
   playlists_write: (a) => library.write(a.playlists, playlistsFile()),
+  lyrics_read: () => library.read(lyricsFile()),
+  lyrics_write: (a) => library.write(a.lyrics, lyricsFile()),
   delete_file: (a) => library.deleteAudio(a.path),
   file_exists: (a) => library.fileExists(a.path),
   media_file: (a) => media.fileUrl(a.path),

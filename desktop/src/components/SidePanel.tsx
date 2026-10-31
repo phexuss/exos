@@ -1,9 +1,10 @@
-import { X } from 'lucide-react';
+import { Pencil, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useT } from '@/i18n';
 import { glide } from '@/lib/springs';
 import type { Track } from '@/lib/types';
 import { formatTime } from '@/lib/format';
+import { useUserLyrics } from '@/store/lyrics';
 import { usePlayer } from '@/store/player';
 import { Lyrics } from './Lyrics';
 import { Tabs } from './Tabs';
@@ -84,6 +85,7 @@ function Queue() {
 export function SidePanel() {
   const panel = usePlayer((s) => s.panel);
   const setPanel = usePlayer((s) => s.setPanel);
+  const current = usePlayer((s) => s.current);
   const { t } = useT();
   if (!panel) return null;
   return (
@@ -98,6 +100,17 @@ export function SidePanel() {
           ]}
         />
         <span style={{ flex: 1 }} />
+        {panel === 'lyrics' && current && (
+          <button
+            type="button"
+            className="icon-btn sm"
+            aria-label={t('lyrics.edit')}
+            title={t('lyrics.edit')}
+            onClick={() => useUserLyrics.getState().edit(current)}
+          >
+            <Pencil size={15} />
+          </button>
+        )}
         <button
           type="button"
           className="icon-btn sm"

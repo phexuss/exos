@@ -44,6 +44,19 @@ export type SimilarTrack = Track & { match: number };
 
 export type Lyrics = { syncedLyrics?: string | null; plainLyrics?: string | null };
 
+/** Lyrics the user set for a track by hand; title and artist only make lyrics.json readable. */
+export type UserLyrics = Lyrics & { id: string; title: string; artist: string; updatedAt: number };
+
+/** One entry from LRCLIB's search. */
+export type LrcLibEntry = Lyrics & {
+  id: number;
+  trackName: string;
+  artistName: string;
+  albumName?: string | null;
+  duration?: number | null;
+  instrumental?: boolean;
+};
+
 export type User = { id: string; name: string; username: string; email: string };
 
 /** A playlist kept on this computer; tracks are snapshots, playable whether downloaded or not. */
