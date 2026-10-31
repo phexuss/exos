@@ -38,7 +38,7 @@ function Queue() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: 24, transition: { duration: 0.16 } }}
       className={`queue-item ${i === index ? 'is-current' : ''}`}
-      onDoubleClick={() => p.playQueue(queue, i)}
+      onDoubleClick={() => p.playAt(i)}
     >
       <Cover src={t.coverUrl} seed={t.album ?? t.id} label={t.title} />
       <div style={{ minWidth: 0 }}>

@@ -90,6 +90,12 @@ type PlayerState = {
   queue: Track[];
   /** Order before shuffle, to restore it. */
   originalQueue: Track[] | null;
+  /**
+   * The list playback was started from (a playlist, an album, the library).
+   * When the queue runs out with repeat off, it goes on with this list
+   * shuffled, again and again, the way Spotify does.
+   */
+  context: Track[];
   index: number;
   current: Track | null;
   status: 'idle' | 'loading' | 'playing' | 'paused';
@@ -105,6 +111,8 @@ type PlayerState = {
   lyricsFor: string | null;
   playQueue: (tracks: Track[], startIndex?: number) => void;
   playTrack: (track: Track) => void;
+  /** Jumps to a place in the current queue, keeping the queue and its list as they are. */
+  playAt: (index: number) => void;
   playNext: (track: Track) => void;
   addToQueue: (track: Track) => void;
   toggle: () => void;
@@ -202,12 +210,34 @@ function shuffled<T>(items: T[]): T[] {
   return a;
 }
 
+/** One more pass over the list, shuffled, never opening with the track that just played. */
+export function nextRound(context: Track[], lastId: string | undefined): Track[] {
+  const round = shuffled(context);
+  if (round.length > 1 && round[0].id === lastId) {
+    const swap = 1 + Math.floor(Math.random() * (round.length - 1));
+    [round[0], round[swap]] = [round[swap], round[0]];
+  }
+  return round;
+}
+
 export const usePlayer = create<PlayerState>((set, get) => {
+  /**
+   * On the last track of the queue, with repeat off, the next round of the
+   * list joins the queue now, so "Up next" is never empty while a list plays.
+   * A single track (played from search) has no list to go on with.
+   */
+  const extend = () => {
+    const { queue, index, repeat, context } = get();
+    if (repeat !== 'off' || context.length < 2 || index < queue.length - 1) return;
+    set({ queue: [...queue, ...nextRound(context, queue[index]?.id)] });
+  };
+
   const load = async (index: number) => {
     const track = get().queue[index];
     if (!track) return;
     const seq = ++loadSeq;
     set({ index, current: track, status: 'loading', time: 0, duration: track.durationSec, loadingNote: null });
+    extend();
     audio.pause();
     updateMediaSession(track);
     void loadLyrics(track);
@@ -317,11 +347,16 @@ export const usePlayer = create<PlayerState>((set, get) => {
       void audio.play();
     } else if (index < queue.length - 1) void load(index + 1);
     else if (repeat === 'all' && queue.length) void load(0);
-    else set({ status: 'paused' });
+    else {
+      extend();
+      if (get().index < get().queue.length - 1) void load(get().index + 1);
+      else set({ status: 'paused' });
+    }
   });
   return {
     queue: [],
     originalQueue: null,
+    context: [],
     index: -1,
     current: null,
     status: 'idle',
@@ -339,14 +374,15 @@ export const usePlayer = create<PlayerState>((set, get) => {
       if (get().shuffle) {
         const first = tracks[startIndex];
         const rest = shuffled(tracks.filter((_, i) => i !== startIndex));
-        set({ queue: [first, ...rest], originalQueue: tracks });
+        set({ queue: [first, ...rest], originalQueue: tracks, context: tracks });
         void load(0);
       } else {
-        set({ queue: tracks, originalQueue: null });
+        set({ queue: tracks, originalQueue: null, context: tracks });
         void load(startIndex);
       }
     },
     playTrack: (track) => get().playQueue([track], 0),
+    playAt: (index) => void load(index),
     playNext: (track) => {
       const { queue, index } = get();
       if (!queue.length) return get().playTrack(track);
@@ -370,6 +406,10 @@ export const usePlayer = create<PlayerState>((set, get) => {
       const { index, queue, repeat } = get();
       if (index < queue.length - 1) void load(index + 1);
       else if (repeat === 'all' && queue.length) void load(0);
+      else {
+        extend();
+        if (get().index < get().queue.length - 1) void load(get().index + 1);
+      }
     },
     prev: () => {
       const { index } = get();
@@ -397,8 +437,11 @@ export const usePlayer = create<PlayerState>((set, get) => {
         set({ shuffle: false, originalQueue: null, queue: base, index: Math.max(0, at) });
       }
     },
-    cycleRepeat: () =>
-      set((s) => ({ repeat: s.repeat === 'off' ? 'all' : s.repeat === 'all' ? 'one' : 'off' })),
+    cycleRepeat: () => {
+      set((s) => ({ repeat: s.repeat === 'off' ? 'all' : s.repeat === 'all' ? 'one' : 'off' }));
+      // Back to off on the last track: line up the next round right away.
+      extend();
+    },
     setPanel: (panel) => set({ panel }),
     togglePanel: (p) => set((s) => ({ panel: s.panel === p ? null : p })),
     setNowPlaying: (open) => {
