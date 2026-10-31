@@ -123,12 +123,12 @@ jobs:
           ls -la "$DIR"
           .github/scripts/desktop-release-notes.sh "$TAG" "$DIR" > "$RUNNER_TEMP/notes.md"
           cat "$RUNNER_TEMP/notes.md"
-          prerelease=""
-          case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
-          # --latest=false: "Latest release" stays the phone APK the website links to.
+          # Desktop is the main app now: a stable version becomes the repo's "Latest" release,
+          # a version with a suffix (0.6.0-beta.1) goes out as a pre-release and leaves Latest alone.
+          label="--latest"
+          case "$VERSION" in *-*) label="--prerelease --latest=false" ;; esac
           gh release create "$TAG" "$DIR"/* \
             --target "$GITHUB_SHA" \
             --title "EXØS desktop $VERSION" \
             --notes-file "$RUNNER_TEMP/notes.md" \
-            --latest=false \
-            $prerelease
+            $label
