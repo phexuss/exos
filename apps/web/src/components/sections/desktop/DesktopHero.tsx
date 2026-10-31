@@ -114,8 +114,8 @@ export function DesktopHero({ release }: { release: DesktopRelease | null }) {
           <Image
             src={`/desktop/home-${locale === 'ru' ? 'ru' : 'en'}.jpg`}
             alt={t('hero.shotAlt')}
-            width={2160}
-            height={1350}
+            width={2400}
+            height={1424}
             priority
             sizes="(min-width: 1100px) 1052px, 100vw"
             className="block h-auto w-full"
