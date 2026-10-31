@@ -4,6 +4,7 @@ import type {
   AlbumDetail,
   ArtistDetails,
   Chart,
+  LrcLibEntry,
   Lyrics,
   SimilarTrack,
   Track,
@@ -163,4 +164,16 @@ const LRC = `[00:00.00]
 
 export function lyrics(_track: Track): Promise<Lyrics> {
   return delay({ syncedLyrics: LRC, plainLyrics: null });
+}
+
+export function lrclib(q: string): Promise<LrcLibEntry[]> {
+  const plain = LRC.split('\n')
+    .map((l) => l.replace(/\[[^\]]*\]/g, ''))
+    .join('\n')
+    .trim();
+  return delay([
+    { id: 1, trackName: q, artistName: 'Radiohead', albumName: 'In Rainbows', duration: 318, syncedLyrics: LRC, plainLyrics: plain },
+    { id: 2, trackName: `${q} (Live)`, artistName: 'Radiohead', albumName: 'Live', duration: 334, syncedLyrics: null, plainLyrics: plain },
+    { id: 3, trackName: q, artistName: 'Someone Else', albumName: null, duration: 201, syncedLyrics: null, plainLyrics: 'Другая песня\nс тем же названием' },
+  ]);
 }

@@ -1,7 +1,8 @@
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Pencil } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useT } from '@/i18n';
 import { outEasing, reducedMotion, springEasing } from '@/lib/motion';
+import { useUserLyrics } from '@/store/lyrics';
 import { registerNowPlayingCloser, usePlayer } from '@/store/player';
 import { useSettings, type VizStyle } from '@/store/settings';
 import { AmbientArt } from './Ambient';
@@ -65,6 +66,15 @@ export function NowPlaying() {
         <AmbientArt />
         <div className="ambient__veil" />
       </div>
+      <button
+        type="button"
+        className="icon-btn np__edit"
+        onClick={() => useUserLyrics.getState().edit(current)}
+        aria-label={t('lyrics.edit')}
+        title={t('lyrics.edit')}
+      >
+        <Pencil size={18} />
+      </button>
       <button
         type="button"
         className="icon-btn np__close"

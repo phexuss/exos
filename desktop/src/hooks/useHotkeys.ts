@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useUserLyrics } from '@/store/lyrics';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
 import { useSettings } from '@/store/settings';
@@ -16,6 +17,8 @@ function isTyping(e: KeyboardEvent): boolean {
 export function useHotkeys(focusSearch: () => void) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // The lyrics editor has its own keys (Space marks a line there).
+      if (useUserLyrics.getState().editing) return;
       const p = usePlayer.getState();
       const nav = useNav.getState();
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {

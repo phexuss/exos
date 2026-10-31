@@ -1,6 +1,8 @@
+import { Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 import { useT } from '@/i18n';
 import { activeLineIndex, parseLrc } from '@/lib/lrc';
+import { useUserLyrics } from '@/store/lyrics';
 import { usePlayer } from '@/store/player';
 
 export function Lyrics({ big }: { big?: boolean }) {
@@ -43,6 +45,9 @@ export function Lyrics({ big }: { big?: boolean }) {
       <div className="empty">
         <strong>{t('lyrics.none')}</strong>
         {t('lyrics.noneHint')}
+        <button type="button" className="btn sm" onClick={() => useUserLyrics.getState().edit(current)}>
+          <Plus size={15} /> {t('lyrics.add')}
+        </button>
       </div>
     );
 

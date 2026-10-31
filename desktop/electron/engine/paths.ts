@@ -42,6 +42,8 @@ export const apiCacheDir = () => path.join(cacheRoot(), 'api');
 export const workDir = () => path.join(dataDir(), 'work');
 export const libraryFile = () => path.join(dataDir(), 'library.json');
 export const playlistsFile = () => path.join(dataDir(), 'playlists.json');
+/** Lyrics the user typed, pasted or picked for a track; they win over found ones. */
+export const lyricsFile = () => path.join(dataDir(), 'lyrics.json');
 
 /** The main process knows the OS music folder; it passes it in. */
 export const defaultMusicDir = () =>
