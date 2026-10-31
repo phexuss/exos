@@ -73,6 +73,11 @@ A track is kept as a snapshot, so it plays whether it is downloaded or not.
 Tracks are added from the right-click menu or by dragging a row onto a
 playlist in the sidebar; inside a playlist, rows drag into a new order.
 
+**Endless lists.** Playing from a list (library, playlist, album, cloud)
+remembers that list. When its last track starts with repeat off, the list joins
+the queue again, shuffled and never opening with the track that just played,
+so playback goes on like Spotify's. A track played on its own stops at the end.
+
 **Account.** The sign-in screen also creates an account (`/auth/register`,
 then the 6-digit code from the email via `/auth/verify`, which signs the new
 account in). It is the same account as in the phone app.
