@@ -36,8 +36,8 @@ export function Showcase() {
             <Image
               src={`/desktop/${file}-${lang}.jpg`}
               alt={t(`${key}.alt`)}
-              width={2160}
-              height={1350}
+              width={2400}
+              height={1424}
               sizes="(min-width: 1100px) 640px, 100vw"
               className="block h-auto w-full"
             />

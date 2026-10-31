@@ -172,7 +172,7 @@
       "otherSystems": "Other systems",
       "meta": "Version {version} · Windows, macOS and Linux",
       "metaNoVersion": "Windows, macOS and Linux",
-      "shotAlt": "EXØS on the desktop: home, a track playing and lyrics on the right"
+      "shotAlt": "The EXØS desktop window with a track playing"
     },
     "os": {
       "win": "Windows",
@@ -210,7 +210,7 @@
       "player": {
         "title": "Full-window player",
         "text": "Cover, lyrics at full height and the visualizer. F opens it, Esc closes it. Draws at your monitor's refresh rate.",
-        "alt": "EXØS full-window player with lyrics and spectrum"
+        "alt": "EXØS full-window player with lyrics and visualizer"
       },
       "cloud": {
         "title": "Cloud, under Downloads",
