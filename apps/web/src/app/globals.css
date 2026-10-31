@@ -47,6 +47,29 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Desktop app tokens (desktop/src/styles/app.css), so the site reads as the same product. */
+  --color-ink: var(--ink);
+  --color-on-accent: var(--on-accent);
+  --color-deezer: var(--deezer);
+  --color-soundcloud: var(--soundcloud);
+  --color-deezer-text: var(--deezer-text);
+  --color-soundcloud-text: var(--soundcloud-text);
+  --color-ok: var(--ok);
+  --color-warning: var(--warning);
+  --color-glass: var(--glass-tint);
+  --color-glass-thick: var(--glass-tint-thick);
+  --color-rim: var(--glass-rim);
+  --color-rim-strong: var(--glass-rim-strong);
+  --color-fill-1: var(--fill-1);
+  --color-fill-2: var(--fill-2);
+  --color-fill-3: var(--fill-3);
+  --color-fill-4: var(--fill-4);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --ease-spring: var(--spring);
+  --radius-shell: 12px;
+  --radius-pane: 24px;
+  --radius-tile: 14px;
 }
 
 :root {
@@ -82,6 +105,28 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.12);
   --sidebar-ring: #6366f1;
+
+  --ink: #0d0d12;
+  --on-accent: #0d0d12;
+  --deezer: #a238ff;
+  --soundcloud: #ff5500;
+  --deezer-text: #c78bff;
+  --soundcloud-text: #ff8a4c;
+  --ok: #4ade80;
+  --warning: #fbbf24;
+  --glass-tint: rgba(28, 28, 32, 0.42);
+  --glass-tint-thick: rgba(22, 22, 26, 0.66);
+  --glass-rim: rgba(255, 255, 255, 0.14);
+  --glass-rim-strong: rgba(255, 255, 255, 0.24);
+  --glass-highlight: rgba(255, 255, 255, 0.1);
+  --fill-1: rgba(255, 255, 255, 0.05);
+  --fill-2: rgba(255, 255, 255, 0.07);
+  --fill-3: rgba(255, 255, 255, 0.1);
+  --fill-4: rgba(255, 255, 255, 0.13);
+  --text-2: rgba(255, 255, 255, 0.7);
+  --text-3: rgba(255, 255, 255, 0.45);
+  --spring: cubic-bezier(0.22, 1.2, 0.36, 1);
+  --drift: 24s;
 }
 
 .dark {
@@ -123,7 +168,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-ink text-foreground;
   }
   html {
     @apply font-sans;
@@ -196,6 +241,89 @@
 
 @media (prefers-reduced-motion: reduce) {
   .glass .glass-blob {
+    animation: none;
+  }
+}
+
+/* A pane of the desktop window: tinted glass, a hairline rim and a top highlight. */
+@utility pane {
+  background-color: var(--glass-tint);
+  @apply backdrop-blur-2xl backdrop-saturate-150;
+  box-shadow:
+    inset 0 0 0 1px var(--glass-rim),
+    inset 0 1px 0 var(--glass-highlight),
+    0 30px 80px -20px rgba(0, 0, 0, 0.5);
+}
+
+/* Slow colour fields, the same as behind the app's sign-in screen. */
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--ink);
+}
+.aurora i {
+  position: absolute;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  will-change: transform;
+  animation: aurora var(--drift) ease-in-out infinite alternate both;
+}
+.aurora i:nth-child(1) {
+  left: -20vmax;
+  top: -25vmax;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--primary) 42%, transparent),
+    transparent
+  );
+}
+.aurora i:nth-child(2) {
+  right: -25vmax;
+  bottom: -30vmax;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--deezer) 30%, transparent),
+    transparent
+  );
+  animation-direction: alternate-reverse;
+}
+.aurora i:nth-child(3) {
+  left: 20vmax;
+  bottom: -40vmax;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--soundcloud) 18%, transparent),
+    transparent
+  );
+}
+@keyframes aurora {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(8vmax, 6vmax, 0) scale(1.15);
+  }
+}
+
+/* The Ø of the wordmark turns once, like a record, when the page opens. */
+.wm-o {
+  display: inline-block;
+  color: var(--primary);
+  animation: o-turn 900ms var(--spring) 300ms both;
+}
+@keyframes o-turn {
+  from {
+    transform: rotate(-180deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora i,
+  .wm-o {
     animation: none;
   }
 }

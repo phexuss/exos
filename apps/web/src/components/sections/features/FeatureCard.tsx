@@ -1,5 +1,5 @@
 import { Download, Music, Search } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
+import { useTranslations } from 'next-intl';
 
 interface FeatureCardProps {
   topic: 'search' | 'download' | 'lyrics';
@@ -11,8 +11,8 @@ const iconMap = {
   lyrics: Music,
 };
 
-export default async function FeatureCard({ topic }: FeatureCardProps) {
-  const t = await getTranslations('Features');
+export default function FeatureCard({ topic }: FeatureCardProps) {
+  const t = useTranslations('Features');
   const Icon = iconMap[topic];
 
   return (
