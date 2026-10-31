@@ -15,9 +15,11 @@ export default function FaqAccordion() {
   const faqKeys = [
     'time',
     'music-store',
-    'legal',
+    'unsigned',
+    'mobile',
     'registration',
     'privacy',
+    'legal',
   ] as const;
 
   return (

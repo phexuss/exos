@@ -13,10 +13,10 @@ export const GLASS_MODE_STORAGE_KEY = 'exos-glass-mode';
 export const GLASS_MODE_CLASS = 'glass';
 
 /**
- * Runs before hydration so a returning visitor with Glass mode on never sees
- * the solid look flash first.
+ * Runs before hydration. Glass is on by default, as in the desktop app; only
+ * a visitor who turned it off sees the solid look.
  */
-export const glassModeInitScript = `try{if(localStorage.getItem('${GLASS_MODE_STORAGE_KEY}')==='1')document.documentElement.classList.add('${GLASS_MODE_CLASS}')}catch(e){}`;
+export const glassModeInitScript = `try{if(localStorage.getItem('${GLASS_MODE_STORAGE_KEY}')!=='0')document.documentElement.classList.add('${GLASS_MODE_CLASS}')}catch(e){document.documentElement.classList.add('${GLASS_MODE_CLASS}')}`;
 
 type GlassModeContextValue = {
   glassMode: boolean;
@@ -26,12 +26,12 @@ type GlassModeContextValue = {
 const GlassModeContext = createContext<GlassModeContextValue | null>(null);
 
 /**
- * Opt-in "liquid glass" look, mirroring the mobile app's Glass mode setting.
- * Off by default; the choice is remembered per browser. Styling hangs off the
+ * "Liquid glass" look, mirroring the apps' Glass mode setting. On by default
+ * like the desktop app; the choice is remembered per browser. Styling hangs off the
  * `glass` class on <html> (see the `glass:` variant in globals.css).
  */
 export function GlassModeProvider({ children }: { children: ReactNode }) {
-  const [glassMode, setGlassMode] = useState(false);
+  const [glassMode, setGlassMode] = useState(true);
 
   useEffect(() => {
     setGlassMode(document.documentElement.classList.contains(GLASS_MODE_CLASS));

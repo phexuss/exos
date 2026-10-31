@@ -9,6 +9,8 @@ import {
 import { Link } from '@/i18n/navigation';
 import { GlassModeToggle } from '../glass/GlassModeToggle';
 import LanguageSwitcher from '../shared/LanguageSwitcher';
+import { PlatformSwitch } from '../shared/PlatformSwitch';
+import { Wordmark } from '../shared/Wordmark';
 
 export function Header() {
   const t = useTranslations('Header');
@@ -20,7 +22,7 @@ export function Header() {
       animate={{ y: 0, opacity: 1 }}
       transition={{
         duration: 0.5,
-        delay: 1.2,
+        delay: 0.2,
         ease: [0.16, 1, 0.3, 1],
       }}
     >
@@ -30,13 +32,14 @@ export function Header() {
       >
         <Link
           href="#"
-          className="inline-flex bg-linear-to-br from-sidebar-primary to-white text-transparent bg-clip-text text-lg sm:text-xl md:text-2xl font-medium"
+          className="inline-flex font-black text-base tracking-[0.12em] sm:text-lg"
         >
-          EXØS
+          <Wordmark />
         </Link>
+        <PlatformSwitch className="ml-3 mr-auto sm:ml-6" />
         <NavigationMenu className="w-auto">
           <NavigationMenuList className="flex items-center justify-end gap-x-4 text-sm sm:gap-x-6 sm:text-base">
-            <NavigationMenuItem className="hidden sm:block">
+            <NavigationMenuItem className="hidden lg:block">
               <Link
                 href="#features"
                 className="text-secondary-foreground hover:text-foreground duration-300"
@@ -44,7 +47,7 @@ export function Header() {
                 {t('features')}
               </Link>
             </NavigationMenuItem>
-            <NavigationMenuItem className="hidden sm:block">
+            <NavigationMenuItem className="hidden lg:block">
               <Link
                 href="#sources"
                 className="text-secondary-foreground hover:text-foreground duration-300"
@@ -52,7 +55,7 @@ export function Header() {
                 {t('sources')}
               </Link>
             </NavigationMenuItem>
-            <NavigationMenuItem className="hidden sm:block">
+            <NavigationMenuItem className="hidden lg:block">
               <Link
                 href="#faq"
                 className="text-secondary-foreground hover:text-foreground duration-300"
@@ -60,7 +63,7 @@ export function Header() {
                 {t('faq')}
               </Link>
             </NavigationMenuItem>
-            <NavigationMenuItem className="hidden sm:block">
+            <NavigationMenuItem className="hidden lg:block">
               <Link
                 href="#download"
                 className="text-secondary-foreground hover:text-foreground transition duration-300"
@@ -68,7 +71,7 @@ export function Header() {
                 {t('download')}
               </Link>
             </NavigationMenuItem>
-            <NavigationMenuItem>
+            <NavigationMenuItem className="hidden sm:block">
               <GlassModeToggle />
             </NavigationMenuItem>
             <NavigationMenuItem>

@@ -82,6 +82,14 @@
     "privacy": {
       "question": "What about my privacy?",
       "answer": "Secure authentication. Zero tracking. Your data is yours. We only store the minimum information required to keep your personal settings and playlists synced. No tracking, no ads."
+    },
+    "unsigned": {
+      "question": "Why do Windows or macOS warn me when installing?",
+      "answer": "The desktop builds are not signed with a developer certificate yet. On Windows choose More info → Run anyway; on macOS right-click the app → Open."
+    },
+    "mobile": {
+      "question": "What about the phone app?",
+      "answer": "It is on hold and only partly works. The account is shared, so what you downloaded on the phone shows up in the desktop app's cloud."
     }
   },
   "Footer": {
@@ -147,6 +155,114 @@
           "description": "Data security is a priority. We employ industry-standard encryption and secure storage protocols for authentication (password hashing). Your data is never shared with third parties."
         }
       }
+    }
+  },
+  "Platform": {
+    "label": "Which app",
+    "desktop": "Desktop",
+    "android": "Android"
+  },
+  "Desktop": {
+    "hero": {
+      "tagline": "A music player for your computer.",
+      "description": "Finds tracks on Deezer and SoundCloud, then plays and downloads them right on your computer, from your own IP. The EXØS server only handles search, lyrics and your account.",
+      "sources": "Deezer · SoundCloud · YouTube",
+      "downloadFor": "Download for {os}",
+      "downloadGeneric": "Download for desktop",
+      "otherSystems": "Other systems",
+      "meta": "Version {version} · Windows, macOS and Linux",
+      "metaNoVersion": "Windows, macOS and Linux",
+      "shotAlt": "EXØS on the desktop: home, a track playing and lyrics on the right"
+    },
+    "os": {
+      "win": "Windows",
+      "mac": "macOS",
+      "linux": "Linux"
+    },
+    "features": {
+      "title": "What it does",
+      "engine": {
+        "title": "Your computer does the work",
+        "text": "yt-dlp, Deno and ffmpeg install in one click and live in the app's folder. yt-dlp keeps itself up to date, and SoundCloud plays straight from its API."
+      },
+      "files": {
+        "title": "Files you own",
+        "text": "Downloads land in a plain music folder as Opus, M4A or MP3 at 128, 192 or 320 kbit/s, and open in any player."
+      },
+      "playlists": {
+        "title": "Playlists from anywhere",
+        "text": "Make your own, or bring one over by link from Spotify or SoundCloud. Drag tracks in, drag them into order."
+      },
+      "sound": {
+        "title": "Sound you can bend",
+        "text": "Sped up and slowed + reverb, live on any track. A volume curve like a mixer's, so 1% is actually quiet."
+      },
+      "lyrics": {
+        "title": "Lyrics and visualizer",
+        "text": "Synced lyrics light up line by line. Under the cover in the full-window player: a spectrum, a wave or VU meters."
+      },
+      "cloud": {
+        "title": "Cloud",
+        "text": "Sign up right in the app. Everything you download, on the phone too, is listed in your account, and whatever this computer lacks downloads in one click."
+      }
+    },
+    "showcase": {
+      "player": {
+        "title": "Full-window player",
+        "text": "Cover, lyrics at full height and the visualizer. F opens it, Esc closes it. Draws at your monitor's refresh rate.",
+        "alt": "EXØS full-window player with lyrics and spectrum"
+      },
+      "cloud": {
+        "title": "Cloud, under Downloads",
+        "text": "What this account downloaded on every device. See what is missing on this computer and get all of it at once.",
+        "alt": "The Cloud screen in EXØS"
+      }
+    },
+    "inside": {
+      "title": "What runs where",
+      "lead": "The phone app asks the server for audio. The desktop app turns that around: your computer finds, plays and downloads the audio itself, and it never passes through the server.",
+      "local": {
+        "title": "On your computer",
+        "items": [
+          "Finding a source and playback",
+          "Downloads with yt-dlp and ffmpeg",
+          "SoundCloud straight from its API",
+          "Music, playlists and caches on disk"
+        ]
+      },
+      "server": {
+        "title": "On the EXØS server",
+        "items": [
+          "Catalogue search on Deezer and SoundCloud",
+          "Lyrics from LRCLIB",
+          "Recommendations from Last.fm",
+          "Your account and the cloud list"
+        ]
+      }
+    },
+    "download": {
+      "title": "Download",
+      "lead": "Version {version}.",
+      "unsigned": "Builds are not signed yet. On Windows choose More info → Run anyway; on macOS right-click the app → Open.",
+      "win": ".exe installer",
+      "mac": "Intel and Apple Silicon, .dmg",
+      "appimage": "AppImage",
+      "targz": ".tar.gz archive: unpack and run ./exos",
+      "size": "{size} MB",
+      "yours": "Your system",
+      "all": "All versions on GitHub"
+    }
+  },
+  "Android": {
+    "hero": {
+      "badge": "On hold",
+      "description": "The phone app is on hold: development is paused with no date to pick it back up. It installs and parts of it work, but playback and downloads are unreliable. Everything new ships in the desktop app.",
+      "toDesktop": "The desktop app"
+    },
+    "download": {
+      "title": "Download",
+      "lead": "The last Android build, 0.2.1 beta. No new ones while the app is on hold.",
+      "button": "Download APK"
     }
   }
 }
