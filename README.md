@@ -2,45 +2,35 @@
 
 # EXØS
 
-**Aggregated music player for Android and desktop — search, stream and download from multiple sources.**
+**A music player for the desktop that finds, streams and downloads tracks from several sources on your own computer.**
 
-[![Expo SDK](https://img.shields.io/badge/Expo_SDK-54-000020?logo=expo)](https://expo.dev)
-[![React Native](https://img.shields.io/badge/React_Native-0.81-61DAFB?logo=react)](https://reactnative.dev)
+[![Electron](https://img.shields.io/badge/Electron-45-47848F?logo=electron)](https://www.electronjs.org)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev)
 [![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs)](https://nestjs.com)
 [![License](https://img.shields.io/badge/License-Private-333333)](#)
 
-<img height="600" src="https://github.com/user-attachments/assets/161a78c6-ba7c-44b9-a6eb-099eaafaa49c" />
-<img height="600" src="https://github.com/user-attachments/assets/8bfe8ffb-ace0-463c-8cbf-0308bfaac018" />
-<img height="600" src="https://github.com/user-attachments/assets/ae84929d-7bac-4064-abc0-2cd737e41254" />
-
+<img width="900" alt="EXØS desktop: home" src="https://github.com/user-attachments/assets/d402a5cc-f5f2-4d8d-ace4-707cd2da7581" />
 
 </div>
 
 ---
 
+## Status
+
+| App | State |
+| --- | --- |
+| **Desktop** (`desktop/`) | **In active development.** This is where the work goes now; new releases come out often. |
+| **Android** (`apps/mobile`) | **On hold, half-working.** Development is paused for now, with no date to pick it back up. Builds install and parts work, but playback and downloads are unreliable. |
+| Server (`apps/api`) | Running; serves both apps (search, lyrics, recommendations, accounts). |
+
 ## What is EXØS
 
-EXØS is a music player that aggregates tracks from **Deezer** and **SoundCloud**, downloads full audio via **yt-dlp**, and stores it locally for offline playback. Think of it as a self-hosted music client with cloud sync, synced lyrics, and smart recommendations. It comes as a phone app and as a [desktop app](#exøs-on-the-desktop) built around a different idea: the computer is the player.
-
-## Features
-
-- **Multi-source search** — query Deezer and SoundCloud catalogs from a single search bar
-- **Full track downloads** — audio fetched via yt-dlp through a ticket-based queue system
-- **Offline playback** — downloaded tracks play instantly with no internet required
-- **Synchronized lyrics** — timed lyrics fetched from LRCLIB API, even for SoundCloud tracks if they're somewhat popular
-- **Recommendations** — "Because you listened to…" powered by Last.fm similar tracks
-- **Cloud library sync** — backed-up downloads and play history synced to your account
-- **Playlists** — create local playlists, bulk-add tracks, manage your library
-- **Dynamic accent color** — player UI tinted with the dominant album cover color
-- **Offline mode** — full app access without an account (no sync, no profile)
-- **i18n** — English and Russian
+EXØS is a music player that aggregates tracks from **Deezer** and **SoundCloud**, gets full audio through **yt-dlp**, and keeps it locally for offline playback, with synced lyrics, recommendations and an account that syncs your library. The [desktop app](#exøs-on-the-desktop) is the main one: there the computer itself is the player. An [Android app](#the-android-app-on-hold) exists too but is on hold.
 
 ## EXØS on the desktop
 
 <div align="center">
 <!-- Screenshots: replace each src with an uploaded image URL. Window shots at 16:10 look best. -->
-<img width="900" alt="EXØS desktop: home" src="https://github.com/user-attachments/assets/d402a5cc-f5f2-4d8d-ace4-707cd2da7581" />
-<br />
 <img width="445" alt="EXØS desktop: full-window player with lyrics"  src="https://github.com/user-attachments/assets/f16d7921-e211-4b0a-8736-d49f3d845138"  />
 
 
@@ -59,9 +49,41 @@ The phone app asks the EXØS server for audio. The desktop app turns that around
 
 **Download:** the latest `desktop-v…` release on the [Releases page](https://github.com/phexuss/exos/releases?q=desktop&expanded=true). Builds are not signed yet: on Windows choose More info → Run anyway, on macOS right-click → Open.
 
+## The Android app (on hold)
+
+> Development of the phone app is paused and it is only partly working. What it was built to do:
+
+<div align="center">
+<img height="600" src="https://github.com/user-attachments/assets/161a78c6-ba7c-44b9-a6eb-099eaafaa49c" />
+<img height="600" src="https://github.com/user-attachments/assets/8bfe8ffb-ace0-463c-8cbf-0308bfaac018" />
+<img height="600" src="https://github.com/user-attachments/assets/ae84929d-7bac-4064-abc0-2cd737e41254" />
+</div>
+
+
+- **Multi-source search** — query Deezer and SoundCloud catalogs from a single search bar
+- **Full track downloads** — audio fetched via yt-dlp through a ticket-based queue system
+- **Offline playback** — downloaded tracks play instantly with no internet required
+- **Synchronized lyrics** — timed lyrics fetched from LRCLIB API, even for SoundCloud tracks if they're somewhat popular
+- **Recommendations** — "Because you listened to…" powered by Last.fm similar tracks
+- **Cloud library sync** — backed-up downloads and play history synced to your account
+- **Playlists** — create local playlists, bulk-add tracks, manage your library
+- **Dynamic accent color** — player UI tinted with the dominant album cover color
+- **Offline mode** — full app access without an account (no sync, no profile)
+- **i18n** — English and Russian
+
 ## Tech Stack
 
-### Frontend — `apps/mobile`
+### Desktop app — `desktop`
+
+| Layer    | Technology                                                    |
+| -------- | ------------------------------------------------------------- |
+| Shell    | Electron · Windows, macOS, Linux; engine in a utility process  |
+| UI       | React 18 · Vite · Zustand · Motion · Lucide (tokens shared with mobile) |
+| Audio    | yt-dlp + Deno + ffmpeg running on the user's own computer     |
+
+Search, lyrics, account and library sync use the API; audio is fetched by yt-dlp locally, from the user's IP. See [`desktop/README.md`](desktop/README.md).
+
+### Android app — `apps/mobile` (on hold)
 
 | Layer      | Technology                                                                      |
 | ---------- | ------------------------------------------------------------------------------- |
@@ -95,17 +117,7 @@ The phone app asks the EXØS server for audio. The desktop app turns that around
 | Icons      | Lucide React                            |
 | i18n       | next-intl                               |
 
-> **Note:** The landing page is a standalone marketing site with no integration to the mobile app or API. It serves as a promotional page only — authentication, music playback, and all app features exist exclusively in `apps/mobile`.
-
-### Desktop app — `desktop`
-
-| Layer    | Technology                                                    |
-| -------- | ------------------------------------------------------------- |
-| Shell    | Electron · Windows, macOS, Linux; engine in a utility process  |
-| UI       | React 18 · Vite · Zustand · Motion · Lucide (tokens shared with mobile) |
-| Audio    | yt-dlp + Deno + ffmpeg running on the user's own computer     |
-
-Search, lyrics, account and library sync use the API; audio is fetched by yt-dlp locally, from the user's IP. See [`desktop/README.md`](desktop/README.md).
+> **Note:** The landing page is a standalone marketing site with no integration to the mobile app or API. It serves as a promotional page only — authentication, music playback, and all app features live in the apps.
 
 ### Infrastructure
 
@@ -158,7 +170,7 @@ graph LR
 
 - Node.js 20+
 - pnpm 10+
-- Android SDK / Xcode (for native builds)
+- Android SDK (only for the on-hold mobile app)
 - yt-dlp installed on the server
 
 ### Install
@@ -169,7 +181,16 @@ cd exos
 pnpm install
 ```
 
-### Run the mobile app
+### Run the desktop app
+
+```bash
+cd desktop
+npm ci
+npm start        # builds and opens the app
+npm run dev      # UI only, in the browser with example data
+```
+
+### Run the mobile app (on hold)
 
 ```bash
 cp apps/mobile/.env.example apps/mobile/.env
@@ -215,8 +236,9 @@ SPOTIFY_REDIRECT_URI=https://<api-host>/api/spotify/callback
 exos/
 ├── apps/
 │   ├── api/          # NestJS backend
-│   ├── mobile/       # React Native (Expo) app
+│   ├── mobile/       # React Native (Expo) app, on hold
 │   └── web/          # Landing page (Next.js)
+├── desktop/          # Electron desktop app (own package-lock, npm)
 ├── turbo.json        # Turborepo config
 ├── biome.json        # Linter/formatter
 └── pnpm-workspace.yaml
