@@ -3,6 +3,7 @@ import { hasTokens, setUnauthorizedHandler } from '@/lib/api';
 import { IS_MOCK } from '@/lib/env';
 import * as api from '@/lib/services';
 import type { User } from '@/lib/types';
+import { useCloud } from './cloud';
 
 type AuthState = {
   status: 'loading' | 'signedOut' | 'signedIn';
@@ -12,6 +13,11 @@ type AuthState = {
   bootstrap: () => Promise<void>;
   /** `beforeEnter` runs once the server said yes, before the app replaces the sign-in screen. */
   login: (username: string, password: string, beforeEnter?: () => Promise<void>) => Promise<void>;
+  /** Creates the account; the server mails a code to the address. */
+  register: (input: { name: string; username: string; email: string; password: string }) => Promise<{ userId: string; email: string }>;
+  /** A right code signs the new account straight in, like `login`. */
+  verify: (userId: string, code: string, beforeEnter?: () => Promise<void>) => Promise<void>;
+  resend: (userId: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -38,7 +44,10 @@ export const useAuth = create<AuthState>((set) => ({
   user: cachedUser(),
   entering: false,
   bootstrap: async () => {
-    setUnauthorizedHandler(() => set({ status: 'signedOut', user: null }));
+    setUnauthorizedHandler(() => {
+      useCloud.getState().reset();
+      set({ status: 'signedOut', user: null });
+    });
     if (!IS_MOCK && !hasTokens()) {
       set({ status: 'signedOut' });
       return;
@@ -60,9 +69,18 @@ export const useAuth = create<AuthState>((set) => ({
     rememberUser(user);
     set({ status: 'signedIn', user, entering: true });
   },
+  register: (input) => api.register(input),
+  verify: async (userId, code, beforeEnter) => {
+    await api.verifyEmail(userId, code);
+    const [user] = await Promise.all([api.getMe().catch(() => null), beforeEnter?.()]);
+    rememberUser(user);
+    set({ status: 'signedIn', user, entering: true });
+  },
+  resend: (userId) => api.resendCode(userId),
   logout: async () => {
     await api.logout();
     rememberUser(null);
+    useCloud.getState().reset();
     set({ status: 'signedOut', user: null });
   },
 }));

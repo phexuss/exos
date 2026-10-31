@@ -5,6 +5,7 @@ import { IS_MOCK } from '@/lib/env';
 import { exampleTracks } from '@/lib/mock';
 import * as api from '@/lib/services';
 import type { LocalTrack, Track } from '@/lib/types';
+import { useCloud } from './cloud';
 import { useSettings } from './settings';
 import { toast } from './toast';
 
@@ -89,6 +90,7 @@ export const useLibrary = create<LibraryState>((set, get) => {
       patchJob(track.id, { stage: 'done', progress: 1 });
       save();
       api.syncDownload(track);
+      useCloud.getState().added(track);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       if (get().jobs[track.id]) {

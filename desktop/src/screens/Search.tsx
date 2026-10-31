@@ -1,4 +1,4 @@
-import { Link2, Play, SearchX } from 'lucide-react';
+import { Link2, SearchX } from 'lucide-react';
 import { useState } from 'react';
 import { useT } from '@/i18n';
 import { formatTime } from '@/lib/format';
@@ -9,6 +9,7 @@ import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
 import { Cover, SkeletonRows, SourcePill } from '@/components/ui';
 import { Tabs } from '@/components/Tabs';
+import { PlayFab } from '@/components/PlayFab';
 import { TrackTable } from '@/components/TrackTable';
 import { ImportScreen } from './Import';
 
@@ -46,14 +47,7 @@ function TopResult({ track, list }: { track: Track; list: Track[] }) {
           {track.durationSec > 0 && <span>· {formatTime(track.durationSec)}</span>}
         </div>
       </div>
-      <button
-        type="button"
-        className="play-fab"
-        aria-label={t('common.playTitle', { title: track.title })}
-        onClick={() => playQueue(list, 0)}
-      >
-        <Play size={22} fill="currentColor" />
-      </button>
+      <PlayFab tracks={list} label={t('common.playTitle', { title: track.title })} match={[track]} />
     </div>
   );
 }

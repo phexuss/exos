@@ -8,6 +8,7 @@ import type {
   AlbumDetail,
   ArtistDetails,
   Chart,
+  LocalTrack,
   Lyrics,
   SimilarTrack,
   Track,
@@ -120,6 +121,34 @@ export async function login(username: string, password: string): Promise<void> {
     true,
   );
   saveTokens(tokens.accessToken, tokens.refreshToken);
+}
+
+/** Creates the account; the server mails a 6-digit code that `verifyEmail` takes. */
+export async function register(input: {
+  name: string;
+  username: string;
+  email: string;
+  password: string;
+}): Promise<{ userId: string; email: string }> {
+  if (IS_MOCK) return { userId: 'u1', email: input.email };
+  const user = await apiPost<{ id: string; email: string }>('/auth/register', input, true);
+  return { userId: user.id, email: user.email };
+}
+
+/** A right code signs the new account in: the server answers with a token pair. */
+export async function verifyEmail(userId: string, code: string): Promise<void> {
+  if (IS_MOCK) return;
+  const tokens = await apiPost<{ accessToken: string; refreshToken: string }>(
+    '/auth/verify',
+    { userId, code },
+    true,
+  );
+  saveTokens(tokens.accessToken, tokens.refreshToken);
+}
+
+export async function resendCode(userId: string): Promise<void> {
+  if (IS_MOCK) return;
+  await apiPost('/auth/verify/resend', { userId }, true);
 }
 
 export async function logout(): Promise<void> {
@@ -262,48 +291,69 @@ export async function getLyrics(track: Track): Promise<Lyrics | null> {
 
 /* ---------- cloud library (shared with the phone app) ---------- */
 
+/**
+ * The server keeps the list of what an account downloaded, on every device,
+ * not the audio. Field limits mirror apps/api/src/library/dto/library.dto.ts:
+ * one record over a limit fails a whole bulk request, so long text is cut and
+ * long URLs are left out.
+ */
+const cut = (s: string | undefined, max: number) => (s && s.length > max ? s.slice(0, max) : s);
+const url = (s: string | undefined) => (s && s.length <= 2048 ? s : undefined);
+
 function toCloud(track: Track, stamp: { addedAt?: number; playedAt?: number }) {
+  const sec = Math.max(0, Math.round(track.durationSec || 0));
   return {
-    trackId: track.id,
-    deezerId: track.source === 'deezer' ? track.id : undefined,
-    scUrl: track.source === 'soundcloud' ? track.isrc : undefined,
+    trackId: cut(track.id, 256),
+    deezerId: track.source === 'deezer' ? cut(track.id, 128) : undefined,
+    scUrl: track.source === 'soundcloud' ? url(track.isrc) : undefined,
     source: track.source,
-    title: track.title,
-    artistName: track.artist.name,
-    artistId: track.artist.id || undefined,
-    album: track.album,
-    coverUrl: track.coverUrl,
-    duration: `${Math.floor(track.durationSec / 60)}:${String(track.durationSec % 60).padStart(2, '0')}`,
-    durationSec: track.durationSec,
-    previewUrl: track.previewUrl,
-    isrc: track.isrc,
+    title: cut(track.title, 240) || '—',
+    artistName: cut(track.artist.name, 180) || '—',
+    artistId: cut(track.artist.id || undefined, 128),
+    album: cut(track.album, 240),
+    coverUrl: url(track.coverUrl),
+    duration: `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`,
+    durationSec: sec,
+    previewUrl: url(track.previewUrl),
+    isrc: url(track.isrc),
     addedAt: stamp.addedAt ? new Date(stamp.addedAt).toISOString() : undefined,
     playedAt: stamp.playedAt ? new Date(stamp.playedAt).toISOString() : undefined,
   };
 }
 
+/** The server needs a Deezer id or a SoundCloud link to file a track under. */
+const filable = (c: CloudTrack) => !!(c.deezerId || c.scUrl);
+
 export function syncDownload(track: Track): void {
   if (IS_MOCK) return;
-  apiRequest('/library/downloads', {
-    method: 'POST',
-    body: toCloud(track, { addedAt: Date.now() }),
-  }).catch(() => {});
+  const body = toCloud(track, { addedAt: Date.now() });
+  if (!filable(body)) return;
+  apiRequest('/library/downloads', { method: 'POST', body }).catch((e) => console.warn('[cloud] download not saved', e));
 }
 
 export function syncPlayed(track: Track): void {
   if (IS_MOCK) return;
-  apiRequest('/library/recent', {
-    method: 'POST',
-    body: toCloud(track, { playedAt: Date.now() }),
-  }).catch(() => {});
+  const body = toCloud(track, { playedAt: Date.now() });
+  if (!filable(body)) return;
+  apiRequest('/library/recent', { method: 'POST', body }).catch(() => {});
+}
+
+/** The server takes at most this many records per bulk request. */
+const BULK_MAX = 500;
+
+/** Files everything on this computer in the cloud; the server keeps the newest date per track. */
+export async function pushDownloads(tracks: LocalTrack[]): Promise<void> {
+  if (IS_MOCK) return;
+  const all = tracks.map((t) => toCloud(t, { addedAt: t.downloadedAt })).filter(filable);
+  for (let i = 0; i < all.length; i += BULK_MAX) {
+    await apiPost('/library/downloads/bulk', { tracks: all.slice(i, i + BULK_MAX) });
+  }
 }
 
 type CloudTrack = ReturnType<typeof toCloud>;
 
-export async function getCloudRecent(): Promise<Track[]> {
-  if (IS_MOCK) return mock.recent();
-  const raw = await apiGet<CloudTrack[]>('/library/recent', { limit: 30 });
-  return raw.map((c) => ({
+function fromCloud(c: CloudTrack): Track {
+  return {
     id: c.trackId ?? c.deezerId ?? c.scUrl ?? c.title,
     title: c.title,
     artist: { id: c.artistId ?? '', name: c.artistName },
@@ -313,5 +363,19 @@ export async function getCloudRecent(): Promise<Track[]> {
     previewUrl: c.previewUrl,
     isrc: c.isrc ?? c.scUrl,
     source: c.source === 'soundcloud' || (!c.deezerId && c.scUrl) ? 'soundcloud' : 'deezer',
-  }));
+  };
+}
+
+export async function getCloudRecent(): Promise<Track[]> {
+  if (IS_MOCK) return mock.recent();
+  const raw = await apiGet<CloudTrack[]>('/library/recent', { limit: 30 });
+  return raw.map(fromCloud);
+}
+
+/** What the account downloaded on any device, newest first, with when. */
+export async function getCloudDownloads(): Promise<{ track: Track; addedAt: number }[]> {
+  // The preview's cloud overlaps its local library, so both states show.
+  if (IS_MOCK) return mock.exampleTracks.slice(5, 16).map((track, i) => ({ track, addedAt: Date.now() - i * 86_400_000 }));
+  const raw = await apiGet<CloudTrack[]>('/library/downloads', { limit: BULK_MAX });
+  return raw.map((c) => ({ track: fromCloud(c), addedAt: c.addedAt ? Date.parse(c.addedAt) : 0 }));
 }

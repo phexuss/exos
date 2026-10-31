@@ -73,6 +73,22 @@ A track is kept as a snapshot, so it plays whether it is downloaded or not.
 Tracks are added from the right-click menu or by dragging a row onto a
 playlist in the sidebar; inside a playlist, rows drag into a new order.
 
+**Account.** The sign-in screen also creates an account (`/auth/register`,
+then the 6-digit code from the email via `/auth/verify`, which signs the new
+account in). It is the same account as in the phone app.
+
+**Cloud** (under Downloads) is the account's list of downloaded tracks from
+`/library/downloads`, shared with the phone app. The server keeps metadata, not
+audio. On sign-in the app files everything in `library.json` with
+`/library/downloads/bulk` (500 per request), each finished download is filed
+on its own, and the screen lists what is missing on this computer with one
+button to download it all. Tracks are matched by id, SoundCloud ones also by
+link.
+
+**Settings → About** shows the version from `package.json` and the commit the
+build came from (`GITHUB_SHA` in CI, `git rev-parse` locally; see
+`vite.config.ts`).
+
 **Import** (the button next to + under Playlists, or a playlist link pasted
 into search) copies a SoundCloud set, or a public Spotify playlist or album,
 into a local playlist. SoundCloud sets come from its web API with the same

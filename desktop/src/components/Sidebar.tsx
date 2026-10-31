@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Home, Import, Library, LogOut, Plus, Search, Settings } from 'lucide-react';
+import { ArrowDownToLine, Cloud, Home, Import, Library, LogOut, Plus, Search, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useT } from '@/i18n';
@@ -6,6 +6,7 @@ import { dragged, endDrag } from '@/lib/drag';
 import { snappy } from '@/lib/springs';
 import type { Playlist } from '@/lib/types';
 import { useAuth } from '@/store/auth';
+import { useCloud } from '@/store/cloud';
 import { useEngine } from '@/store/engine';
 import { useLibrary } from '@/store/library';
 import { type Route, useNav } from '@/store/nav';
@@ -52,6 +53,7 @@ export function Sidebar() {
     Object.values(s.jobs).filter((j) => j.stage !== 'done' && j.stage !== 'error').length,
   );
   const count = useLibrary((s) => s.tracks.length);
+  const cloud = useCloud((s) => s.items.length);
   const user = useAuth((s) => s.user);
   const logout = useAuth((s) => s.logout);
   const status = useEngine((s) => s.status);
@@ -85,6 +87,7 @@ export function Sidebar() {
         <div className="nav__label">{t('nav.myMusic')}</div>
         {item({ name: 'library' }, <Library size={20} />, `${t('nav.library')}${count ? ` · ${count}` : ''}`)}
         {item({ name: 'downloads' }, <ArrowDownToLine size={20} />, t('nav.downloads'), active)}
+        {item({ name: 'cloud' }, <Cloud size={20} />, `${t('nav.cloud')}${cloud ? ` · ${cloud}` : ''}`)}
       </nav>
       <nav className="nav sidebar__playlists">
         <div className="nav__label nav__label--action">

@@ -5,6 +5,7 @@ export type Route =
   | { name: 'search'; q?: string }
   | { name: 'library' }
   | { name: 'downloads' }
+  | { name: 'cloud' }
   | { name: 'settings' }
   | { name: 'album'; id: string }
   | { name: 'artist'; id: string }

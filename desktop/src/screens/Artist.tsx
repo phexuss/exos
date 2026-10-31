@@ -1,12 +1,12 @@
-import { Download, Play } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { useState } from 'react';
 import { useT } from '@/i18n';
 import { formatCount, placeholderGradient, tracksLabel } from '@/lib/format';
 import { imageUrl } from '@/lib/bridge';
 import { useArtist, useArtistAlbums, useArtistTracks } from '@/lib/queries';
 import { useLibrary } from '@/store/library';
-import { usePlayer } from '@/store/player';
 import { ArtistSkeleton, SkeletonRows } from '@/components/ui';
+import { PlayFab } from '@/components/PlayFab';
 import { TrackTable } from '@/components/TrackTable';
 import { AlbumTile } from './cards';
 
@@ -15,7 +15,6 @@ export function Artist({ id }: { id: string }) {
   const tracks = useArtistTracks(id);
   const albums = useArtistAlbums(id);
   const [all, setAll] = useState(false);
-  const playQueue = usePlayer((s) => s.playQueue);
   const downloadMany = useLibrary((s) => s.downloadMany);
   const top = tracks.data ?? [];
   const { t } = useT();
@@ -50,15 +49,7 @@ export function Artist({ id }: { id: string }) {
         </div>
       </header>
       <div className="actions">
-        <button
-          type="button"
-          className="play-fab"
-          aria-label={t('artist.playTop')}
-          onClick={() => playQueue(top, 0)}
-          disabled={!top.length}
-        >
-          <Play size={22} fill="currentColor" />
-        </button>
+        <PlayFab tracks={top} label={t('artist.playTop')} />
         <button type="button" className="btn" disabled={!top.length} onClick={() => downloadMany(top)}>
           <Download size={16} /> {t('artist.downloadTop', { tracks: tracksLabel(top.length) })}
         </button>
