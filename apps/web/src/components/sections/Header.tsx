@@ -28,7 +28,7 @@ export function Header() {
     >
       <nav
         aria-label="Main navigation"
-        className="flex items-center justify-between max-w-275 mx-auto px-4 sm:px-6 py-3 border border-transparent transition-all duration-500 glass:glass-surface glass:rounded-full glass:py-2 glass:pl-5 glass:pr-3 sm:glass:pl-6"
+        className="flex items-center justify-between max-w-275 mx-auto px-4 sm:px-6 py-3 border border-transparent transition-all duration-500 glass:glass-surface glass:rounded-full glass:py-2 glass:pl-4 glass:pr-2 sm:glass:pl-6 sm:glass:pr-3"
       >
         <Link
           href="#"
@@ -36,7 +36,7 @@ export function Header() {
         >
           <Wordmark />
         </Link>
-        <PlatformSwitch className="ml-3 mr-auto sm:ml-6" />
+        <PlatformSwitch className="ml-2 mr-auto sm:ml-6" />
         <NavigationMenu className="w-auto">
           <NavigationMenuList className="flex items-center justify-end gap-x-4 text-sm sm:gap-x-6 sm:text-base">
             <NavigationMenuItem className="hidden lg:block">

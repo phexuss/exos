@@ -172,6 +172,8 @@
   }
   html {
     @apply font-sans;
+    /* a stray wide element must never make the whole page pan sideways */
+    overflow-x: clip;
   }
 }
 

@@ -21,9 +21,9 @@ export default function LanguageSwitcher() {
         <Button
           variant="ghost"
           size="sm"
-          className="h-9 gap-2 px-2 hover:bg-transparent text-muted-foreground hover:text-white transition-colors focus-visible:ring-0 focus-visible:ring-offset-0"
+          className="h-9 gap-2 px-1.5 sm:px-2 hover:bg-transparent text-muted-foreground hover:text-white transition-colors focus-visible:ring-0 focus-visible:ring-offset-0"
         >
-          <Globe size={16} className="opacity-70" />
+          <Globe size={16} className="hidden opacity-70 sm:block" />
           <span className="text-sm font-medium">{currentLang}</span>
         </Button>
       </DropdownMenuTrigger>
