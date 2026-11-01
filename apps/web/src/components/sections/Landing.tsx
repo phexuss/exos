@@ -5,6 +5,7 @@ import { usePlatform } from '@/components/providers/PlatformProvider';
 import { DesktopFeatures } from '@/components/sections/desktop/DesktopFeatures';
 import { DesktopHero } from '@/components/sections/desktop/DesktopHero';
 import { Inside } from '@/components/sections/desktop/Inside';
+import { LyricsEditing } from '@/components/sections/desktop/LyricsEditing';
 import { Showcase } from '@/components/sections/desktop/Showcase';
 import { Download } from '@/components/sections/download/Download';
 import Faq from '@/components/sections/faq/Faq';
@@ -30,6 +31,7 @@ export function Landing({ release }: { release: DesktopRelease | null }) {
             <DesktopHero release={release} />
             <DesktopFeatures />
             <Showcase />
+            <LyricsEditing />
             <Inside />
           </>
         ) : (
