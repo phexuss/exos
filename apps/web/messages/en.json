@@ -251,6 +251,34 @@
       "size": "{size} MB",
       "yours": "Your system",
       "all": "All versions on GitHub"
+    },
+    "lyrics": {
+      "title": "Lyrics you can fix",
+      "lead": "Auto-search picked the wrong version, or found nothing at all? The pencil in the lyrics panel opens an editor, and for that track your lyrics win over the found ones.",
+      "ways": {
+        "paste": {
+          "title": "Paste or open a file",
+          "text": "Plain text or LRC with time tags. Drop an .lrc, .srt or .txt file in; SRT turns into LRC on its own."
+        },
+        "find": {
+          "title": "Find on LRCLIB",
+          "text": "Search by any words right in the app. Each entry shows whether it is synced and matches the track's length, and you can read it before taking it."
+        },
+        "sync": {
+          "title": "Sync it yourself",
+          "text": "The track plays and you press Space as each line starts. Plain text becomes synced, no millisecond editor needed."
+        }
+      },
+      "demoLabel": "Syncing in the lyrics editor",
+      "demoLines": [
+        "First line of the verse",
+        "Second line, a bit later",
+        "Here comes the chorus",
+        "The chorus once more",
+        "The last line"
+      ],
+      "demoButton": "Line",
+      "demoKey": "Space"
     }
   },
   "Android": {
