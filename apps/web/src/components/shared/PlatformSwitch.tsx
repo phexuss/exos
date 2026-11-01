@@ -35,7 +35,7 @@ export function PlatformSwitch({ className }: { className?: string }) {
             aria-selected={active}
             onClick={() => setPlatform(value)}
             className={cn(
-              'relative inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors duration-200',
+              'relative inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-sm sm:px-3 font-medium transition-colors duration-200',
               active ? 'text-white' : 'text-text-3 hover:text-text-2',
             )}
           >
@@ -52,7 +52,7 @@ export function PlatformSwitch({ className }: { className?: string }) {
               />
             )}
             <Icon size={15} className="relative" />
-            <span className="relative">{t(value)}</span>
+            <span className="relative max-[359px]:sr-only">{t(value)}</span>
           </button>
         );
       })}
