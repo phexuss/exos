@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { useT } from '@/i18n';
 import { formatCount, placeholderGradient, tracksLabel } from '@/lib/format';
 import { imageUrl } from '@/lib/bridge';
-import { useArtist, useArtistAlbums, useArtistTracks } from '@/lib/queries';
+import { useArtist, useArtistAlbums, useArtistTracks, useArtistUploads } from '@/lib/queries';
 import { useLibrary } from '@/store/library';
-import { ArtistSkeleton, SkeletonRows } from '@/components/ui';
+import { ArtistSkeleton, SkeletonRows, SourcePill } from '@/components/ui';
 import { PlayFab } from '@/components/PlayFab';
 import { TrackTable } from '@/components/TrackTable';
 import { AlbumTile } from './cards';
@@ -14,6 +14,7 @@ export function Artist({ id }: { id: string }) {
   const artist = useArtist(id);
   const tracks = useArtistTracks(id);
   const albums = useArtistAlbums(id);
+  const uploads = useArtistUploads(id);
   const [all, setAll] = useState(false);
   const downloadMany = useLibrary((s) => s.downloadMany);
   const top = tracks.data ?? [];
@@ -42,9 +43,14 @@ export function Artist({ id }: { id: string }) {
         <div className="artist-banner__body">
           <h1 className="artist-banner__name">{a.name}</h1>
           <div className="detail-head__meta">
-            <span>{t('common.artist')}</span>
-            {a.fans ? <span className="dot">{t('artist.fans', { n: formatCount(a.fans) })}</span> : null}
+            {a.source === 'soundcloud' ? <SourcePill source="soundcloud" /> : <span>{t('common.artist')}</span>}
+            {a.fans ? (
+              <span className="dot">
+                {t(a.source === 'soundcloud' ? 'artist.followers' : 'artist.fans', { n: formatCount(a.fans) })}
+              </span>
+            ) : null}
             {a.albumsCount ? <span className="dot">{t('artist.releases', { n: a.albumsCount })}</span> : null}
+            {a.tracksCount ? <span className="dot">{tracksLabel(a.tracksCount)}</span> : null}
           </div>
         </div>
       </header>
@@ -56,7 +62,11 @@ export function Artist({ id }: { id: string }) {
       </div>
       <section className="section">
         <h2 className="h2">{t('artist.popular')}</h2>
-        {tracks.loading ? <SkeletonRows /> : <TrackTable tracks={all ? top : top.slice(0, 5)} />}
+        {tracks.loading ? (
+          <SkeletonRows />
+        ) : (
+          <TrackTable tracks={all ? top : top.slice(0, 5)} showAlbum={a.source !== 'soundcloud'} />
+        )}
         {top.length > 5 && (
           <button
             type="button"
@@ -68,6 +78,12 @@ export function Artist({ id }: { id: string }) {
           </button>
         )}
       </section>
+      {(uploads.loading || (uploads.data?.length ?? 0) > 0) && (
+        <section className="section">
+          <h2 className="h2">{t('artist.uploads')}</h2>
+          {uploads.loading ? <SkeletonRows /> : <TrackTable tracks={uploads.data!} showAlbum={false} />}
+        </section>
+      )}
       {(albums.data?.length ?? 0) > 0 && (
         <section className="section">
           <h2 className="h2">{t('artist.discography')}</h2>

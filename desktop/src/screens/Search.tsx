@@ -1,12 +1,17 @@
 import { History, Link2, SearchX, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useT } from '@/i18n';
 import { formatTime } from '@/lib/format';
 import { importSource } from '@/lib/importer';
-import { useSearch } from '@/lib/queries';
+import { imageUrl } from '@/lib/bridge';
+import { placeholderGradient } from '@/lib/format';
+import { onIntent, prefetchArtist, useArtist, useChart, useSearch } from '@/lib/queries';
 import type { Track } from '@/lib/types';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
+import { useLibrary } from '@/store/library';
+import { type ArtistStat, artistKey, decayed, statFor, usePlays } from '@/store/plays';
+import { usePlaylists } from '@/store/playlists';
 import { useSearchHistory } from '@/store/searchHistory';
 import { Cover, SkeletonRows, SourcePill } from '@/components/ui';
 import { Tabs } from '@/components/Tabs';
@@ -143,11 +148,121 @@ function LinkResult({ query }: { query: string }) {
   );
 }
 
+/** How many artists the search start page shows. */
+const ARTISTS_SHOWN = 12;
+
+/**
+ * Artists by plays, plus what is downloaded and in playlists (one play each,
+ * dated when it got there), so a fresh install with a library is not empty.
+ */
+function useYourArtists(): (ArtistStat & { key: string })[] {
+  const artists = usePlays((s) => s.artists);
+  const hidden = usePlays((s) => s.hidden);
+  const library = useLibrary((s) => s.tracks);
+  const playlists = usePlaylists((s) => s.playlists);
+  return useMemo(() => {
+    const now = Date.now();
+    const all = new Map<string, ArtistStat>();
+    for (const [key, a] of Object.entries(artists)) all.set(key, { ...a, score: decayed(a.score, a.last, now) });
+    const seed = (track: Track, at: number) => {
+      if (!track.artist.name.trim()) return;
+      const key = artistKey(track);
+      const prev = all.get(key);
+      const score = (prev?.score ?? 0) + decayed(1, at, now);
+      all.set(key, prev ? { ...prev, score, coverUrl: prev.coverUrl ?? track.coverUrl } : statFor(track, score, at));
+    };
+    for (const tr of library) seed(tr, tr.downloadedAt);
+    for (const pl of playlists) for (const tr of pl.tracks) seed(tr, pl.updatedAt);
+    const skip = new Set(hidden);
+    return [...all.entries()]
+      .filter(([key]) => !skip.has(key))
+      .map(([key, a]) => ({ ...a, key }))
+      .sort((a, b) => b.score - a.score || b.last - a.last)
+      .slice(0, ARTISTS_SHOWN);
+  }, [artists, hidden, library, playlists]);
+}
+
+function ArtistPhoto({ page, coverUrl, name }: { page: string | null; coverUrl?: string; name: string }) {
+  const artist = useArtist(page ?? '');
+  const src = (page ? artist.data?.pictureUrl : undefined) ?? coverUrl;
+  return (
+    <span
+      className="artist-chip__photo"
+      style={{ backgroundImage: src ? `url("${imageUrl(src)}")` : placeholderGradient(name) }}
+    />
+  );
+}
+
+function ArtistChip({ a, onHide }: { a: { key: string; page: string | null; name: string; coverUrl?: string; source: Track['source'] }; onHide?: () => void }) {
+  const go = useNav((s) => s.go);
+  const { t } = useT();
+  const open = () => (a.page ? go({ name: 'artist', id: a.page }) : go({ name: 'search', q: a.name }));
+  return (
+    <span className="mood artist-chip">
+      <button
+        type="button"
+        className="artist-chip__go"
+        onClick={open}
+        {...(a.page ? onIntent(() => prefetchArtist(a.page!)) : {})}
+      >
+        <ArtistPhoto page={a.page} coverUrl={a.coverUrl} name={a.name} />
+        <span className="ellipsis">{a.name}</span>
+      </button>
+      {onHide && (
+        <button
+          type="button"
+          className="recent-q__x"
+          aria-label={t('search.hideArtist', { name: a.name })}
+          title={t('search.hideArtist', { name: a.name })}
+          onClick={onHide}
+        >
+          <X size={15} />
+        </button>
+      )}
+    </span>
+  );
+}
+
+function YourArtists() {
+  const mine = useYourArtists();
+  const hide = usePlays((s) => s.hide);
+  const chart = useChart();
+  const { t } = useT();
+  if (mine.length)
+    return (
+      <section className="section">
+        <h2 className="h2">{t('search.yourArtists')}</h2>
+        <div className="mood-cloud">
+          {mine.map((a) => (
+            <ArtistChip key={a.key} a={a} onHide={() => hide(a.key)} />
+          ))}
+        </div>
+      </section>
+    );
+  const top = chart.data?.artists.slice(0, ARTISTS_SHOWN) ?? [];
+  if (!top.length) return null;
+  return (
+    <section className="section">
+      <h2 className="h2">{t('search.popularArtists')}</h2>
+      <p className="muted" style={{ margin: 0 }}>
+        {t('search.popularHint')}
+      </p>
+      <div className="mood-cloud">
+        {top.map((a) => (
+          <ArtistChip
+            key={a.id}
+            a={{ key: a.id, page: a.id, name: a.name, coverUrl: a.pictureUrl, source: 'deezer' }}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 const NO_TRACKS: Track[] = [];
 
 export function Search({ q }: { q?: string }) {
   const [tab, setTab] = useState<Tab>('deezer');
-  const go = useNav((s) => s.go);
   const query = q?.trim() ?? '';
   const link = isLink(query);
   const results = useSearch(!query || link || importSource(query) ? null : query, tab);
@@ -162,18 +277,7 @@ export function Search({ q }: { q?: string }) {
         <p className="muted" style={{ margin: 0, maxWidth: '60ch' }}>
           {t('search.intro')}
         </p>
-        <section className="section">
-          <h2 className="h2">{t('search.startWith')}</h2>
-          <div className="mood-cloud">
-            {t('search.moods')
-              .split(',')
-              .map((name) => (
-                <button type="button" key={name} className="mood" onClick={() => go({ name: 'search', q: name })}>
-                  {name}
-                </button>
-              ))}
-          </div>
-        </section>
+        <YourArtists />
         <RecentSearches />
         <RecentTracks />
       </div>

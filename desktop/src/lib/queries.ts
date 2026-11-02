@@ -15,8 +15,10 @@ export const useSimilar = (seed: Track | null) =>
   useQuery(seed ? `similar:${seed.id}` : null, () => api.getSimilar(seed!), 30 * MIN);
 
 export const useAlbum = (id: string) => useQuery(`album:${id}`, () => api.getAlbum(id), 30 * MIN);
-export const useArtist = (id: string) => useQuery(`artist:${id}`, () => api.getArtist(id), 30 * MIN);
+export const useArtist = (id: string) => useQuery(id ? `artist:${id}` : null, () => api.getArtist(id), 30 * MIN);
 export const useArtistTracks = (id: string) => useQuery(`artist-tracks:${id}`, () => api.getArtistTracks(id), 30 * MIN);
+export const useArtistUploads = (id: string) =>
+  useQuery(api.scRef(id) !== null ? `artist-uploads:${id}` : null, () => api.getArtistUploads(id), 30 * MIN);
 export const useArtistAlbums = (id: string) => useQuery(`artist-albums:${id}`, () => api.getArtistAlbums(id), 30 * MIN);
 
 export const useSearch = (q: string | null, source: 'deezer' | 'soundcloud') =>

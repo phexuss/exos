@@ -34,6 +34,7 @@ import { useUserLyrics } from '@/store/lyrics';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
 import { usePlaylists } from '@/store/playlists';
+import { trackPlays } from '@/store/plays';
 import { useSettings } from '@/store/settings';
 
 // Screens nobody opens first load on demand (and in the background once the app is idle).
@@ -126,6 +127,8 @@ export function App() {
   const glass = useSettings((s) => s.glassMode);
   const current = usePlayer((s) => s.current);
   const locale = useSettings((s) => s.locale);
+
+  useEffect(() => trackPlays(), []);
   const searchRef = useRef<HTMLInputElement>(null);
   const focusSearch = useCallback(() => searchRef.current?.focus(), []);
 

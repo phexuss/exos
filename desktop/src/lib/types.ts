@@ -34,7 +34,13 @@ export type AlbumCard = {
 
 export type ArtistCard = { id: string; name: string; pictureUrl?: string };
 
-export type ArtistDetails = ArtistCard & { fans?: number; albumsCount?: number };
+export type ArtistDetails = ArtistCard & {
+  fans?: number;
+  albumsCount?: number;
+  /** Set for SoundCloud profiles; fans are then followers. */
+  source?: 'soundcloud';
+  tracksCount?: number;
+};
 
 export type AlbumDetail = AlbumCard & { artistId: string; tracks: Track[] };
 
