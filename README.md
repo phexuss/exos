@@ -41,6 +41,8 @@ The phone app asks the EXØS server for audio. The desktop app turns that around
 
 - **Your computer does the work.** The engine installs its own yt-dlp, Deno and ffmpeg in one click, keeps yt-dlp up to date, and plays SoundCloud straight from its API.
 - **Files you own.** Downloads land in a plain music folder as Opus, M4A or MP3 (128, 192 or 320 kbit/s) and open in any player.
+- **Search that remembers.** Recent searches and the tracks you played from results wait on the search page, one click to go back, a cross to forget. Next to them, your artists: the ones you actually listen to, download and keep in playlists, with photos.
+- **SoundCloud artists are artists too.** Click an uploader's name anywhere and get their page: avatar, followers, popular tracks and everything they uploaded, the same way Deezer artists work.
 - **Your playlists, wherever they were.** Make playlists here, or bring one over by link from Spotify or SoundCloud. Drag tracks in, drag them into order.
 - **Sound you can bend.** Sped up, slowed + reverb, live on any track. A volume curve that is quiet at 1% the way a mixer is.
 - **Lyrics you can fix.** Synced line by line when they exist, plain when they do not. Wrong version or nothing found? The pencil in the lyrics panel opens an editor: paste your own text or LRC, drop in an `.lrc`, `.srt` or `.txt` file, pick another entry from LRCLIB right in the app, or turn plain text into synced lyrics by pressing Space as each line starts. Your lyrics win over the found ones for that track.
