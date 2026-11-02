@@ -1,0 +1,36 @@
+name: API
+
+# Builds apps/api on every pull request that touches it (Dependabot's included),
+# so a dependency bump that breaks the server shows up red before it is merged.
+on:
+  pull_request:
+    paths:
+      - apps/api/**
+      - .github/workflows/api.yml
+
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable && corepack prepare pnpm@10.33.0 --activate
+      - run: pnpm install --frozen-lockfile --ignore-workspace
+      - run: pnpm prisma:generate
+        env:
+          # prisma generate only needs a valid URL; it never connects.
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
+      - run: pnpm typecheck
+      - run: pnpm build

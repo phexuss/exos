@@ -1,5 +1,6 @@
-# Weekly dependency updates, one PR per app with everything in it (majors
-# included). @types/node stays on 22 to match the Node the apps run on.
+# Weekly dependency updates, one PR per app. Only minor and patch versions:
+# major versions change APIs and are upgraded by hand. Every PR is built by CI
+# (desktop.yml, api.yml, Vercel for the site) before it can be merged.
 # apps/mobile is left out while the Android app is on hold.
 version: 2
 
@@ -16,7 +17,7 @@ updates:
       desktop:
         patterns: ["*"]
     ignore:
-      - dependency-name: "@types/node"
+      - dependency-name: "*"
         update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
@@ -31,7 +32,7 @@ updates:
       api:
         patterns: ["*"]
     ignore:
-      - dependency-name: "@types/node"
+      - dependency-name: "*"
         update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
@@ -46,7 +47,7 @@ updates:
       web:
         patterns: ["*"]
     ignore:
-      - dependency-name: "@types/node"
+      - dependency-name: "*"
         update-types: [version-update:semver-major]
 
   - package-ecosystem: docker
