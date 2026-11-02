@@ -304,6 +304,11 @@ export const en = {
     best: 'Top result',
     tracks: 'Tracks',
     all: 'All results',
+    recent: 'Recent searches',
+    played: 'Played from search',
+    clear: 'Clear',
+    forget: 'Remove “{q}” from history',
+    forgetTrack: 'Remove from search history',
   },
   library: {
     title: 'On this computer',

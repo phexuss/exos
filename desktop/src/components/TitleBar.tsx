@@ -4,6 +4,7 @@ import { bridge } from '@/lib/bridge';
 import { IS_MAC, IS_MOCK } from '@/lib/env';
 import { useT } from '@/i18n';
 import { useNav } from '@/store/nav';
+import { useSearchHistory } from '@/store/searchHistory';
 import { useSettings } from '@/store/settings';
 import { FpsMeter } from './FpsMeter';
 
@@ -83,7 +84,9 @@ export const TitleBar = forwardRef<HTMLInputElement>(function TitleBar(_, search
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => route.name !== 'search' && go({ name: 'search', q: q.trim() || undefined })}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && q.trim()) go({ name: 'search', q: q.trim() });
+            if (e.key !== 'Enter' || !q.trim()) return;
+            go({ name: 'search', q: q.trim() });
+            useSearchHistory.getState().addQuery(q);
           }}
         />
         <span className="kbd">Ctrl K</span>
