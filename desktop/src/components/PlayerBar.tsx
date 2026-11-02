@@ -14,6 +14,7 @@ import {
   ListMusic,
   LoaderCircle,
 } from 'lucide-react';
+import { artistPageId } from '@/lib/services';
 import { useEffect, useRef } from 'react';
 import { useT } from '@/i18n';
 import { formatTime } from '@/lib/format';
@@ -85,6 +86,7 @@ export function PlayerBar() {
   const go = useNav((s) => s.go);
   const nowRef = useRef<HTMLDivElement>(null);
   const currentId = current?.id;
+  const artistPage = current ? artistPageId(current) : null;
   const { t } = useT();
 
   useEffect(() => {
@@ -107,8 +109,8 @@ export function PlayerBar() {
               ) : (
                 <div className="player__artist ellipsis" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <SourcePill source={current.source} />
-                  {current.source === 'deezer' && current.artist.id ? (
-                    <button type="button" className="ellipsis" onClick={() => go({ name: 'artist', id: current.artist.id })}>
+                  {artistPage ? (
+                    <button type="button" className="ellipsis" onClick={() => go({ name: 'artist', id: artistPage })}>
                       {current.artist.name}
                     </button>
                   ) : (

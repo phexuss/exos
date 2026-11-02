@@ -231,6 +231,66 @@ export async function playlist(pageUrl: string): Promise<{ name: string; coverUr
   return { name: set.title ?? 'SoundCloud', coverUrl: art(set.artwork_url), tracks };
 }
 
+/* ---------- users (artist pages) ---------- */
+
+type ScApiUser = {
+  id: number;
+  username?: string;
+  full_name?: string;
+  avatar_url?: string | null;
+  followers_count?: number;
+  track_count?: number;
+  permalink_url?: string;
+};
+
+export type ScUser = { id: string; name: string; pictureUrl?: string; fans?: number; tracksCount?: number; url?: string };
+
+/**
+ * A user by numeric id, or by profile name as `@name` (the first part of a
+ * track URL) for tracks that came without one.
+ */
+async function apiUser(ref: string): Promise<ScApiUser> {
+  const user = ref.startsWith('@')
+    ? await apiGet<ScApiUser & { kind?: string }>(
+        `${API}/resolve?url=${encodeURIComponent(`https://soundcloud.com/${ref.slice(1)}`)}`,
+      )
+    : await apiGet<ScApiUser>(`${API}/users/${encodeURIComponent(ref)}`);
+  if (!user?.id) throw new Error(L('автор не найден на SoundCloud', 'artist not found on SoundCloud'));
+  return user;
+}
+
+const ids = new Map<string, number>();
+async function userId(ref: string): Promise<number> {
+  if (/^\d+$/.test(ref)) return Number(ref);
+  const known = ids.get(ref);
+  if (known) return known;
+  const { id } = await apiUser(ref);
+  ids.set(ref, id);
+  return id;
+}
+
+export async function user(ref: string): Promise<ScUser> {
+  const u = await apiUser(ref);
+  ids.set(ref, u.id);
+  return {
+    id: String(u.id),
+    name: u.username || u.full_name || 'SoundCloud',
+    pictureUrl: art(u.avatar_url),
+    fans: u.followers_count,
+    tracksCount: u.track_count,
+    url: u.permalink_url,
+  };
+}
+
+/** `popular`: the user's most played; otherwise their uploads, newest first. */
+export async function userTracks(ref: string, popular: boolean): Promise<ScImportTrack[]> {
+  const id = await userId(ref);
+  const page = await apiGet<{ collection?: ScApiTrack[] }>(
+    `${API}/users/${id}/${popular ? 'toptracks' : 'tracks'}?limit=50&linked_partitioning=1`,
+  );
+  return (page.collection ?? []).map(mapApiTrack).filter((t): t is ScImportTrack => !!t);
+}
+
 /* ---------- HLS → one file ---------- */
 
 export function parsePlaylist(base: string, text: string): { init: string | null; segments: string[] } {

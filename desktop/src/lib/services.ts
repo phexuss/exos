@@ -195,18 +195,49 @@ export async function searchSoundCloud(q: string): Promise<Track[]> {
   return raw.data.map(mapScTrack);
 }
 
+/** SoundCloud artist pages use `sc:<user id>` (or `sc:@<profile name>`); Deezer ones the bare id. */
+export const scRef = (id: string) => (id.startsWith('sc:') ? id.slice(3) : null);
+
+/** The artist page a track's artist opens, or null when there is none. */
+export function artistPageId(track: Track): string | null {
+  const id = track.artist.id;
+  if (track.source === 'deezer') return id || null;
+  if (/^\d+$/.test(id)) return `sc:${id}`;
+  const who = /^https?:\/\/(?:www\.|m\.)?soundcloud\.com\/([\w-]+)\//i.exec(track.isrc ?? '')?.[1];
+  return who && !['discover', 'search', 'stream', 'you'].includes(who) ? `sc:@${who}` : null;
+}
+
 export async function getArtist(id: string): Promise<ArtistDetails> {
+  const sc = scRef(id);
+  if (sc !== null) {
+    if (IS_MOCK) return mock.scArtist(sc);
+    return { ...(await call<ArtistDetails>('sc_user', { ref: sc })), id, source: 'soundcloud' };
+  }
   if (IS_MOCK) return mock.artist(id);
   return mapDzArtist(await apiGet<DzArtist>(`/artists/${id}`, undefined, TTL.catalogue));
 }
 
 export async function getArtistTracks(id: string): Promise<Track[]> {
+  const sc = scRef(id);
+  if (sc !== null) {
+    if (IS_MOCK) return mock.scArtistTracks(sc);
+    return call<Track[]>('sc_user_tracks', { ref: sc, popular: true });
+  }
   if (IS_MOCK) return mock.artistTracks(id);
   const raw = await apiGet<{ data: DzTrack[] }>(`/artists/${id}/tracks`, undefined, TTL.catalogue);
   return raw.data.map((t) => mapDzTrack(t));
 }
 
+/** A SoundCloud artist's uploads, newest first. */
+export async function getArtistUploads(id: string): Promise<Track[]> {
+  const sc = scRef(id);
+  if (sc === null) return [];
+  if (IS_MOCK) return mock.scArtistTracks(sc);
+  return call<Track[]>('sc_user_tracks', { ref: sc, popular: false });
+}
+
 export async function getArtistAlbums(id: string): Promise<AlbumCard[]> {
+  if (scRef(id) !== null) return [];
   if (IS_MOCK) return mock.artistAlbums(id);
   const raw = await apiGet<{ data: DzAlbum[] }>(`/artists/${id}/albums`, undefined, TTL.catalogue);
   return raw.data.map(mapDzAlbum);

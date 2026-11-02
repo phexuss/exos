@@ -1410,6 +1410,12 @@ img { display: block; }
 .recent-q__x:hover { background: var(--fill-2); color: var(--text); }
 .recent-q:hover .recent-q__go svg { color: var(--accent); }
 
+/* An artist you listen to: round photo, name, and the same cross to hide it. */
+.artist-chip { display: inline-flex; align-items: center; max-width: 100%; padding: 0; }
+.artist-chip__go { display: inline-flex; align-items: center; gap: 10px; min-width: 0; height: 100%; padding: 0 20px 0 6px; color: inherit; font: inherit; }
+.artist-chip:has(.recent-q__x) .artist-chip__go { padding-right: 6px; }
+.artist-chip__photo { flex: none; width: 32px; height: 32px; border-radius: 999px; background-size: cover; background-position: center; }
+
 .tabs button, .nav__item { white-space: nowrap; }
 
 /* macOS keeps its own traffic lights over the content (titleBarStyle Overlay). */

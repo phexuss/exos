@@ -1,4 +1,5 @@
 import { Clock3, Play } from 'lucide-react';
+import { artistPageId } from '@/lib/services';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useLayoutEffect, useRef, useState } from 'react';
 import { useT } from '@/i18n';
@@ -181,6 +182,7 @@ const Row = memo(function Row({
   const go = useNav((s) => s.go);
   const showMenu = useMenu((s) => s.show);
   const { t } = useT();
+  const artistPage = artistPageId(track);
   return (
     <div
       role="row"
@@ -217,15 +219,15 @@ const Row = memo(function Row({
         <span style={{ minWidth: 0 }}>
           <div className="tt__title ellipsis">{track.title}</div>
           <div className="tt__artist">
-            {track.source === 'deezer' && track.artist.id ? (
+            {artistPage ? (
               <button
                 type="button"
                 className="ellipsis"
                 onClick={(e) => {
                   e.stopPropagation();
-                  go({ name: 'artist', id: track.artist.id });
+                  go({ name: 'artist', id: artistPage });
                 }}
-                {...onIntent(() => prefetchArtist(track.artist.id))}
+                {...onIntent(() => prefetchArtist(artistPage))}
               >
                 {track.artist.name}
               </button>

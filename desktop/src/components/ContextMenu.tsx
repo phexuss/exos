@@ -1,4 +1,5 @@
 import { ChevronRight, CircleMinus, Disc3, Download, FolderOpen, ListEnd, ListMusic, ListPlus, Mic2, Play, Plus, Trash2, User } from 'lucide-react';
+import { artistPageId } from '@/lib/services';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { create } from 'zustand';
 import { useT } from '@/i18n';
@@ -71,6 +72,7 @@ export function ContextMenu() {
 
   if (!open) return null;
   const { track } = open;
+  const artistPage = artistPageId(track);
   const act = (fn: () => void) => () => {
     fn();
     close();
@@ -122,8 +124,8 @@ export function ContextMenu() {
         </button>
       )}
       <hr />
-      {track.source === 'deezer' && track.artist.id && (
-        <button type="button" onClick={act(() => nav.go({ name: 'artist', id: track.artist.id }))}>
+      {artistPage && (
+        <button type="button" onClick={act(() => nav.go({ name: 'artist', id: artistPage }))}>
           <User size={16} /> {t('menu.openArtist')}
         </button>
       )}

@@ -124,6 +124,17 @@ export function artist(id: string): Promise<ArtistDetails> {
   return delay(ARTISTS.find((a) => a.id === id) ?? ARTISTS[0]);
 }
 
+/** A SoundCloud profile by `@name` or id, from the example uploads. */
+export function scArtist(ref: string): Promise<ArtistDetails> {
+  const name = ref.replace(/^@/, '');
+  return delay({ id: `sc:${ref}`, name, pictureUrl: generatedCover(`sc ${name}`, 400), source: 'soundcloud' as const });
+}
+
+export function scArtistTracks(ref: string): Promise<Track[]> {
+  const name = ref.replace(/^@/, '');
+  return delay(SC_TRACKS.filter((t) => t.artist.id === name));
+}
+
 export function artistTracks(id: string): Promise<Track[]> {
   return delay(TRACKS.filter((t) => t.artist.id === id));
 }
