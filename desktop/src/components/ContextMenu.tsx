@@ -16,17 +16,19 @@ type MenuOpen = {
   onPlay?: () => void;
   /** Set when the row belongs to a playlist: "remove from this playlist". */
   onRemove?: () => void;
+  /** Label for onRemove when the row is not a playlist row. */
+  removeLabel?: string;
 };
 
 type MenuState = {
   open: MenuOpen | null;
-  show: (x: number, y: number, track: Track, onPlay?: () => void, onRemove?: () => void) => void;
+  show: (x: number, y: number, track: Track, onPlay?: () => void, onRemove?: () => void, removeLabel?: string) => void;
   close: () => void;
 };
 
 export const useMenu = create<MenuState>((set) => ({
   open: null,
-  show: (x, y, track, onPlay, onRemove) => set({ open: { x, y, track, onPlay, onRemove } }),
+  show: (x, y, track, onPlay, onRemove, removeLabel) => set({ open: { x, y, track, onPlay, onRemove, removeLabel } }),
   close: () => set({ open: null }),
 }));
 
@@ -116,7 +118,7 @@ export function ContextMenu() {
       </div>
       {open.onRemove && (
         <button type="button" onClick={act(open.onRemove)}>
-          <CircleMinus size={16} /> {t('playlist.removeTrack')}
+          <CircleMinus size={16} /> {open.removeLabel ?? t('playlist.removeTrack')}
         </button>
       )}
       <hr />

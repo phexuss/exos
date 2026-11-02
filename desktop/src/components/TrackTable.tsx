@@ -21,13 +21,23 @@ type Props = {
   /** Rows of a playlist: they can be removed and dragged into a new order. */
   playlistId?: string;
   onRemove?: (index: number) => void;
+  /** Context menu label for onRemove; defaults to "remove from this playlist". */
+  removeLabel?: string;
 };
 
 /** Longer lists only keep the rows near the viewport in the DOM. */
 const VIRTUAL_FROM = 60;
 const ROW_H = 58;
 
-export function TrackTable({ tracks, showAlbum = true, showCover = true, compact, playlistId, onRemove }: Props) {
+export function TrackTable({
+  tracks,
+  showAlbum = true,
+  showCover = true,
+  compact,
+  playlistId,
+  onRemove,
+  removeLabel,
+}: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const currentId = usePlayer((s) => s.current?.id);
   const playing = usePlayer((s) => s.status === 'playing' || s.status === 'loading');
@@ -49,6 +59,7 @@ export function TrackTable({ tracks, showAlbum = true, showCover = true, compact
       onSelect={() => setSelected(t.id)}
       onPlay={() => playQueue(tracks, i)}
       onRemove={onRemove ? () => onRemove(i) : undefined}
+      removeLabel={removeLabel}
       onDragStart={(e) => startDrag(e, { tracks: [t], from: playlistId ? { playlistId, index: i } : undefined })}
       dropMark={dropAt === i}
       onDragOver={
@@ -145,6 +156,7 @@ const Row = memo(function Row({
   onSelect,
   onPlay,
   onRemove,
+  removeLabel,
   onDragStart,
   onDragOver,
   onDrop,
@@ -160,6 +172,7 @@ const Row = memo(function Row({
   onSelect: () => void;
   onPlay: () => void;
   onRemove?: () => void;
+  removeLabel?: string;
   onDragStart: (e: React.DragEvent) => void;
   onDragOver?: (e: React.DragEvent) => void;
   onDrop?: (e: React.DragEvent) => void;
@@ -185,7 +198,7 @@ const Row = memo(function Row({
       onContextMenu={(e) => {
         e.preventDefault();
         onSelect();
-        showMenu(e.clientX, e.clientY, track, onPlay, onRemove);
+        showMenu(e.clientX, e.clientY, track, onPlay, onRemove, removeLabel);
       }}
     >
       <span className="tt__num">

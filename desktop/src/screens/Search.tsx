@@ -1,5 +1,5 @@
-import { Link2, SearchX } from 'lucide-react';
-import { useState } from 'react';
+import { History, Link2, SearchX, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useT } from '@/i18n';
 import { formatTime } from '@/lib/format';
 import { importSource } from '@/lib/importer';
@@ -7,6 +7,7 @@ import { useSearch } from '@/lib/queries';
 import type { Track } from '@/lib/types';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
+import { useSearchHistory } from '@/store/searchHistory';
 import { Cover, SkeletonRows, SourcePill } from '@/components/ui';
 import { Tabs } from '@/components/Tabs';
 import { PlayFab } from '@/components/PlayFab';
@@ -52,6 +53,98 @@ function TopResult({ track, list }: { track: Track; list: Track[] }) {
   );
 }
 
+/**
+ * Remembers the query and the track when a track from `list` starts playing here.
+ * A track that was already playing when the results opened does not count.
+ */
+function useRememberPlays(query: string, list: Track[]) {
+  const currentId = usePlayer((s) => s.current?.id);
+  const initial = useRef(currentId);
+  useEffect(() => {
+    if (!currentId || currentId === initial.current) return;
+    initial.current = undefined;
+    const track = list.find((tr) => tr.id === currentId);
+    if (!track) return;
+    const h = useSearchHistory.getState();
+    h.addQuery(query);
+    h.addTrack(track);
+  }, [currentId, list, query]);
+}
+
+function RecentSearches() {
+  const { queries, removeQuery, clearQueries } = useSearchHistory();
+  const go = useNav((s) => s.go);
+  const { t } = useT();
+  if (!queries.length) return null;
+  return (
+    <section className="section">
+      <div className="section__head">
+        <h2 className="h2">{t('search.recent')}</h2>
+        <button type="button" className="link-btn" onClick={clearQueries}>
+          {t('search.clear')}
+        </button>
+      </div>
+      <div className="mood-cloud">
+        {queries.map((q) => (
+          <span key={q} className="mood recent-q">
+            <button type="button" className="recent-q__go" onClick={() => go({ name: 'search', q })}>
+              <History size={16} />
+              <span className="ellipsis">{q}</span>
+            </button>
+            <button
+              type="button"
+              className="recent-q__x"
+              aria-label={t('search.forget', { q })}
+              title={t('search.forget', { q })}
+              onClick={() => removeQuery(q)}
+            >
+              <X size={15} />
+            </button>
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RecentTracks() {
+  const { tracks, removeTrack, clearTracks } = useSearchHistory();
+  const { t } = useT();
+  if (!tracks.length) return null;
+  return (
+    <section className="section">
+      <div className="section__head">
+        <h2 className="h2">{t('search.played')}</h2>
+        <button type="button" className="link-btn" onClick={clearTracks}>
+          {t('search.clear')}
+        </button>
+      </div>
+      <TrackTable tracks={tracks} showAlbum={false} onRemove={removeTrack} removeLabel={t('search.forgetTrack')} />
+    </section>
+  );
+}
+
+function LinkResult({ query }: { query: string }) {
+  const { t } = useT();
+  const [list] = useState(() => [linkTrack(query)]);
+  useRememberPlays(query, list);
+  return (
+    <div className="page page-enter">
+      <h1 className="h1">{t('search.link')}</h1>
+      <div className="search-split">
+        <TopResult track={list[0]} list={list} />
+        <div className="empty" style={{ alignItems: 'flex-start', textAlign: 'left', padding: 0 }}>
+          <Link2 size={28} />
+          <strong>{t('search.linkTitle')}</strong>
+          {t('search.linkHint')}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const NO_TRACKS: Track[] = [];
+
 export function Search({ q }: { q?: string }) {
   const [tab, setTab] = useState<Tab>('deezer');
   const go = useNav((s) => s.go);
@@ -59,6 +152,8 @@ export function Search({ q }: { q?: string }) {
   const link = isLink(query);
   const results = useSearch(!query || link || importSource(query) ? null : query, tab);
   const { t } = useT();
+  const list = results.data ?? NO_TRACKS;
+  useRememberPlays(query, list);
 
   if (!query) {
     return (
@@ -79,6 +174,8 @@ export function Search({ q }: { q?: string }) {
               ))}
           </div>
         </section>
+        <RecentSearches />
+        <RecentTracks />
       </div>
     );
   }
@@ -86,24 +183,8 @@ export function Search({ q }: { q?: string }) {
   // A playlist link: offer to import it rather than play one track.
   if (importSource(query)) return <ImportScreen url={query} />;
 
-  if (link) {
-    const lt = linkTrack(query);
-    return (
-      <div className="page page-enter">
-        <h1 className="h1">{t('search.link')}</h1>
-        <div className="search-split">
-          <TopResult track={lt} list={[lt]} />
-          <div className="empty" style={{ alignItems: 'flex-start', textAlign: 'left', padding: 0 }}>
-            <Link2 size={28} />
-            <strong>{t('search.linkTitle')}</strong>
-            {t('search.linkHint')}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (link) return <LinkResult key={query} query={query} />;
 
-  const list = results.data ?? [];
   return (
     <div className="page page-enter">
       <div className="section__head">

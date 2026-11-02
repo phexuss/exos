@@ -1392,6 +1392,24 @@ img { display: block; }
 }
 .mood:hover { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent); }
 
+/* A recent query: the chip opens it, the cross forgets it. */
+.recent-q { display: inline-flex; align-items: center; max-width: 100%; padding: 0; }
+.recent-q__go { display: inline-flex; align-items: center; gap: 10px; min-width: 0; height: 100%; padding: 0 6px 0 18px; color: inherit; font: inherit; }
+.recent-q__go svg { flex: none; color: var(--text-3); }
+.recent-q__x {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin-right: 6px;
+  border-radius: 999px;
+  color: var(--text-3);
+  transition: background 140ms, color 140ms;
+}
+.recent-q__x:hover { background: var(--fill-2); color: var(--text); }
+.recent-q:hover .recent-q__go svg { color: var(--accent); }
+
 .tabs button, .nav__item { white-space: nowrap; }
 
 /* macOS keeps its own traffic lights over the content (titleBarStyle Overlay). */
