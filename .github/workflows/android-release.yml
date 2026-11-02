@@ -48,7 +48,7 @@ jobs:
       run:
         working-directory: apps/mobile
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -91,18 +91,18 @@ jobs:
             fi
           done
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/mobile/package-lock.json
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       # metro.config.js also resolves from the monorepo root node_modules; Metro
       # fails to start if that folder is missing.
@@ -176,7 +176,7 @@ jobs:
           mv "$apk" "$RUNNER_TEMP/${{ steps.version.outputs.apk }}"
           rm -f "$KS_FILE"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.version.outputs.apk }}
           path: ${{ runner.temp }}/${{ steps.version.outputs.apk }}
