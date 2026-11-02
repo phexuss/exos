@@ -1,5 +1,5 @@
-# Weekly dependency updates. Minor and patch bumps come grouped as one PR per
-# app; major bumps come one per package, since those can break things.
+# Weekly dependency updates, one PR per app with everything in it (majors
+# included). @types/node stays on 22 to match the Node the apps run on.
 # apps/mobile is left out while the Android app is on hold.
 version: 2
 
@@ -13,8 +13,11 @@ updates:
     commit-message:
       prefix: "chore(desktop)"
     groups:
-      desktop-minor:
-        update-types: [minor, patch]
+      desktop:
+        patterns: ["*"]
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
     directory: /apps/api
@@ -25,8 +28,11 @@ updates:
     commit-message:
       prefix: "chore(api)"
     groups:
-      api-minor:
-        update-types: [minor, patch]
+      api:
+        patterns: ["*"]
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
     directory: /apps/web
@@ -37,8 +43,11 @@ updates:
     commit-message:
       prefix: "chore(web)"
     groups:
-      web-minor:
-        update-types: [minor, patch]
+      web:
+        patterns: ["*"]
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: docker
     directory: /apps/api
