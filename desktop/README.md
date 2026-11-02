@@ -31,6 +31,7 @@ reconnected.
 | | Goes through |
 | --- | --- |
 | Login, search, charts, artists, albums, lyrics, Last.fm recs, play history sync | `exos-api`, requested by the engine (the API's CORS list only has the website) |
+| SoundCloud playback, set import, artist pages | SoundCloud's web API (`api-v2`), from the engine, with the client id the web player uses |
 | Finding the audio, streaming, downloading | `yt-dlp` on this computer |
 
 ## Why it feels fast
@@ -105,6 +106,24 @@ player reads (`spclient.wg.spotify.com`) with the anonymous token the same
 page carries, and each title from that track's own embed page. Each track is
 matched on Deezer by title, artist and length. A track Deezer lacks stays as artist +
 title and plays through a YouTube search.
+
+**Search page.** With the box empty it shows three things, all kept in
+`localStorage` on this computer:
+
+- *Your artists*: up to 12 artists ranked by a local play counter
+  (`src/store/plays.ts`). A track counts after 30 s of listening (or half of a
+  shorter one); each play fades with a 14-day half-life, so the list follows
+  what you listen to now. Downloaded tracks and playlist tracks add one play
+  each, so a library is enough to fill it. The cross hides an artist for good.
+  With nothing to go on, it shows Deezer chart artists instead.
+- *Recent searches*: a query is kept when you press Enter or play a track from
+  its results, not while typing.
+- *Played from search*: the tracks started from results. Right click removes one.
+
+**SoundCloud artists** open their own page, like Deezer ones: profile, popular
+tracks (`/users/{id}/toptracks`) and all uploads (`/users/{id}/tracks`) from
+`api-v2`. Their page id is `sc:<user id>`, or `sc:@<profile>` taken from the
+track URL when a track came without the user id.
 
 **Lyrics** come from the EXØS server (LRCLIB). When its exact match has no
 text, the app searches LRCLIB itself and takes synced lyrics if any entry has
