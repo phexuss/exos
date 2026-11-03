@@ -2,13 +2,17 @@ import { CheckCircle2, CircleAlert, Download, FolderOpen, RefreshCw } from 'luci
 import { useState } from 'react';
 import { type CookieCheck, engine, openFolder, pickFolder, type Tool, type ToolInfo } from '@/lib/engine';
 import { useT } from '@/i18n';
-import { API_BASE_URL, IS_MOCK } from '@/lib/env';
+import { API_BASE_URL, IS_DESKTOP, IS_MOCK } from '@/lib/env';
 import { useAuth } from '@/store/auth';
 import { useEngine } from '@/store/engine';
 import { type CookiesBrowser, useSettings } from '@/store/settings';
-import { Toggle } from '@/components/ui';
+import { Slider, Toggle } from '@/components/ui';
 import { Select } from '@/components/Select';
 import { Tabs } from '@/components/Tabs';
+
+/** Crossfade length range, seconds (the same as Spotify's). */
+const CROSSFADE_MIN = 1;
+const CROSSFADE_MAX = 12;
 
 /** Electron's version, from the user agent it reports; empty in a plain browser. */
 const ELECTRON = /Electron\/([\d.]+)/.exec(navigator.userAgent)?.[1] ?? '';
@@ -247,6 +251,49 @@ export function Settings() {
                     { value: '320', label: '320' },
                   ]}
                 />
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="h2 group__title">{t('settings.playback')}</h2>
+          <div className="group">
+            <div className="row">
+              <div>
+                <div className="row__label">{t('settings.normalize')}</div>
+                <div className="row__hint">{t('settings.normalizeHint')}</div>
+              </div>
+              <Toggle on={s.normalize} onChange={(v) => s.set({ normalize: v })} label={t('settings.normalize')} />
+            </div>
+            <div className="row">
+              <div>
+                <div className="row__label">{t('settings.crossfade')}</div>
+                <div className="row__hint">{t('settings.crossfadeHint')}</div>
+              </div>
+              <div className="row__controls">
+                {s.crossfadeOn && (
+                  <div className="crossfade">
+                    <Slider
+                      value={s.crossfadeSec - CROSSFADE_MIN}
+                      max={CROSSFADE_MAX - CROSSFADE_MIN}
+                      label={t('settings.crossfade')}
+                      onChange={(v) => s.set({ crossfadeSec: Math.round(CROSSFADE_MIN + v) })}
+                      onCommit={(v) => s.set({ crossfadeSec: Math.round(CROSSFADE_MIN + v) })}
+                    />
+                    <span className="tabular">{t('settings.crossfadeSec', { n: s.crossfadeSec })}</span>
+                  </div>
+                )}
+                <Toggle on={s.crossfadeOn} onChange={(v) => s.set({ crossfadeOn: v })} label={t('settings.crossfade')} />
+              </div>
+            </div>
+            {IS_DESKTOP && (
+              <div className="row">
+                <div>
+                  <div className="row__label">{t('settings.closeToTray')}</div>
+                  <div className="row__hint">{t('settings.closeToTrayHint')}</div>
+                </div>
+                <Toggle on={s.closeToTray} onChange={(v) => s.set({ closeToTray: v })} label={t('settings.closeToTray')} />
               </div>
             )}
           </div>

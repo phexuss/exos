@@ -2,10 +2,11 @@ import { Play } from 'lucide-react';
 import { useMemo } from 'react';
 import { type Key, useT } from '@/i18n';
 import { formatTime } from '@/lib/format';
-import { useChart, useRecent, useSimilar } from '@/lib/queries';
+import { useChart, useRecent, useSimilarFirst } from '@/lib/queries';
 import type { Track } from '@/lib/types';
 import { useAuth } from '@/store/auth';
 import { usePlayer } from '@/store/player';
+import { usePlays } from '@/store/plays';
 import { useMenu } from '@/components/ContextMenu';
 import { Cover, DownloadButton, Eq, SkeletonRows } from '@/components/ui';
 import { AlbumTile, ArtistTile } from './cards';
@@ -85,12 +86,23 @@ export function Home() {
   const user = useAuth((s) => s.user);
   const chart = useChart();
   const recent = useRecent();
-  const seed = recent.data?.[0] ?? chart.data?.tracks[0] ?? null;
-  const similar = useSimilar(seed);
+  const played = usePlays((s) => s.recent);
+  // What you listened to here first, then what the account played elsewhere, then the chart.
+  const seeds = useMemo(() => {
+    const out: Track[] = [];
+    for (const tr of [...played, ...(recent.data ?? [])]) {
+      if (tr.source === 'deezer' && !out.some((x) => x.id === tr.id)) out.push(tr);
+      if (out.length === 3) break;
+    }
+    if (!out.length && chart.data?.tracks[0]) out.push(chart.data.tracks[0]);
+    return out;
+  }, [played, recent.data, chart.data]);
+  const similar = useSimilarFirst(seeds);
+  const seed = similar.data?.seed ?? null;
   const playQueue = usePlayer((s) => s.playQueue);
   const top = chart.data?.tracks ?? [];
   const recentList = useMemo(() => recent.data ?? [], [recent.data]);
-  const similarList = similar.data ?? [];
+  const similarList = similar.data?.list ?? [];
   const { t } = useT();
 
   return (

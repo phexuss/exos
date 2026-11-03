@@ -63,11 +63,43 @@ class FakeAudio implements AudioLike {
   }
 }
 
-const audio: AudioLike = IS_MOCK ? new FakeAudio() : new Audio();
+/**
+ * Two elements, so a crossfade can start the next track on one while the
+ * other fades out. `audio` is the one that plays the current track; the other
+ * is idle, or is the tail of the previous track during a crossfade.
+ */
+const elements: AudioLike[] = IS_MOCK ? [new FakeAudio(), new FakeAudio()] : [new Audio(), new Audio()];
+let audio: AudioLike = elements[0];
+const other = () => (audio === elements[0] ? elements[1] : elements[0]);
 // Effects run the audio through Web Audio, which hears a cross-origin element
 // only when it was loaded with CORS; the engine's media server allows it.
-if (!IS_MOCK) (audio as HTMLAudioElement).crossOrigin = 'anonymous';
-const fx = IS_MOCK ? null : createFx(audio as HTMLAudioElement);
+if (!IS_MOCK) for (const el of elements) (el as HTMLAudioElement).crossOrigin = 'anonymous';
+const fx = IS_MOCK ? null : createFx(elements as HTMLAudioElement[]);
+
+/** The previous track fading out during a crossfade. */
+let tail: { el: AudioLike; timer: ReturnType<typeof setTimeout> } | null = null;
+function stopTail() {
+  if (!tail) return;
+  clearTimeout(tail.timer);
+  tail.el.pause();
+  tail = null;
+}
+
+/** Listens on both elements, but only to the one playing the current track. */
+function on(ev: string, fn: () => void) {
+  for (const el of elements) el.addEventListener(ev, () => el === audio && fn());
+}
+
+function soundSettings() {
+  const s = useSettings.getState();
+  return {
+    fx: { speed: s.speed, reverb: s.reverb },
+    eqOn: s.eqOn,
+    eq: s.eq,
+    normalize: s.normalize,
+    crossfade: s.crossfadeOn ? s.crossfadeSec : 0,
+  };
+}
 
 /**
  * Slider position (0..1) to the element's gain. Loudness is heard on a log
@@ -235,10 +267,24 @@ export const usePlayer = create<PlayerState>((set, get) => {
     set({ queue: [...queue, ...nextRound(context, queue[index]?.id)] });
   };
 
-  const load = async (index: number) => {
+  /**
+   * Plays queue[index]. With `crossfadeSec`, the track that is playing keeps
+   * going on its element and fades out once the next one starts on the other.
+   */
+  const load = async (index: number, crossfadeSec = 0) => {
     const track = get().queue[index];
     if (!track) return;
     const seq = ++loadSeq;
+    const prev = audio;
+    stopTail();
+    if (crossfadeSec > 0 && fx?.canFade()) {
+      audio = other();
+      fx.fade(audio as HTMLAudioElement, 0, 0);
+    } else {
+      prev.pause();
+      fx?.fade(audio as HTMLAudioElement, 1, 0);
+    }
+    const fading = audio !== prev;
     set({ index, current: track, status: 'loading', time: 0, duration: track.durationSec, loadingNote: null });
     extend();
     audio.pause();
@@ -248,6 +294,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
       const url = await resolvePlayable(track, (note) => seq === loadSeq && set({ loadingNote: note }));
       if (seq !== loadSeq) return;
       audio.src = url;
+      fx?.track(audio as HTMLAudioElement, track.id);
       if (audio instanceof FakeAudio) {
         audio.fakeDuration = track.durationSec;
         audio.load();
@@ -267,9 +314,16 @@ export const usePlayer = create<PlayerState>((set, get) => {
         audio.src = cachedUrl;
         await audio.play();
       }
+      if (fading && fx) {
+        // Both are playing now: the new one comes in as the old one goes.
+        fx.fade(audio as HTMLAudioElement, 1, crossfadeSec);
+        fx.fade(prev as HTMLAudioElement, 0, crossfadeSec);
+        tail = { el: prev, timer: setTimeout(stopTail, crossfadeSec * 1000 + 200) };
+      }
       api.syncPlayed(track);
     } catch (e) {
       if (seq !== loadSeq) return;
+      if (fading) prev.pause();
       urlCache.delete(track.id);
       set({ status: 'paused', loadingNote: null });
       toast(
@@ -299,14 +353,47 @@ export const usePlayer = create<PlayerState>((set, get) => {
   };
 
   setOutput(useSettings.getState().volume);
-  {
-    const { speed, reverb } = useSettings.getState();
-    fx?.setFx({ speed, reverb });
-    useSettings.subscribe((s, prev) => {
-      if (s.speed !== prev.speed || s.reverb !== prev.reverb) fx?.setFx({ speed: s.speed, reverb: s.reverb });
-    });
-  }
-  audio.addEventListener('timeupdate', () => set({ time: audio.currentTime }));
+  fx?.setSound(soundSettings());
+  useSettings.subscribe((s, p) => {
+    if (
+      s.speed !== p.speed ||
+      s.reverb !== p.reverb ||
+      s.eqOn !== p.eqOn ||
+      s.eq !== p.eq ||
+      s.normalize !== p.normalize ||
+      s.crossfadeOn !== p.crossfadeOn ||
+      s.crossfadeSec !== p.crossfadeSec
+    )
+      fx?.setSound(soundSettings());
+  });
+
+  /** The queue position that comes after this one, the same way 'ended' picks it. */
+  const nextIndex = (): number | null => {
+    const { repeat, index, queue } = get();
+    if (repeat === 'one') return null;
+    if (index < queue.length - 1) return index + 1;
+    if (repeat === 'all' && queue.length > 1) return 0;
+    extend();
+    return get().index < get().queue.length - 1 ? get().index + 1 : null;
+  };
+
+  on('timeupdate', () => {
+    set({ time: audio.currentTime });
+    // Crossfade: start the next track a few seconds before this one ends.
+    const { crossfadeOn, crossfadeSec } = useSettings.getState();
+    const sec = crossfadeOn ? crossfadeSec : 0;
+    const { status, duration } = get();
+    if (sec <= 0 || status !== 'playing' || !fx?.canFade()) return;
+    // The file's own length when it agrees with the catalogue; HLS stitched
+    // from chunks can report a few seconds, and then the catalogue is right.
+    const file = Number.isFinite(audio.duration) ? audio.duration : 0;
+    const length = file > 0 && (duration <= 0 || Math.abs(file - duration) <= duration * 0.15) ? file : duration;
+    // Short tracks get a shorter overlap, never more than a third of the track.
+    const overlap = Math.min(sec, length / 3);
+    if (length <= 0 || length - audio.currentTime > overlap || overlap < 1) return;
+    const next = nextIndex();
+    if (next !== null) void load(next, overlap);
+  });
   // The catalogue knows the real length; files stitched from HLS chunks can
   // report a few seconds, so the file only wins when the catalogue has nothing.
   const syncDuration = () => {
@@ -314,22 +401,22 @@ export const usePlayer = create<PlayerState>((set, get) => {
     if (known > 0 || !Number.isFinite(audio.duration)) return;
     set({ duration: audio.duration });
   };
-  audio.addEventListener('loadedmetadata', syncDuration);
-  audio.addEventListener('durationchange', syncDuration);
-  audio.addEventListener('play', () => {
+  on('loadedmetadata', syncDuration);
+  on('durationchange', syncDuration);
+  on('play', () => {
     // An audio context made before any click starts suspended; playing is the click.
     fx?.reapply();
     set({ status: 'playing', loadingNote: null });
     const { queue, index, repeat } = get();
     schedulePrefetch(queue[index + 1] ?? (repeat === 'all' ? queue[0] : undefined));
   });
-  audio.addEventListener('pause', () => {
+  on('pause', () => {
     if (get().status !== 'loading') set({ status: 'paused' });
   });
   // A CDN link can stop answering mid-track (expired signature, a refused
   // range). Resolve a fresh one once and carry on from the same spot.
   let recoveredFor: string | null = null;
-  audio.addEventListener('error', () => {
+  on('error', () => {
     const { current, status, time } = get();
     if (!current || status === 'loading' || IS_MOCK || useLibrary.getState().get(current.id)) return;
     if (recoveredFor === current.id) return;
@@ -348,7 +435,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
         if (seq === loadSeq) set({ status: 'paused' });
       });
   });
-  audio.addEventListener('ended', () => {
+  on('ended', () => {
     const { repeat, index, queue } = get();
     if (repeat === 'one') {
       audio.currentTime = 0;
@@ -407,8 +494,10 @@ export const usePlayer = create<PlayerState>((set, get) => {
     toggle: () => {
       const { status, current } = get();
       if (!current) return;
-      if (status === 'playing') audio.pause();
-      else if (status === 'paused') void audio.play();
+      if (status === 'playing') {
+        stopTail();
+        audio.pause();
+      } else if (status === 'paused') void audio.play();
     },
     next: () => {
       const { index, queue, repeat } = get();
@@ -427,6 +516,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
       } else void load(index - 1);
     },
     seek: (sec) => {
+      stopTail();
       audio.currentTime = Math.max(0, Math.min(sec, get().duration || sec));
       set({ time: audio.currentTime });
     },

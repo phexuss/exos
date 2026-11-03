@@ -11,6 +11,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { TitleBar } from '@/components/TitleBar';
 import { Toasts } from '@/components/Toasts';
 import { useAccent } from '@/hooks/useAccent';
+import { bridge } from '@/lib/bridge';
 import { IS_MAC } from '@/lib/env';
 import { exampleTracks } from '@/lib/mock';
 import { installMotion } from '@/lib/motion';
@@ -129,6 +130,40 @@ export function App() {
   const locale = useSettings((s) => s.locale);
 
   useEffect(() => trackPlays(), []);
+
+  // The tray: what it shows, what its menu does, and whether close hides to it.
+  useEffect(() => {
+    const tray = bridge?.tray;
+    if (!tray) return;
+    const send = () => {
+      const { closeToTray, locale } = useSettings.getState();
+      const { current, status } = usePlayer.getState();
+      tray.config({
+        closeToTray,
+        lang: locale,
+        title: current ? `${current.artist.name} — ${current.title}` : '',
+        playing: status === 'playing' || status === 'loading',
+      });
+    };
+    send();
+    const offSettings = useSettings.subscribe((s, p) => {
+      if (s.closeToTray !== p.closeToTray || s.locale !== p.locale) send();
+    });
+    const offPlayer = usePlayer.subscribe((s, p) => {
+      if (s.current?.id !== p.current?.id || s.status !== p.status) send();
+    });
+    const offCommand = tray.onCommand((op) => {
+      const p = usePlayer.getState();
+      if (op === 'toggle') p.toggle();
+      else if (op === 'next') p.next();
+      else if (op === 'prev') p.prev();
+    });
+    return () => {
+      offSettings();
+      offPlayer();
+      offCommand();
+    };
+  }, []);
   const searchRef = useRef<HTMLInputElement>(null);
   const focusSearch = useCallback(() => searchRef.current?.focus(), []);
 

@@ -14,6 +14,7 @@ const COUNT_AFTER_SEC = 30;
 /** A play loses half its weight in this time. */
 const HALF_LIFE_MS = 14 * 24 * 3600_000;
 const MAX_ARTISTS = 200;
+const MAX_RECENT = 20;
 
 export type ArtistStat = {
   /** Artist page to open (Deezer id or `sc:…`); null opens a search by name. */
@@ -30,6 +31,8 @@ type PlaysState = {
   artists: Record<string, ArtistStat>;
   /** Keys hidden from "Your artists". */
   hidden: string[];
+  /** Tracks heard long enough to count, newest first: seeds for "Because you listened to". */
+  recent: Track[];
   count: (track: Track, at?: number) => void;
   hide: (key: string) => void;
 };
@@ -55,9 +58,13 @@ export const usePlays = create<PlaysState>()(
     (set) => ({
       artists: {},
       hidden: [],
+      recent: [],
       count: (track, at = Date.now()) => {
         if (!track.artist.name.trim()) return;
         const key = artistKey(track);
+        const { id, title, artist, album, albumId, durationSec, coverUrl, isrc, source } = track;
+        const snap: Track = { id, title, artist: { ...artist }, album, albumId, durationSec, coverUrl, isrc, source };
+        set((s) => ({ recent: [snap, ...s.recent.filter((x) => x.id !== id)].slice(0, MAX_RECENT) }));
         set((s) => {
           const prev = s.artists[key];
           const score = (prev ? decayed(prev.score, prev.last, at) : 0) + 1;
@@ -76,7 +83,7 @@ export const usePlays = create<PlaysState>()(
     {
       name: 'exos.plays',
       version: 1,
-      partialize: (s) => ({ artists: s.artists, hidden: s.hidden }),
+      partialize: (s) => ({ artists: s.artists, hidden: s.hidden, recent: s.recent }),
       storage: createJSONStorage(() => {
         try {
           return localStorage;

@@ -29,6 +29,16 @@ type SettingsState = {
   visualizer: boolean;
   /** Which one the now playing view shows. */
   vizStyle: VizStyle;
+  /** Equalizer on, and its ten band gains in dB (see EQ_BANDS). */
+  eqOn: boolean;
+  eq: number[];
+  /** Bring every track to the same loudness. */
+  normalize: boolean;
+  /** The next track starts while this one fades out, over crossfadeSec seconds. */
+  crossfadeOn: boolean;
+  crossfadeSec: number;
+  /** The window's close button hides it to the tray and the music plays on. */
+  closeToTray: boolean;
   set: (patch: Partial<Omit<SettingsState, 'set'>>) => void;
 };
 
@@ -48,6 +58,12 @@ export const useSettings = create<SettingsState>()(
       showFps: false,
       visualizer: true,
       vizStyle: 'bars',
+      eqOn: false,
+      eq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      normalize: false,
+      crossfadeOn: false,
+      crossfadeSec: 6,
+      closeToTray: true,
       set: (patch) => set(patch),
     }),
     {

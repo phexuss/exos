@@ -14,6 +14,23 @@ export const useRecent = () => useQuery('recent', () => api.getCloudRecent().cat
 export const useSimilar = (seed: Track | null) =>
   useQuery(seed ? `similar:${seed.id}` : null, () => api.getSimilar(seed!), 30 * MIN);
 
+/**
+ * Similar tracks for the first of `seeds` that has any: Last.fm knows nothing
+ * about many uploads and remixes, so one unknown track should not empty the shelf.
+ */
+export const useSimilarFirst = (seeds: Track[]) =>
+  useQuery(
+    seeds.length ? `similar-first:${seeds.map((s) => s.id).join(',')}` : null,
+    async () => {
+      for (const seed of seeds) {
+        const list = await api.getSimilar(seed).catch(() => []);
+        if (list.length) return { seed, list };
+      }
+      return null;
+    },
+    30 * MIN,
+  );
+
 export const useAlbum = (id: string) => useQuery(`album:${id}`, () => api.getAlbum(id), 30 * MIN);
 export const useArtist = (id: string) => useQuery(id ? `artist:${id}` : null, () => api.getArtist(id), 30 * MIN);
 export const useArtistTracks = (id: string) => useQuery(`artist-tracks:${id}`, () => api.getArtistTracks(id), 30 * MIN);

@@ -12,10 +12,13 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
+  Menu,
   MessageChannelMain,
+  nativeImage,
   net,
   protocol,
   shell,
+  Tray,
   type UtilityProcess,
   utilityProcess,
 } from 'electron';
@@ -115,6 +118,68 @@ function connect() {
   win.webContents.postMessage('engine-port', null, [port2]);
 }
 
+/* ---------- tray: close hides the window, the music plays on ---------- */
+
+let tray: Tray | null = null;
+/** Mirrors the "keep playing when closed" setting; the window sends it on start and on change. */
+let closeToTray = true;
+let nowPlaying: { title: string; playing: boolean } = { title: '', playing: false };
+/** The UI's language, for the tray menu. */
+let lang = 'en';
+
+function showWindow() {
+  if (!win) return createWindow();
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
+const send = (op: string) => win?.webContents.send('tray', op);
+
+function trayMenu() {
+  const L = (ru: string, en: string) => (lang === 'ru' ? ru : en);
+  return Menu.buildFromTemplate([
+    ...(nowPlaying.title ? [{ label: nowPlaying.title, enabled: false }, { type: 'separator' as const }] : []),
+    { label: L('Открыть EXØS', 'Open EXØS'), click: showWindow },
+    {
+      label: nowPlaying.playing ? L('Пауза', 'Pause') : L('Играть', 'Play'),
+      click: () => send('toggle'),
+    },
+    { label: L('Следующий', 'Next'), click: () => send('next') },
+    { label: L('Предыдущий', 'Previous'), click: () => send('prev') },
+    { type: 'separator' },
+    {
+      label: L('Выйти', 'Quit'),
+      click: () => {
+        quitting = true;
+        app.quit();
+      },
+    },
+  ]);
+}
+
+function createTray() {
+  if (tray) return;
+  const icon = nativeImage
+    .createFromPath(path.join(__dirname, '..', 'resources', 'icon.png'))
+    .resize({ width: isMac ? 18 : 22, height: isMac ? 18 : 22 });
+  tray = new Tray(icon);
+  tray.setToolTip('EXØS');
+  tray.setContextMenu(trayMenu());
+  // Windows and most Linux panels open the app on a click; macOS shows the menu.
+  tray.on('click', showWindow);
+}
+
+ipcMain.on('tray:config', (_e, cfg: { closeToTray?: boolean; title?: string; playing?: boolean; lang?: string }) => {
+  if (typeof cfg.closeToTray === 'boolean') closeToTray = cfg.closeToTray;
+  if (typeof cfg.lang === 'string') lang = cfg.lang;
+  if (typeof cfg.title === 'string') nowPlaying.title = cfg.title;
+  if (typeof cfg.playing === 'boolean') nowPlaying.playing = cfg.playing;
+  if (!tray) return;
+  tray.setToolTip(nowPlaying.title ? `EXØS · ${nowPlaying.title}` : 'EXØS');
+  tray.setContextMenu(trayMenu());
+});
+
 /* ---------- window ---------- */
 
 type Bounds = { x?: number; y?: number; width: number; height: number; maximized?: boolean };
@@ -151,6 +216,9 @@ function createWindow() {
       spellcheck: false,
       // Cache compiled UI code on the first run instead of after a few launches.
       v8CacheOptions: 'bypassHeatCheck',
+      // Hidden in the tray, the player still has to notice a track ending,
+      // start crossfades and measure loudness on time.
+      backgroundThrottling: false,
     },
   });
   if (b.maximized) win.maximize();
@@ -158,8 +226,13 @@ function createWindow() {
   win.webContents.on('did-finish-load', connect);
   win.on('maximize', () => win?.webContents.send('win:maximized', true));
   win.on('unmaximize', () => win?.webContents.send('win:maximized', false));
-  win.on('close', () => {
+  win.on('close', (e) => {
     if (!win) return;
+    if (closeToTray && tray && !quitting) {
+      e.preventDefault();
+      win.hide();
+      return;
+    }
     const bounds = win.getNormalBounds();
     try {
       fs.writeFileSync(boundsFile(), JSON.stringify({ ...bounds, maximized: win.isMaximized() }));
@@ -202,11 +275,9 @@ ipcMain.handle('dialog:pick-folder', async (e) => {
   return r.canceled ? null : (r.filePaths[0] ?? null);
 });
 
-app.on('second-instance', () => {
-  if (!win) return;
-  if (win.isMinimized()) win.restore();
-  win.focus();
-});
+// Starting the app again brings the hidden window back (also the way out
+// on a desktop without a tray area).
+app.on('second-instance', showWindow);
 
 app.on('before-quit', () => {
   quitting = true;
@@ -222,7 +293,6 @@ app.whenReady().then(() => {
   serveUi();
   startEngine();
   createWindow();
-  app.on('activate', () => {
-    if (!win) createWindow();
-  });
+  createTray();
+  app.on('activate', showWindow);
 });
