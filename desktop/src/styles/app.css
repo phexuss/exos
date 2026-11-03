@@ -484,6 +484,7 @@ img { display: block; }
   grid-auto-columns: minmax(150px, 1fr);
   gap: 18px;
   overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: 6px;
   scroll-snap-type: x proximity;
 }
@@ -1367,6 +1368,7 @@ img { display: block; }
   border-radius: 12px;
 }
 .rank__row:hover { background: var(--hover); }
+.rank--plain .rank__row { grid-template-columns: 52px minmax(0, 1fr) auto 36px; padding-left: 8px; }
 .rank__n {
   font-size: 30px;
   font-weight: 900;
@@ -1498,6 +1500,7 @@ img { display: block; }
   .h1 { font-size: 28px; }
   .quick-grid { grid-template-columns: minmax(0, 1fr); }
   .rank__row { grid-template-columns: 30px 44px minmax(0, 1fr) 36px; }
+  .rank--plain .rank__row { grid-template-columns: 44px minmax(0, 1fr) 36px; }
   .rank__n { font-size: 20px; }
   .rank__art .cover { width: 44px; }
   .rank__dur { display: none; }

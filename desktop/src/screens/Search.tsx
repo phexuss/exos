@@ -1,5 +1,5 @@
 import { History, Link2, SearchX, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useT } from '@/i18n';
 import { formatTime } from '@/lib/format';
 import { importSource } from '@/lib/importer';
@@ -9,15 +9,14 @@ import { onIntent, prefetchArtist, useArtist, useChart, useSearch } from '@/lib/
 import type { Track } from '@/lib/types';
 import { useNav } from '@/store/nav';
 import { usePlayer } from '@/store/player';
-import { useLibrary } from '@/store/library';
-import { type ArtistStat, artistKey, decayed, statFor, usePlays } from '@/store/plays';
-import { usePlaylists } from '@/store/playlists';
+import { usePlays } from '@/store/plays';
 import { useSearchHistory } from '@/store/searchHistory';
 import { Cover, SkeletonRows, SourcePill } from '@/components/ui';
 import { Tabs } from '@/components/Tabs';
 import { PlayFab } from '@/components/PlayFab';
 import { TrackTable } from '@/components/TrackTable';
 import { ImportScreen } from './Import';
+import { useYourArtists } from '@/lib/yourArtists';
 
 type Tab = 'deezer' | 'soundcloud';
 
@@ -151,37 +150,6 @@ function LinkResult({ query }: { query: string }) {
 /** How many artists the search start page shows. */
 const ARTISTS_SHOWN = 12;
 
-/**
- * Artists by plays, plus what is downloaded and in playlists (one play each,
- * dated when it got there), so a fresh install with a library is not empty.
- */
-function useYourArtists(): (ArtistStat & { key: string })[] {
-  const artists = usePlays((s) => s.artists);
-  const hidden = usePlays((s) => s.hidden);
-  const library = useLibrary((s) => s.tracks);
-  const playlists = usePlaylists((s) => s.playlists);
-  return useMemo(() => {
-    const now = Date.now();
-    const all = new Map<string, ArtistStat>();
-    for (const [key, a] of Object.entries(artists)) all.set(key, { ...a, score: decayed(a.score, a.last, now) });
-    const seed = (track: Track, at: number) => {
-      if (!track.artist.name.trim()) return;
-      const key = artistKey(track);
-      const prev = all.get(key);
-      const score = (prev?.score ?? 0) + decayed(1, at, now);
-      all.set(key, prev ? { ...prev, score, coverUrl: prev.coverUrl ?? track.coverUrl } : statFor(track, score, at));
-    };
-    for (const tr of library) seed(tr, tr.downloadedAt);
-    for (const pl of playlists) for (const tr of pl.tracks) seed(tr, pl.updatedAt);
-    const skip = new Set(hidden);
-    return [...all.entries()]
-      .filter(([key]) => !skip.has(key))
-      .map(([key, a]) => ({ ...a, key }))
-      .sort((a, b) => b.score - a.score || b.last - a.last)
-      .slice(0, ARTISTS_SHOWN);
-  }, [artists, hidden, library, playlists]);
-}
-
 function ArtistPhoto({ page, coverUrl, name }: { page: string | null; coverUrl?: string; name: string }) {
   const artist = useArtist(page ?? '');
   const src = (page ? artist.data?.pictureUrl : undefined) ?? coverUrl;
@@ -224,7 +192,7 @@ function ArtistChip({ a, onHide }: { a: { key: string; page: string | null; name
 }
 
 function YourArtists() {
-  const mine = useYourArtists();
+  const mine = useYourArtists(ARTISTS_SHOWN);
   const hide = usePlays((s) => s.hide);
   const chart = useChart();
   const { t } = useT();
