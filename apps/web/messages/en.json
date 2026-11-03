@@ -53,10 +53,11 @@
       "advantages": {
         "1": "Underground tracks & remixes",
         "2": "Community-driven discoverability",
-        "3": "Instant stream optimization"
+        "3": "Instant stream optimization",
+        "4": "Artist pages: popular tracks and every upload"
       },
       "disadvantages": {
-        "1": "No artist or album pages"
+        "1": "No album pages"
       }
     }
   },
