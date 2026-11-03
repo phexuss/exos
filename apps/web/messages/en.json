@@ -195,7 +195,7 @@
       },
       "sound": {
         "title": "Sound you can bend",
-        "text": "Sped up and slowed + reverb, live on any track. A volume curve like a mixer's, so 1% is actually quiet."
+        "text": "Sped up and slowed + reverb, a 10-band equalizer, volume normalization and crossfade, live on any track. A volume curve like a mixer's, so 1% is actually quiet."
       },
       "lyrics": {
         "title": "Lyrics and visualizer",
@@ -279,6 +279,31 @@
       ],
       "demoButton": "Line",
       "demoKey": "Space"
+    },
+    "soundTuning": {
+      "title": "Sound, tuned by you",
+      "lead": "Three things in the player that change how music sounds, not which music plays. Each turns on with one switch and costs nothing when it is off.",
+      "tools": {
+        "eq": {
+          "title": "Equalizer",
+          "text": "Ten bands from 32 Hz to 16 kHz, ±12 dB each, and presets for bass, vocals, treble, electronic and acoustic. It sits on its own page next to sped up and slowed."
+        },
+        "normalize": {
+          "title": "Volume normalization",
+          "text": "Quiet and loud tracks play at one level. Loudness is measured while the track plays, so nothing is scanned ahead and nothing waits; the app remembers each track's level after the first half minute."
+        },
+        "crossfade": {
+          "title": "Crossfade",
+          "text": "The next track fades in while this one fades out, like a DJ mix. A switch and a length from 1 to 12 seconds, in Settings → Playback."
+        }
+      },
+      "demoLabel": "The equalizer moving through its presets",
+      "presets": {
+        "bass": "Bass",
+        "vocal": "Vocals",
+        "electronic": "Electronic",
+        "acoustic": "Acoustic"
+      }
     }
   },
   "Android": {

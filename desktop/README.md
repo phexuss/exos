@@ -66,8 +66,28 @@ reconnected.
   following it, reverb is a Web Audio convolver on a generated hall impulse.
   Nothing is rendered ahead of time. The audio element loads with CORS so Web
   Audio can hear it; the engine's media server allows any origin.
+- **Equalizer**: ten BiquadFilters (a low shelf at 32 Hz, peaking bands, a
+  high shelf at 16 kHz; ±12 dB) on the
+  mixed bus, before reverb. The presets and the switch are the second page of
+  the sound popover; off means every band at 0 dB, so nothing is coloured.
+- **Volume normalization** (Settings → Playback) measures gated loudness live
+  from an AnalyserNode and steers a gain toward -14 dB, within -12/+6 dB, with
+  a limiter after it. There is no pre-scan: a track starts at once and is
+  corrected over its first seconds. After 30 s its level is saved
+  (`exos.loudness` in localStorage) and applied from the start next time.
+- **Crossfade** (Settings → Playback, 1–12 s) uses two audio elements, each
+  with its own fade gain. Near the end the next track starts on the idle
+  element and both ramp linearly. The overlap is at most a third of the track,
+  and the catalogue length is used when the file's own duration disagrees by
+  more than 15% (HLS).
 - **Download format**: Opus (YouTube's best, about 160 kbit/s, no
   re-encoding), M4A (AAC as YouTube serves it) or MP3 at 128/192/320 kbit/s.
+
+**Closing the window** hides it to the tray (Settings → Playback → Close to
+tray, on by default) and playback goes on; the window keeps rendering audio
+with `backgroundThrottling` off. The tray menu shows what is playing and has
+play/pause, next, previous and quit. Starting the app again brings the window
+back.
 
 **Playlists** live on this computer in `playlists.json` next to `library.json`.
 A track is kept as a snapshot, so it plays whether it is downloaded or not.

@@ -16,7 +16,9 @@ export default function LanguageSwitcher() {
   const currentLang = useLocale().toUpperCase();
 
   return (
-    <DropdownMenu>
+    // Not modal: the modal scroll lock sets overflow: hidden on body, which makes body
+    // the sticky header's scroll box, so a scrolled page loses the header and the menu.
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
