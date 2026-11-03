@@ -12,6 +12,8 @@ import { LastfmService } from 'src/providers/lastfm/lastfm.service';
 import { SoundCloudService } from 'src/providers/soundcloud/soundcloud.service';
 import { SoundCloudSearchResponse } from 'src/providers/soundcloud/soundcloud.types';
 
+const EMPTY_SIMILAR_TTL_MS = 5 * 60_000;
+
 const LASTFM_SIMILAR_CANDIDATE_LIMIT = 12;
 const MAX_SIMILAR_RESULTS = 10;
 
@@ -231,7 +233,12 @@ export class SearchService {
       })
       .slice(0, MAX_SIMILAR_RESULTS);
 
-    await this.cacheManager.set(cacheKey, results, CACHE_TTL_MS.similar);
+    // An empty answer (Last.fm down, key missing, nothing on Deezer) is kept briefly so it does not stick for an hour.
+    await this.cacheManager.set(
+      cacheKey,
+      results,
+      results.length ? CACHE_TTL_MS.similar : EMPTY_SIMILAR_TTL_MS,
+    );
     return results;
   }
 

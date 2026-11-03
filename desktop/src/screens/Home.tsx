@@ -2,7 +2,7 @@ import { Play } from 'lucide-react';
 import { useMemo } from 'react';
 import { type Key, useT } from '@/i18n';
 import { formatTime } from '@/lib/format';
-import { useArtist, useChart, useMix, useRecent, useSimilarFirst } from '@/lib/queries';
+import { useArtist, useMix, useRecent, useSimilarFirst } from '@/lib/queries';
 import { useYourArtists } from '@/lib/yourArtists';
 import type { Track } from '@/lib/types';
 import { useAuth } from '@/store/auth';
@@ -10,7 +10,7 @@ import { usePlayer } from '@/store/player';
 import { usePlays } from '@/store/plays';
 import { useMenu } from '@/components/ContextMenu';
 import { Cover, DownloadButton, Eq, SkeletonRows } from '@/components/ui';
-import { AlbumTile, ArtistTile } from './cards';
+import { ArtistTile } from './cards';
 
 function greeting(): Key {
   const h = new Date().getHours();
@@ -39,8 +39,8 @@ function QuickTile({ track, list, i }: { track: Track; list: Track[]; i: number 
 }
 
 /**
- * The chart as a ranked list: the position is the point, so it gets the type.
- * A mix has no ranks, so `ranked` off drops the number column.
+ * Tracks as a list; `ranked` adds a position column for lists where the
+ * position is the point.
  */
 function RankList({ tracks, ranked = true }: { tracks: Track[]; ranked?: boolean }) {
   const playQueue = usePlayer((s) => s.playQueue);
@@ -98,24 +98,21 @@ const SHELF_ARTISTS = 10;
 
 export function Home() {
   const user = useAuth((s) => s.user);
-  const chart = useChart();
   const recent = useRecent();
   const played = usePlays((s) => s.recent);
-  // What you listened to here first, then what the account played elsewhere; the chart only for the side list.
+  // What you listened to here first, then what the account played elsewhere. Any source:
+  // Last.fm matches by artist and title, so a SoundCloud upload it knows works too.
   const seeds = useMemo(() => {
     const out: Track[] = [];
     for (const tr of [...played, ...(recent.data ?? [])]) {
-      if (tr.source === 'deezer' && !out.some((x) => x.id === tr.id)) out.push(tr);
+      if (!out.some((x) => x.id === tr.id)) out.push(tr);
       if (out.length === 3) break;
     }
     return out;
   }, [played, recent.data]);
-  const fallbackSeed = chart.data?.tracks[0];
-  const sideSeeds = useMemo(() => (seeds.length ? seeds : fallbackSeed ? [fallbackSeed] : []), [seeds, fallbackSeed]);
-  const similar = useSimilarFirst(sideSeeds);
+  const similar = useSimilarFirst(seeds);
   const seed = similar.data?.seed ?? null;
   const playQueue = usePlayer((s) => s.playQueue);
-  const top = chart.data?.tracks ?? [];
   const recentList = useMemo(() => recent.data ?? [], [recent.data]);
   const similarList = similar.data?.list ?? [];
   const mine = useYourArtists(SHELF_ARTISTS);
@@ -129,10 +126,8 @@ export function Home() {
   const skip = useMemo(() => similarList.slice(0, 8).map((x) => x.id), [similarList]);
   const mix = useMix(mixSeeds, mixArtists, skip);
   const mixList = mix.data ?? [];
-  // No history yet, or nothing came back: the chart stands in.
-  const waiting = similar.loading || mix.loading;
-  const showMix = mixList.length > 0;
-  const list = showMix ? mixList : top;
+  const hasHistory = seeds.length > 0 || mineWithPage.length > 0;
+  const waiting = hasHistory && (similar.loading || mix.loading);
   const { t } = useT();
 
   return (
@@ -154,27 +149,23 @@ export function Home() {
       <div className="home-split">
         <section className="section" style={{ minWidth: 0 }}>
           <div className="section__head">
-            <h2 className="h2">{showMix ? t('home.mix') : t('home.chart')}</h2>
-            <button type="button" className="link-btn" onClick={() => playQueue(list, 0)} disabled={!list.length}>
+            <h2 className="h2">{t('home.mix')}</h2>
+            <button type="button" className="link-btn" onClick={() => playQueue(mixList, 0)} disabled={!mixList.length}>
               {t('home.playAll')}
             </button>
           </div>
-          {showMix && (
-            <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-              {t('home.mixHint')}
-            </p>
-          )}
-          {showMix ? (
-            <RankList tracks={mixList} ranked={false} />
-          ) : waiting || chart.loading ? (
+          <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+            {t('home.mixHint')}
+          </p>
+          {waiting ? (
             <SkeletonRows n={8} />
-          ) : chart.error ? (
-            <div className="empty">
-              <strong>{t('home.chartFailed')}</strong>
-              {chart.error}
-            </div>
+          ) : mixList.length ? (
+            <RankList tracks={mixList} ranked={false} />
           ) : (
-            <RankList tracks={top.slice(0, 10)} />
+            <div className="empty">
+              <strong>{t('home.mixEmpty')}</strong>
+              {t('home.mixEmptyHint')}
+            </div>
           )}
         </section>
 
@@ -193,18 +184,7 @@ export function Home() {
         )}
       </div>
 
-      {(chart.data?.albums.length ?? 0) > 0 && (
-        <section className="section">
-          <h2 className="h2">{t('home.albums')}</h2>
-          <div className="grid-cards">
-            {chart.data!.albums.slice(0, 12).map((a) => (
-              <AlbumTile key={a.id} album={a} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {mineWithPage.length > 0 ? (
+      {mineWithPage.length > 0 && (
         <section className="section">
           <h2 className="h2">{t('home.yourArtists')}</h2>
           <div className="shelf">
@@ -213,17 +193,6 @@ export function Home() {
             ))}
           </div>
         </section>
-      ) : (
-        (chart.data?.artists.length ?? 0) > 0 && (
-          <section className="section">
-            <h2 className="h2">{t('home.artists')}</h2>
-            <div className="shelf">
-              {chart.data!.artists.slice(0, SHELF_ARTISTS).map((a) => (
-                <ArtistTile key={a.id} artist={a} />
-              ))}
-            </div>
-          </section>
-        )
       )}
     </div>
   );

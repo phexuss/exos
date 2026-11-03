@@ -69,7 +69,9 @@ export async function request(req: HttpRequest): Promise<HttpResponse> {
         signal: AbortSignal.timeout(30_000),
       });
       const body = await res.text();
-      if (cacheable && res.ok) await writeEntry(req.url, { at: Date.now(), status: res.status, body });
+      // An empty list is kept out of the cache: it is often "nothing yet" (a key not set on
+      // the server, a service down) and would otherwise stick for the whole ttl.
+      if (cacheable && res.ok && body.trim() !== '[]') await writeEntry(req.url, { at: Date.now(), status: res.status, body });
       if (cacheable && res.status >= 500) {
         const stale = await readEntry(req.url);
         if (stale) return { status: stale.status, body: stale.body, cached: 'stale' };
