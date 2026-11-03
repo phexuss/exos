@@ -45,6 +45,9 @@ The phone app asks the EXØS server for audio. The desktop app turns that around
 - **SoundCloud artists are artists too.** Click an uploader's name anywhere and get their page: avatar, followers, popular tracks and everything they uploaded, the same way Deezer artists work.
 - **Your playlists, wherever they were.** Make playlists here, or bring one over by link from Spotify or SoundCloud. Drag tracks in, drag them into order.
 - **Sound you can bend.** Sped up, slowed + reverb, live on any track. A volume curve that is quiet at 1% the way a mixer is.
+- **Sound tuned by you.** A 10-band equalizer (32 Hz to 16 kHz, ±12 dB) with presets, on its own page next to the effects. Volume normalization brings quiet and loud tracks to one level, measured while the track plays, so nothing is scanned ahead. Crossfade blends one track into the next over 1 to 12 seconds. Each is one switch.
+- **Keeps playing when closed.** Closing the window hides it to the tray, like Spotify; the tray menu has play/pause, next, previous and quit.
+- **A home page about you.** "Mix for you" deals Last.fm picks from what you played in turn with your artists' top tracks, next to "Like …" for your latest track and a shelf of your artists.
 - **Lyrics you can fix.** Synced line by line when they exist, plain when they do not. Wrong version or nothing found? The pencil in the lyrics panel opens an editor: paste your own text or LRC, drop in an `.lrc`, `.srt` or `.txt` file, pick another entry from LRCLIB right in the app, or turn plain text into synced lyrics by pressing Space as each line starts. Your lyrics win over the found ones for that track.
 - **One library in the cloud.** Sign up right in the app. Everything you download is listed in your account, from the phone too; whatever is missing on this computer downloads again in one click.
 - **Feels native.** Draws at your monitor's refresh rate, keeps what it has seen on disk, preloads what you are about to click.

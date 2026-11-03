@@ -7,6 +7,7 @@ import { DesktopHero } from '@/components/sections/desktop/DesktopHero';
 import { Inside } from '@/components/sections/desktop/Inside';
 import { LyricsEditing } from '@/components/sections/desktop/LyricsEditing';
 import { Showcase } from '@/components/sections/desktop/Showcase';
+import { SoundTuning } from '@/components/sections/desktop/SoundTuning';
 import { Download } from '@/components/sections/download/Download';
 import Faq from '@/components/sections/faq/Faq';
 import Features from '@/components/sections/features/Features';
@@ -32,6 +33,7 @@ export function Landing({ release }: { release: DesktopRelease | null }) {
             <DesktopFeatures />
             <Showcase />
             <LyricsEditing />
+            <SoundTuning />
             <Inside />
           </>
         ) : (
