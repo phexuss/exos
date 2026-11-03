@@ -71,6 +71,15 @@ contextBridge.exposeInMainWorld('exos', {
     openFolder: (path: string) => ipcRenderer.invoke('shell:open-folder', path),
     pickFolder: () => ipcRenderer.invoke('dialog:pick-folder') as Promise<string | null>,
   },
+  tray: {
+    /** Tells the main process the close-to-tray setting and what is playing. */
+    config: (cfg: { closeToTray?: boolean; title?: string; playing?: boolean; lang?: string }) => ipcRenderer.send('tray:config', cfg),
+    onCommand: (fn: (op: string) => void) => {
+      const h = (_: unknown, op: string) => fn(op);
+      ipcRenderer.on('tray', h);
+      return () => ipcRenderer.off('tray', h);
+    },
+  },
   win: {
     minimize: () => ipcRenderer.invoke('win', 'minimize'),
     toggleMaximize: () => ipcRenderer.invoke('win', 'toggle-maximize'),

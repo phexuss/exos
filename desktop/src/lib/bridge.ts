@@ -8,6 +8,10 @@ export type Bridge = {
     openFolder: (path: string) => Promise<void>;
     pickFolder: () => Promise<string | null>;
   };
+  tray: {
+    config: (cfg: { closeToTray?: boolean; title?: string; playing?: boolean; lang?: string }) => void;
+    onCommand: (fn: (op: string) => void) => () => void;
+  };
   win: {
     minimize: () => Promise<void>;
     toggleMaximize: () => Promise<void>;
