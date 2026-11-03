@@ -274,6 +274,8 @@ export const en = {
     evening: 'Good evening',
     mix: 'Mix for you',
     mixHint: 'Last.fm picks from what you played, mixed with your artists’ top tracks.',
+    mixEmpty: 'Nothing to mix yet',
+    mixEmptyHint: 'Play a few tracks and the mix shows up here. If it stays empty, Last.fm returned nothing for what you played.',
     yourArtists: 'Your artists',
     chart: 'Deezer chart',
     playAll: 'Play all',

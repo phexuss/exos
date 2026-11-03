@@ -283,12 +283,27 @@ export async function user(ref: string): Promise<ScUser> {
 }
 
 /** `popular`: the user's most played; otherwise their uploads, newest first. */
+/** Uploads come in pages; this many pages (of up to 100) is enough for any real profile. */
+const MAX_UPLOAD_PAGES = 20;
+
 export async function userTracks(ref: string, popular: boolean): Promise<ScImportTrack[]> {
   const id = await userId(ref);
-  const page = await apiGet<{ collection?: ScApiTrack[] }>(
-    `${API}/users/${id}/${popular ? 'toptracks' : 'tracks'}?limit=50&linked_partitioning=1`,
-  );
-  return (page.collection ?? []).map(mapApiTrack).filter((t): t is ScImportTrack => !!t);
+  if (popular) {
+    const page = await apiGet<{ collection?: ScApiTrack[] }>(`${API}/users/${id}/toptracks?limit=50&linked_partitioning=1`);
+    return (page.collection ?? []).map(mapApiTrack).filter((t): t is ScImportTrack => !!t);
+  }
+  // All uploads: follow next_href, since one page holds only part of a big profile.
+  const out: ScImportTrack[] = [];
+  let url: string | null | undefined = `${API}/users/${id}/tracks?limit=100&linked_partitioning=1`;
+  for (let i = 0; url && i < MAX_UPLOAD_PAGES; i++) {
+    const page: { collection?: ScApiTrack[]; next_href?: string | null } = await apiGet(url);
+    for (const raw of page.collection ?? []) {
+      const t = mapApiTrack(raw);
+      if (t) out.push(t);
+    }
+    url = page.next_href;
+  }
+  return out;
 }
 
 /* ---------- HLS → one file ---------- */

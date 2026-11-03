@@ -26,7 +26,8 @@ export const useSimilarFirst = (seeds: Track[]) =>
         const list = await api.getSimilar(seed).catch(() => []);
         if (list.length) return { seed, list };
       }
-      return null;
+      // Not null: a null result reads as still loading.
+      return { seed: null, list: [] as Track[] };
     },
     30 * MIN,
   );
