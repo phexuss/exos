@@ -23,6 +23,8 @@ out/
 .expo-shared/
 android/
 ios/
+# Local Expo modules keep their native sources in git.
+!apps/mobile/modules/*/android/
 
 # Logs
 *.log
