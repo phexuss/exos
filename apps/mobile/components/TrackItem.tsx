@@ -1,15 +1,19 @@
+import { Image } from 'expo-image';
 import { memo } from 'react';
 import { Pressable, View } from 'react-native';
-import { Image } from 'expo-image';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { DownloadButton } from '@/components/DownloadButton';
+import { EqBars } from '@/components/EqBars';
 import { SourceBadge } from '@/components/SourceBadge';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { GLASS } from '@/constants/glass';
+import { SPACING } from '@/constants/spacing';
 import type { DownloadResult } from '@/services/download/downloadService';
 import { useOverlayStore } from '@/store/useOverlayStore';
+import { usePlayerStore } from '@/store/usePlayerStore';
 import type { Track } from '@/types/domain';
 
 type TrackItemProps = {
@@ -38,48 +42,37 @@ function TrackItemComponent({
   accentColor,
 }: TrackItemProps) {
   const activeColor = accentColor ?? COLORS.accent;
-  const isHighlighted = isSelected || isActive;
+  const isPlaying = usePlayerStore((s) => !!isActive && s.isPlaying);
 
   return (
     <AnimatedPressable
       onPress={() => onPress?.(track)}
       onLongPress={() => onLongPress?.(track)}
+      // Desktop track-table row: rounded, no dividers, the playing row sits
+      // on a lighter fill with a glass rim. Inset by its own padding so the
+      // cover still lines up with the page gutter.
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 14,
-        paddingLeft: isHighlighted ? 12 : 0,
-        paddingRight: 14,
-        gap: 14,
-        borderBottomWidth: 0.5,
-        borderBottomColor: COLORS.divider,
+        marginHorizontal: -SPACING.sm,
+        paddingVertical: SPACING.sm,
+        paddingHorizontal: SPACING.sm,
+        gap: SPACING.md,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: isActive || isSelected ? GLASS.rim : 'transparent',
         backgroundColor: isSelected
           ? `${activeColor}22`
           : isActive
-            ? `${activeColor}14`
+            ? GLASS.fillActive
             : 'transparent',
-        borderRadius: isHighlighted ? 14 : 0,
-        overflow: 'hidden',
       }}
     >
-      {isHighlighted && (
-        <View
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 4,
-            bottom: 4,
-            width: 3,
-            borderRadius: 2,
-            backgroundColor: isSelected ? COLORS.textPrimary : activeColor,
-          }}
-        />
-      )}
       {selectionMode ? (
         <View
           style={{
             width: 26,
-            height: 52,
+            height: 48,
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -104,17 +97,17 @@ function TrackItemComponent({
           source={{ uri: track.coverUrl }}
           recyclingKey={track.id}
           style={{
-            width: 52,
-            height: 52,
-            borderRadius: 10,
+            width: 48,
+            height: 48,
+            borderRadius: 8,
           }}
         />
       ) : (
         <View
           style={{
-            width: 52,
-            height: 52,
-            borderRadius: 10,
+            width: 48,
+            height: 48,
+            borderRadius: 8,
             backgroundColor: COLORS.surfaceMuted,
             alignItems: 'center',
             justifyContent: 'center',
@@ -159,8 +152,6 @@ function TrackItemComponent({
               style={{
                 color: COLORS.textMuted,
                 fontSize: 13,
-                textDecorationLine:
-                  track.source === 'deezer' ? 'underline' : 'none',
               }}
               numberOfLines={1}
             >
@@ -185,12 +176,16 @@ function TrackItemComponent({
         </View>
       </View>
 
-      <AppText
-        variant="caption"
-        style={{ color: COLORS.textMuted, fontSize: 13 }}
-      >
-        {track.duration}
-      </AppText>
+      {isActive ? (
+        <EqBars color={activeColor} playing={isPlaying} />
+      ) : (
+        <AppText
+          variant="caption"
+          style={{ color: COLORS.textMuted, fontSize: 13 }}
+        >
+          {track.duration}
+        </AppText>
+      )}
 
       {showDownload ? (
         <DownloadButton track={track} size={20} onDownloaded={onDownloaded} />

@@ -31,6 +31,8 @@ export const GLASS = {
   highlightBottom: 'rgba(255,255,255,0)',
   innerGlow: 'rgba(255,255,255,0.05)',
   selection: 'rgba(255,255,255,0.14)',
+  /** The playing row in a track list (desktop `--fill-3`). */
+  fillActive: 'rgba(255,255,255,0.1)',
   scrim: 'rgba(0,0,0,0.28)',
   shadow: '#000000',
   blur: {
