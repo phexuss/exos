@@ -308,4 +308,34 @@ export const en = {
   album: {
     notFound: 'Album not found',
   },
+  ytdlpLab: {
+    settingsRow: 'yt-dlp on this phone',
+    settingsRowDesc:
+      'Test: download from YouTube and SoundCloud without the server',
+    title: 'yt-dlp on the phone',
+    intro:
+      'Runs yt-dlp right on this phone, from your own IP, like the desktop app. Nothing goes through the EXØS server.',
+    unavailable:
+      'This build has no yt-dlp. Install the EXØS APK; Expo Go cannot run it.',
+    engine: 'Engine',
+    starting: 'Starting yt-dlp...',
+    ready: 'yt-dlp {version} · ready in {seconds} s',
+    update: 'Update yt-dlp',
+    updateNightly: 'Nightly',
+    updating: 'Updating...',
+    updated: 'Updated to {version}',
+    upToDate: 'Already up to date ({version})',
+    startupMeasure: 'Python startup',
+    startupResult: 'Bare yt-dlp start: {seconds} s (paid on every call)',
+    urlPlaceholder: 'Track link',
+    download: 'Download',
+    resolve: 'Link only',
+    play: 'Play',
+    cancel: 'Cancel',
+    downloading: 'Downloading {percent}%',
+    preparing: 'Preparing...',
+    resolved: 'Link in {seconds} s · {protocol} · {codec}',
+    downloaded: 'Downloaded in {seconds} s · {size} · {codec}',
+    copy: 'Error text can be selected and copied',
+  },
 } as const;

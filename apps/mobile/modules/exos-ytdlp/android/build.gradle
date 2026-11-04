@@ -1,0 +1,26 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.exos'
+version = '0.1.0'
+
+// youtubedl-android ships Python 3, yt-dlp (with the yt-dlp-ejs challenge
+// solver), QuickJS and ffmpeg as native libs, and passes
+// `--js-runtimes quickjs:<path>` and `--ffmpeg-location` on every call.
+def ytdlpAndroid = '0.18.1'
+
+android {
+  namespace 'expo.modules.exosytdlp'
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+    consumerProguardFiles 'proguard-rules.pro'
+  }
+}
+
+dependencies {
+  implementation "io.github.junkfood02.youtubedl-android:library:$ytdlpAndroid"
+  implementation "io.github.junkfood02.youtubedl-android:ffmpeg:$ytdlpAndroid"
+}

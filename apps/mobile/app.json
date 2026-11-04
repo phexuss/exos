@@ -52,7 +52,8 @@
         }
       ],
       "expo-secure-store",
-      "./plugins/withHighRefreshRate"
+      "./plugins/withHighRefreshRate",
+      "./plugins/withYtdlp"
     ],
     "experiments": {
       "typedRoutes": true,
