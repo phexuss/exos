@@ -200,8 +200,11 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
         style={{
           width: 40,
           height: 40,
+          borderRadius: 20,
           alignItems: 'center',
           justifyContent: 'center',
+          // Desktop player bar: white disc behind play/pause.
+          backgroundColor: glassMode ? COLORS.textPrimary : 'transparent',
         }}
       >
         {glassMode ? (
@@ -213,8 +216,8 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
           >
             <AppIcon
               name={isPlaying ? 'pause' : 'play'}
-              size={22}
-              color={COLORS.textPrimary}
+              size={18}
+              color={COLORS.background}
             />
           </Animated.View>
         ) : (

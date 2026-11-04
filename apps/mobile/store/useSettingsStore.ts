@@ -27,7 +27,8 @@ type SettingsState = {
 export const useSettingsStore = create<SettingsState>((set) => ({
   dynamicAccent: true,
   hasSeenFaq: false,
-  glassMode: false,
+  // Same look as the desktop app: glass over the artwork-tinted backdrop.
+  glassMode: true,
   glassBlur: GLASS_BLUR_DEFAULT,
   _hydrated: false,
 
@@ -64,7 +65,7 @@ Promise.all([
     useSettingsStore.setState({
       dynamicAccent: accentRaw !== null ? JSON.parse(accentRaw) : true,
       hasSeenFaq: faqRaw !== null ? JSON.parse(faqRaw) : false,
-      glassMode: glassRaw !== null ? JSON.parse(glassRaw) : false,
+      glassMode: glassRaw !== null ? JSON.parse(glassRaw) : true,
       glassBlur:
         glassBlurRaw !== null ? JSON.parse(glassBlurRaw) : GLASS_BLUR_DEFAULT,
       _hydrated: true,

@@ -1,405 +1,259 @@
-import { FlashList, type ListRenderItem } from '@shopify/flash-list';
-import { memo, useCallback, useEffect, useState } from 'react';
 import { Image } from 'expo-image';
-import { Pressable, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
-import { SourceBadge } from '@/components/SourceBadge';
+import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
+import { GLASS } from '@/constants/glass';
+import { SPACING } from '@/constants/spacing';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useI18n } from '@/hooks/useI18n';
-import { mapDeezerTrackToTrack } from '@/services/adapters/search.adapter';
-import { getChart } from '@/services/api/search';
-import { getSimilarTracks, type SimilarTrack } from '@/services/api/similar';
+import type { TranslationPath } from '@/i18n';
 import { getRecentlyPlayed } from '@/services/db/database';
+import {
+  type HomeFeed,
+  loadHomeFeed,
+  type YourArtist,
+  yourArtists,
+} from '@/services/home/homeFeed';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { useAuthStore } from '@/store/useAuthStore';
-import type { DeezerAlbum, DeezerArtist } from '@/types/deezer';
 import type { Track } from '@/types/domain';
 
-type RecentCardProps = {
-  track: Track;
-  onPress: (track: Track) => void;
-  isActive?: boolean;
-  accentColor?: string;
-};
+/** How many recent plays seed the page. */
+const RECENT_LIMIT = 60;
+const QUICK_TILES = 6;
+const SHELF_ARTISTS = 10;
 
-function RecentCardComponent({
-  track,
-  onPress,
-  isActive,
-  accentColor,
-}: RecentCardProps) {
-  const handlePress = useCallback(() => onPress(track), [onPress, track]);
-  const activeColor = accentColor ?? COLORS.accent;
-  return (
-    <AnimatedPressable
-      scaleValue={0.95}
-      onPress={handlePress}
+function greeting(): TranslationPath {
+  const h = new Date().getHours();
+  if (h < 5) return 'home.night';
+  if (h < 12) return 'home.morning';
+  if (h < 18) return 'home.afternoon';
+  return 'home.evening';
+}
+
+function Cover({
+  uri,
+  size,
+  radius,
+}: {
+  uri?: string;
+  size: number;
+  radius: number;
+}) {
+  return uri ? (
+    <Image
+      source={{ uri }}
+      style={{ width: size, height: size, borderRadius: radius }}
+    />
+  ) : (
+    <View
       style={{
-        width: 160,
-        gap: 10,
+        width: size,
+        height: size,
+        borderRadius: radius,
+        backgroundColor: COLORS.surfaceMuted,
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
-      {track.coverUrl ? (
-        <Image
-          source={{ uri: track.coverUrl }}
-          recyclingKey={track.id}
-          style={{
-            width: 160,
-            height: 160,
-            borderRadius: 14,
-            borderWidth: isActive ? 2 : 0,
-            borderColor: isActive ? activeColor : 'transparent',
-          }}
-        />
-      ) : (
-        <View
-          style={{
-            width: 160,
-            height: 160,
-            borderRadius: 14,
-            backgroundColor: COLORS.surfaceMuted,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 0.5,
-            borderColor: COLORS.border,
-          }}
-        >
-          <AppIcon name="music" size={32} color={COLORS.textMuted} />
-        </View>
-      )}
-      <View style={{ gap: 3 }}>
+      <AppIcon name="music" size={size / 3} color={COLORS.textMuted} />
+    </View>
+  );
+}
+
+type TileProps = {
+  track: Track;
+  isActive: boolean;
+  accentColor: string;
+  onPress: (track: Track) => void;
+};
+
+/** Desktop "quick" tile: a recent play as cover + title on a glass chip. */
+const QuickTile = memo(function QuickTile({
+  track,
+  isActive,
+  accentColor,
+  onPress,
+}: TileProps) {
+  return (
+    <AnimatedPressable
+      scaleValue={0.97}
+      onPress={() => onPress(track)}
+      style={{
+        width: '48.5%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.sm,
+        borderRadius: 12,
+        overflow: 'hidden',
+        backgroundColor: isActive ? GLASS.fillActive : 'rgba(255,255,255,0.07)',
+        borderWidth: 1,
+        borderColor: isActive ? GLASS.rim : 'transparent',
+      }}
+    >
+      <Cover uri={track.coverUrl} size={52} radius={0} />
+      <View style={{ flex: 1, paddingRight: SPACING.sm }}>
         <AppText
-          variant="body"
+          variant="caption"
           weight="medium"
+          numberOfLines={2}
           style={{
-            color: isActive ? activeColor : COLORS.textPrimary,
-            fontSize: 14,
+            fontSize: 13,
+            color: isActive ? accentColor : COLORS.textPrimary,
           }}
-          numberOfLines={1}
         >
           {track.title}
         </AppText>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <AppText
-            variant="caption"
-            style={{ color: COLORS.textMuted, fontSize: 12, flexShrink: 1 }}
-            numberOfLines={1}
-          >
-            {track.artist.name}
-          </AppText>
-          <SourceBadge source={track.source} />
-        </View>
       </View>
     </AnimatedPressable>
   );
-}
+});
 
-const RecentCard = memo(RecentCardComponent);
-
-type SimilarCardProps = {
-  item: SimilarTrack;
-  onPress: (item: SimilarTrack) => void;
-  isActive?: boolean;
-  accentColor?: string;
-};
-
-function SimilarCardComponent({
-  item,
-  onPress,
+/** Square cover with two lines under it, for the "Like …" shelf. */
+const ShelfCard = memo(function ShelfCard({
+  track,
   isActive,
   accentColor,
-}: SimilarCardProps) {
-  const handlePress = useCallback(() => onPress(item), [onPress, item]);
-  const activeColor = accentColor ?? COLORS.accent;
+  onPress,
+}: TileProps) {
   return (
     <AnimatedPressable
       scaleValue={0.95}
-      onPress={handlePress}
-      style={{ width: 130, gap: 8 }}
+      onPress={() => onPress(track)}
+      style={{ width: 132, gap: SPACING.sm }}
     >
-      <View>
-        {item.coverUrl ? (
-          <Image
-            source={{ uri: item.coverUrl }}
-            recyclingKey={String(item.deezerId)}
-            style={{
-              width: 130,
-              height: 130,
-              borderRadius: 12,
-              borderWidth: isActive ? 2 : 0,
-              borderColor: isActive ? activeColor : 'transparent',
-            }}
-          />
-        ) : (
-          <View
-            style={{
-              width: 130,
-              height: 130,
-              borderRadius: 12,
-              backgroundColor: COLORS.surfaceMuted,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 0.5,
-              borderColor: COLORS.border,
-            }}
-          >
-            <AppIcon name="music" size={28} color={COLORS.textMuted} />
-          </View>
-        )}
-      </View>
-      <View style={{ gap: 3 }}>
+      <Cover uri={track.coverUrl} size={132} radius={12} />
+      <View style={{ gap: 2 }}>
         <AppText
-          variant="body"
+          variant="caption"
           weight="medium"
-          style={{
-            color: isActive ? activeColor : COLORS.textPrimary,
-            fontSize: 13,
-          }}
           numberOfLines={1}
+          style={{
+            fontSize: 13,
+            color: isActive ? accentColor : COLORS.textPrimary,
+          }}
         >
-          {item.title}
+          {track.title}
         </AppText>
         <AppText
           variant="caption"
-          style={{ color: COLORS.textMuted, fontSize: 11 }}
           numberOfLines={1}
+          style={{ color: COLORS.textMuted }}
         >
-          {item.artist}
+          {track.artist.name}
         </AppText>
       </View>
     </AnimatedPressable>
   );
-}
+});
 
-const SimilarCard = memo(SimilarCardComponent);
-
-function ArtistCardComponent({
+const ArtistTile = memo(function ArtistTile({
   artist,
-  onPress,
 }: {
-  artist: DeezerArtist;
-  onPress: (artist: DeezerArtist) => void;
+  artist: YourArtist;
 }) {
-  const handlePress = useCallback(() => onPress(artist), [onPress, artist]);
   return (
     <AnimatedPressable
       scaleValue={0.95}
-      onPress={handlePress}
-      style={{ width: 80, alignItems: 'center', gap: 8 }}
+      onPress={() => useOverlayStore.getState().openArtist(artist.id)}
+      style={{ width: 92, alignItems: 'center', gap: SPACING.sm }}
     >
-      {artist.picture_medium ? (
-        <Image
-          source={{ uri: artist.picture_medium }}
-          recyclingKey={String(artist.id)}
-          style={{ width: 64, height: 64, borderRadius: 32 }}
-        />
-      ) : (
-        <View
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: 32,
-            backgroundColor: COLORS.surfaceMuted,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <AppIcon name="profile" size={24} color={COLORS.textMuted} />
-        </View>
-      )}
+      <Cover uri={artist.coverUrl} size={84} radius={42} />
       <AppText
         variant="caption"
-        style={{
-          color: COLORS.textSecondary,
-          fontSize: 11,
-          textAlign: 'center',
-        }}
+        weight="medium"
         numberOfLines={1}
+        style={{ color: COLORS.textSecondary, textAlign: 'center' }}
       >
         {artist.name}
       </AppText>
     </AnimatedPressable>
   );
-}
+});
 
-const ArtistCard = memo(ArtistCardComponent);
-
-function AlbumCardComponent({
-  album,
-  onPress,
+function SectionTitle({
+  title,
+  action,
 }: {
-  album: DeezerAlbum;
-  onPress: (album: DeezerAlbum) => void;
+  title: string;
+  action?: { label: string; onPress: () => void };
 }) {
-  const handlePress = useCallback(() => onPress(album), [onPress, album]);
   return (
-    <AnimatedPressable
-      scaleValue={0.95}
-      onPress={handlePress}
-      style={{ width: 120, gap: 8 }}
-    >
-      {album.cover_medium ? (
-        <Image
-          source={{ uri: album.cover_medium }}
-          recyclingKey={String(album.id)}
-          style={{ width: 120, height: 120, borderRadius: 12 }}
-        />
-      ) : (
-        <View
-          style={{
-            width: 120,
-            height: 120,
-            borderRadius: 12,
-            backgroundColor: COLORS.surfaceMuted,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <AppIcon name="music" size={28} color={COLORS.textMuted} />
-        </View>
-      )}
-      <AppText
-        variant="caption"
-        weight="medium"
-        style={{ color: COLORS.textPrimary, fontSize: 12 }}
-        numberOfLines={1}
-      >
-        {album.title}
-      </AppText>
-    </AnimatedPressable>
-  );
-}
-
-const AlbumCard = memo(AlbumCardComponent);
-
-function SimilarSkeletonRow({ count }: { count: number }) {
-  return (
-    <View style={{ flexDirection: 'row', gap: 14 }}>
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={{ width: 130, gap: 8 }}>
-          <Skeleton width={130} height={130} radius={12} />
-          <View style={{ gap: 4 }}>
-            <Skeleton width={100} height={12} radius={4} />
-            <Skeleton width={70} height={10} radius={4} />
-          </View>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function TrackSkeletonRow({ count }: { count: number }) {
-  return (
-    <View style={{ flexDirection: 'row', gap: 14 }}>
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={{ width: 160, gap: 10 }}>
-          <Skeleton width={160} height={160} radius={14} />
-          <View style={{ gap: 4 }}>
-            <Skeleton width={128} height={12} radius={4} />
-            <Skeleton width={80} height={10} radius={4} />
-          </View>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function ArtistSkeletonRow({ count }: { count: number }) {
-  return (
-    <View style={{ flexDirection: 'row', gap: 14 }}>
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={{ width: 80, alignItems: 'center', gap: 8 }}>
-          <Skeleton width={64} height={64} circle />
-          <Skeleton width={50} height={10} radius={4} />
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function AlbumSkeletonRow({ count }: { count: number }) {
-  return (
-    <View style={{ flexDirection: 'row', gap: 14 }}>
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={{ width: 120, gap: 8 }}>
-          <Skeleton width={120} height={120} radius={12} />
-          <Skeleton width={100} height={12} radius={4} />
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function SectionHeader({ label }: { label: string }) {
-  return (
-    <AppText
-      variant="label"
-      weight="medium"
-      style={{ color: COLORS.textSecondary, letterSpacing: 1, fontSize: 12 }}
-    >
-      {label.toUpperCase()}
-    </AppText>
-  );
-}
-
-function HorizontalSeparator() {
-  return <View style={{ width: 14 }} />;
-}
-
-function SignInPromptCard() {
-  const { t } = useI18n();
-  return (
-    <Pressable
-      onPress={() => useOverlayStore.getState().openProfile()}
+    <View
       style={{
-        height: 120,
-        borderRadius: 14,
-        borderWidth: 0.5,
-        borderColor: COLORS.border,
-        backgroundColor: COLORS.surfaceMuted,
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        paddingHorizontal: 20,
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        justifyContent: 'space-between',
+        gap: SPACING.md,
       }}
     >
-      <AppIcon name="profile" size={24} color={COLORS.textMuted} />
       <AppText
-        variant="caption"
-        weight="medium"
-        style={{ color: COLORS.textMuted, textAlign: 'center', fontSize: 13 }}
+        variant="title"
+        weight="bold"
+        numberOfLines={1}
+        style={{ flexShrink: 1 }}
       >
-        {t('home.signInToAccess')}
+        {title}
       </AppText>
-    </Pressable>
+      {action ? (
+        <Pressable onPress={action.onPress} hitSlop={10}>
+          <AppText
+            variant="label"
+            weight="medium"
+            style={{ color: COLORS.textSecondary }}
+          >
+            {action.label}
+          </AppText>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function MixSkeleton() {
+  return (
+    <View style={{ gap: SPACING.md }}>
+      {Array.from({ length: 6 }, (_, i) => (
+        <View
+          // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders
+          key={i}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: SPACING.md,
+          }}
+        >
+          <Skeleton width={48} height={48} radius={8} />
+          <View style={{ gap: 6 }}>
+            <Skeleton width={160} height={12} radius={4} />
+            <Skeleton width={100} height={10} radius={4} />
+          </View>
+        </View>
+      ))}
+    </View>
   );
 }
 
 export default function HomeScreen() {
   const { t } = useI18n();
+  const router = useRouter();
   const play = usePlayerStore((s) => s.play);
   const setQueue = usePlayerStore((s) => s.setQueue);
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const accentColor = useDynamicAccent();
   const user = useAuthStore((s) => s.user);
-  const [recentTracks, setRecentTracks] = useState<Track[]>([]);
-  const [chartTracks, setChartTracks] = useState<Track[]>([]);
-  const [chartArtists, setChartArtists] = useState<DeezerArtist[]>([]);
-  const [chartAlbums, setChartAlbums] = useState<DeezerAlbum[]>([]);
-  const [chartLoading, setChartLoading] = useState(true);
-  const [similarTracks, setSimilarTracks] = useState<SimilarTrack[] | null>(
-    null,
-  );
-  const [similarLoading, setSimilarLoading] = useState(false);
-  const [similarArtist, setSimilarArtist] = useState('');
+  const [recent, setRecent] = useState<Track[] | null>(null);
+  const [feed, setFeed] = useState<HomeFeed | null>(null);
 
   useEffect(() => {
     const { hasSeenFaq, setHasSeenFaq } = useSettingsStore.getState();
@@ -409,146 +263,59 @@ export default function HomeScreen() {
     }
   }, []);
 
+  // Re-read plays whenever the tab comes back, so the page follows what
+  // was just played.
+  useFocusEffect(
+    useCallback(() => {
+      getRecentlyPlayed(RECENT_LIMIT)
+        .then(setRecent)
+        .catch(() => setRecent([]));
+    }, []),
+  );
+
+  const artists = useMemo(() => yourArtists(recent ?? []), [recent]);
+  const seedKey = (recent ?? [])
+    .slice(0, 3)
+    .map((t) => t.id)
+    .join(',');
+
+  // Rebuilt only when the latest plays change, not on every focus.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on seedKey
   useEffect(() => {
-    (async () => {
-      const recent = await getRecentlyPlayed(20).catch(() => [] as Track[]);
-      setRecentTracks(recent);
+    if (!recent || recent.length === 0) {
+      setFeed(null);
+      return;
+    }
+    let alive = true;
+    loadHomeFeed(recent, artists)
+      .then((next) => {
+        if (alive) setFeed(next);
+      })
+      .catch(() => {
+        if (alive) setFeed({ similar: null, mix: [] });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [seedKey, user]);
 
-      if (!user) {
-        setChartLoading(false);
-        return;
-      }
-
-      if (recent[0]) {
-        setSimilarLoading(true);
-        setSimilarArtist(recent[0].artist.name);
-      }
-
-      const [chart, similar] = await Promise.all([
-        getChart().catch(() => null),
-        recent[0]
-          ? getSimilarTracks(recent[0].artist.name, recent[0].title).catch(
-              () => null,
-            )
-          : Promise.resolve(null),
-      ]);
-
-      if (chart) {
-        setChartTracks(chart.tracks.data.map(mapDeezerTrackToTrack));
-        setChartArtists(chart.artists.data);
-        setChartAlbums(chart.albums.data);
-      }
-      setChartLoading(false);
-
-      setSimilarTracks(similar);
-      setSimilarLoading(false);
-    })();
-  }, [user]);
-
-  const handlePlay = useCallback(
-    (track: Track, queue: Track[]) => {
-      setQueue(queue);
+  const playFrom = useCallback(
+    (list: Track[]) => (track: Track) => {
+      setQueue(list);
       play(track);
     },
     [setQueue, play],
   );
 
-  const handlePlayRecent = useCallback(
-    (track: Track) => handlePlay(track, recentTracks),
-    [handlePlay, recentTracks],
-  );
-
-  const handlePlayChart = useCallback(
-    (track: Track) => handlePlay(track, chartTracks),
-    [handlePlay, chartTracks],
-  );
-
-  const handlePlaySimilar = useCallback(
-    (item: SimilarTrack) => {
-      const track: Track = {
-        id: String(item.deezerId),
-        title: item.title,
-        artist: { id: '', name: item.artist },
-        coverUrl: item.coverUrl ?? undefined,
-        duration: item.duration
-          ? `${Math.floor(item.duration / 60)}:${(item.duration % 60).toString().padStart(2, '0')}`
-          : '0:00',
-        durationSec: item.duration ?? 0,
-        isrc: item.isrc ?? undefined,
-        source: 'deezer',
-      };
-      play(track);
-    },
-    [play],
-  );
-
-  const handleArtistPress = useCallback((artist: DeezerArtist) => {
-    useOverlayStore.getState().openArtist(String(artist.id));
-  }, []);
-
-  const handleAlbumPress = useCallback((album: DeezerAlbum) => {
-    useOverlayStore.getState().openAlbum(String(album.id), album.title);
-  }, []);
-
-  const renderRecentCard = useCallback<ListRenderItem<Track>>(
-    ({ item }) => (
-      <RecentCard
-        track={item}
-        onPress={handlePlayRecent}
-        isActive={currentTrackId === item.id}
-        accentColor={accentColor}
-      />
-    ),
-    [handlePlayRecent, currentTrackId, accentColor],
-  );
-
-  const renderChartCard = useCallback<ListRenderItem<Track>>(
-    ({ item }) => (
-      <RecentCard
-        track={item}
-        onPress={handlePlayChart}
-        isActive={currentTrackId === item.id}
-        accentColor={accentColor}
-      />
-    ),
-    [handlePlayChart, currentTrackId, accentColor],
-  );
-
-  const renderSimilarCard = useCallback<ListRenderItem<SimilarTrack>>(
-    ({ item }) => (
-      <SimilarCard
-        item={item}
-        onPress={handlePlaySimilar}
-        isActive={currentTrackId === String(item.deezerId)}
-        accentColor={accentColor}
-      />
-    ),
-    [handlePlaySimilar, currentTrackId, accentColor],
-  );
-
-  const similarKeyExtractor = useCallback(
-    (item: SimilarTrack) => String(item.deezerId),
-    [],
-  );
-
-  const renderArtistCard = useCallback<ListRenderItem<DeezerArtist>>(
-    ({ item }) => <ArtistCard artist={item} onPress={handleArtistPress} />,
-    [handleArtistPress],
-  );
-
-  const renderAlbumCard = useCallback<ListRenderItem<DeezerAlbum>>(
-    ({ item }) => <AlbumCard album={item} onPress={handleAlbumPress} />,
-    [handleAlbumPress],
-  );
-
-  const keyExtractor = useCallback((item: Track) => item.id, []);
-  const artistKeyExtractor = useCallback(
-    (item: DeezerArtist) => String(item.id),
-    [],
-  );
-  const albumKeyExtractor = useCallback(
-    (item: DeezerAlbum) => String(item.id),
-    [],
+  const quick = (recent ?? []).slice(0, QUICK_TILES);
+  const hasHistory = (recent?.length ?? 0) > 0;
+  const mix = feed?.mix ?? [];
+  const playQuick = useMemo(() => playFrom(recent ?? []), [playFrom, recent]);
+  const playMix = useMemo(() => playFrom(mix), [playFrom, mix]);
+  const similarTracks = feed?.similar?.tracks ?? [];
+  const playSimilar = useMemo(
+    () => playFrom(similarTracks),
+    [playFrom, similarTracks],
   );
 
   return (
@@ -558,10 +325,17 @@ export default function HomeScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: SPACING.md,
         }}
       >
-        <AppText variant="display" weight="bold" style={{ letterSpacing: 2 }}>
-          EXØS
+        <AppText
+          variant="display"
+          weight="bold"
+          numberOfLines={1}
+          style={{ flexShrink: 1 }}
+        >
+          {t(greeting())}
+          {user?.name ? `, ${user.name}` : ''}
         </AppText>
         <Pressable
           onPress={() => useOverlayStore.getState().openProfile()}
@@ -581,100 +355,134 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      <View style={{ gap: 14 }}>
-        <SectionHeader label={t('home.recentlyPlayed')} />
-        {chartLoading ? (
-          <TrackSkeletonRow count={2} />
-        ) : recentTracks.length > 0 ? (
-          <FlashList
-            data={recentTracks}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={keyExtractor}
-            renderItem={renderRecentCard}
-            ItemSeparatorComponent={HorizontalSeparator}
-            style={{ height: 218 }}
-          />
-        ) : null}
-      </View>
-
-      {(similarLoading || (similarTracks && similarTracks.length > 0)) && (
-        <View style={{ gap: 14 }}>
-          <SectionHeader
-            label={`${t('home.becauseYouListened')} · ${similarArtist}`.toUpperCase()}
-          />
-          {similarLoading ? (
-            <SimilarSkeletonRow count={4} />
-          ) : (
-            <FlashList
-              data={similarTracks ?? []}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={similarKeyExtractor}
-              renderItem={renderSimilarCard}
-              ItemSeparatorComponent={HorizontalSeparator}
-              style={{ height: 182 }}
+      {quick.length > 0 ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+            rowGap: SPACING.sm,
+          }}
+        >
+          {quick.map((track) => (
+            <QuickTile
+              key={track.id}
+              track={track}
+              isActive={currentTrackId === track.id}
+              accentColor={accentColor}
+              onPress={playQuick}
             />
+          ))}
+        </View>
+      ) : null}
+
+      {recent && !hasHistory ? (
+        <View style={{ gap: SPACING.md, alignItems: 'flex-start' }}>
+          <SectionTitle title={t('home.mixEmpty')} />
+          <AppText variant="label" style={{ color: COLORS.textMuted }}>
+            {t('home.mixEmptyHint')}
+          </AppText>
+          <Pressable
+            onPress={() => router.push('/search' as never)}
+            style={{
+              paddingVertical: 10,
+              paddingHorizontal: 18,
+              borderRadius: 999,
+              backgroundColor: COLORS.textPrimary,
+            }}
+          >
+            <AppText
+              variant="label"
+              weight="bold"
+              style={{ color: COLORS.background }}
+            >
+              {t('home.findMusic')}
+            </AppText>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {hasHistory ? (
+        <View style={{ gap: SPACING.md }}>
+          <SectionTitle
+            title={t('home.mix')}
+            action={
+              mix.length > 0
+                ? { label: t('home.playAll'), onPress: () => playMix(mix[0]) }
+                : undefined
+            }
+          />
+          <AppText variant="caption" style={{ color: COLORS.textMuted }}>
+            {t('home.mixHint')}
+          </AppText>
+          {!feed ? (
+            <MixSkeleton />
+          ) : mix.length > 0 ? (
+            <View>
+              {mix.map((track) => (
+                <TrackItem
+                  key={track.id}
+                  track={track}
+                  onPress={playMix}
+                  isActive={currentTrackId === track.id}
+                  accentColor={accentColor}
+                  showDownload
+                />
+              ))}
+            </View>
+          ) : (
+            <AppText variant="label" style={{ color: COLORS.textMuted }}>
+              {t('home.mixEmptyHint')}
+            </AppText>
           )}
         </View>
-      )}
+      ) : null}
 
-      <View style={{ gap: 14 }}>
-        <SectionHeader label={t('home.chartTracks')} />
-        {chartLoading ? (
-          <TrackSkeletonRow count={3} />
-        ) : chartTracks.length > 0 ? (
-          <FlashList
-            data={chartTracks}
+      {feed?.similar ? (
+        <View style={{ gap: SPACING.md }}>
+          <SectionTitle
+            title={t('home.similar', { title: feed.similar.seed.title })}
+          />
+          <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            keyExtractor={keyExtractor}
-            renderItem={renderChartCard}
-            ItemSeparatorComponent={HorizontalSeparator}
-            style={{ height: 218 }}
-          />
-        ) : (
-          <SignInPromptCard />
-        )}
-      </View>
+            style={{ marginHorizontal: -SPACING.lg }}
+            contentContainerStyle={{
+              paddingHorizontal: SPACING.lg,
+              gap: SPACING.md,
+            }}
+          >
+            {similarTracks.map((track) => (
+              <ShelfCard
+                key={track.id}
+                track={track}
+                isActive={currentTrackId === track.id}
+                accentColor={accentColor}
+                onPress={playSimilar}
+              />
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
 
-      <View style={{ gap: 14 }}>
-        <SectionHeader label={t('home.topArtists')} />
-        {chartLoading ? (
-          <ArtistSkeletonRow count={4} />
-        ) : chartArtists.length > 0 ? (
-          <FlashList
-            data={chartArtists}
+      {artists.length > 0 ? (
+        <View style={{ gap: SPACING.md }}>
+          <SectionTitle title={t('home.yourArtists')} />
+          <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            keyExtractor={artistKeyExtractor}
-            renderItem={renderArtistCard}
-            ItemSeparatorComponent={HorizontalSeparator}
-            style={{ height: 92 }}
-          />
-        ) : (
-          <SignInPromptCard />
-        )}
-      </View>
-
-      <View style={{ gap: 14 }}>
-        <SectionHeader label={t('home.topAlbums')} />
-        {chartLoading ? (
-          <AlbumSkeletonRow count={3} />
-        ) : chartAlbums.length > 0 ? (
-          <FlashList
-            data={chartAlbums}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={albumKeyExtractor}
-            renderItem={renderAlbumCard}
-            ItemSeparatorComponent={HorizontalSeparator}
-            style={{ height: 150 }}
-          />
-        ) : (
-          <SignInPromptCard />
-        )}
-      </View>
+            style={{ marginHorizontal: -SPACING.lg }}
+            contentContainerStyle={{
+              paddingHorizontal: SPACING.lg,
+              gap: SPACING.md,
+            }}
+          >
+            {artists.slice(0, SHELF_ARTISTS).map((artist) => (
+              <ArtistTile key={artist.id} artist={artist} />
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
     </ScreenContainer>
   );
 }
