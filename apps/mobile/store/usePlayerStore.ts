@@ -3,6 +3,11 @@ import { API_BASE_URL, apiPost } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
 import * as audio from '@/services/audio/audioService';
 import { addRecentlyPlayed, getDownloadedTrack } from '@/services/db/database';
+import {
+  isLocalEngineAvailable,
+  prefetchLocalStream,
+  resolveLocalStream,
+} from '@/services/engine/localEngine';
 import { syncRecentlyPlayedTrack } from '@/services/sync/librarySyncService';
 import type { Track } from '@/types/domain';
 
@@ -154,8 +159,9 @@ function startTrack(track: Track, set: PlayerSet, get: PlayerGet): void {
 }
 
 /**
- * Asks the server to resolve the next queued track's stream URL ahead of
- * time, so skipping to it starts without the yt-dlp delay. Best-effort.
+ * Resolves the next queued track's stream URL ahead of time (on the phone,
+ * or on the server without the native engine), so skipping to it starts
+ * without the yt-dlp delay. Best-effort.
  */
 function prefetchNextTrack(get: PlayerGet): void {
   const { queue, currentTrack, shuffle, repeat } = get();
@@ -166,6 +172,10 @@ function prefetchNextTrack(get: PlayerGet): void {
   const next = queue[(idx + 1) % queue.length];
   if (!next || next.id === currentTrack.id || next.filePath) return;
 
+  if (isLocalEngineAvailable) {
+    prefetchLocalStream(next);
+    return;
+  }
   apiPost(`${API_ENDPOINTS.download}/prefetch`, {
     query: getStreamQuery(next),
     format: 'm4a',
@@ -216,6 +226,37 @@ async function playDownloadedOrResolveStream(
 }
 
 async function resolveAndPlayStream(
+  track: Track,
+  set: PlayerSet,
+  get: PlayerGet,
+  requestId: number,
+): Promise<void> {
+  if (isLocalEngineAvailable) {
+    try {
+      const stream = await resolveLocalStream(track);
+      if (!isCurrentPlaybackRequest(requestId, track.id, get)) return;
+      if (!get().isPlaying) {
+        audio.clearPendingTrackPlayback(track.id);
+        return;
+      }
+      audio.playUrl(stream.url, {
+        contentType: stream.contentType,
+        headers: stream.headers,
+        hls: stream.hls,
+      });
+      return;
+    } catch (e) {
+      console.warn(
+        `[Stream] On-device yt-dlp failed for trackId=${track.id}, using server:`,
+        e,
+      );
+      if (!isCurrentPlaybackRequest(requestId, track.id, get)) return;
+    }
+  }
+  await resolveServerStream(track, set, get, requestId);
+}
+
+async function resolveServerStream(
   track: Track,
   set: PlayerSet,
   get: PlayerGet,

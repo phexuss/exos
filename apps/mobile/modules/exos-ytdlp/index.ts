@@ -28,6 +28,7 @@ declare class ExosYtdlpNative extends NativeModule<{
     url: string,
     format: string,
     extraArgs: string[],
+    outTemplate: string,
   ): Promise<Timed<{ json: string; log: string }>>;
   startupCost(): Promise<Timed<object>>;
   cancel(id: string): boolean;
@@ -96,17 +97,23 @@ export async function resolveYtdlp(
   return { info: JSON.parse(json) as YtdlpInfo, log, elapsedMs };
 }
 
+/**
+ * `outTemplate` is a yt-dlp `-o` template with an absolute path (no
+ * `file://`); empty keeps files in the module's own folder.
+ */
 export async function downloadYtdlp(
   id: string,
   url: string,
   extraArgs: string[] = [],
   format = DEFAULT_AUDIO_FORMAT,
+  outTemplate = '',
 ): Promise<Timed<{ info: YtdlpInfo; log: string }>> {
   const { json, log, elapsedMs } = await requireNative().download(
     id,
     url,
     format,
     extraArgs,
+    outTemplate,
   );
   return { info: JSON.parse(json) as YtdlpInfo, log, elapsedMs };
 }

@@ -6,6 +6,10 @@ type TrackPlayerApi = TrackPlayerModule['default'];
 
 type PlaybackSourceOptions = {
   contentType?: string;
+  /** Request headers the CDN insists on (yt-dlp's http_headers). */
+  headers?: Record<string, string>;
+  /** Set for HLS playlists (SoundCloud); ExoPlayer can't sniff them. */
+  hls?: boolean;
 };
 
 let positionInterval: ReturnType<typeof setInterval> | null = null;
@@ -341,6 +345,8 @@ function buildPlayerTrack(
       title: 'Unknown track',
       artist: 'Unknown artist',
       contentType: options.contentType,
+      headers: options.headers,
+      type: options.hls ? ('hls' as PlayerTrack['type']) : undefined,
     };
   }
 
@@ -355,6 +361,8 @@ function buildPlayerTrack(
     artwork: currentTrack.coverUrl,
     duration: lastKnownDuration || undefined,
     contentType: options.contentType,
+    headers: options.headers,
+    type: options.hls ? ('hls' as PlayerTrack['type']) : undefined,
   };
 }
 

@@ -1,6 +1,7 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import { createDownloadResumable } from 'expo-file-system/legacy';
 
+import { onYtdlpProgress } from '@/modules/exos-ytdlp';
 import { API_BASE_URL, ApiError, apiGet, apiPost } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
 import {
@@ -9,6 +10,11 @@ import {
   insertDownloadedTrack,
   type LyricsData,
 } from '@/services/db/database';
+import {
+  downloadLocal,
+  fetchLyricsDirect,
+  isLocalEngineAvailable,
+} from '@/services/engine/localEngine';
 import { syncDownloadedTrack } from '@/services/sync/librarySyncService';
 import { useDownloadStore } from '@/store/useDownloadStore';
 import type { Track } from '@/types/domain';
@@ -106,6 +112,17 @@ async function fetchLyrics(
   title: string,
   duration: number,
 ): Promise<LyricsData | null> {
+  const direct = await fetchLyricsDirect(
+    primaryArtist(artist),
+    title,
+    duration,
+  );
+  if (direct?.syncedLyrics || direct?.plainLyrics) {
+    return {
+      syncedLyrics: direct.syncedLyrics ?? null,
+      plainLyrics: direct.plainLyrics ?? null,
+    };
+  }
   try {
     const data = await apiGet<{ syncedLyrics?: string; plainLyrics?: string }>(
       API_ENDPOINTS.lyrics,
@@ -194,6 +211,51 @@ async function downloadStream(
   return result.uri;
 }
 
+/** `file:///a/b` -> `/a/b`, which is what yt-dlp's `-o` wants. */
+function toFsPath(uri: string): string {
+  return decodeURIComponent(uri.replace(/^file:\/\//, ''));
+}
+
+/**
+ * yt-dlp on the phone first (from the user's own IP), the EXØS server only
+ * when that fails or the native engine is missing (Expo Go).
+ */
+async function downloadAudio(
+  track: Track,
+  serverFormat: DownloadFormat,
+  destination: File,
+  onProgress: (progress: number) => void,
+): Promise<{ filePath: string; format: string }> {
+  if (isLocalEngineAvailable) {
+    const jobId = `download-${track.id}-${Date.now()}`;
+    const sub = onYtdlpProgress((event) => {
+      if (event.id === jobId && event.progress >= 0) {
+        onProgress(Math.min(0.99, event.progress / 100));
+      }
+    });
+    try {
+      const base = toFsPath(new File(TRACKS_DIR, track.id).uri);
+      const { path, ext } = await downloadLocal(track, jobId, base);
+      onProgress(1);
+      return { filePath: `file://${path}`, format: ext };
+    } catch (e) {
+      console.warn(
+        `[Download] On-device yt-dlp failed for ${track.id}, using server:`,
+        e,
+      );
+    } finally {
+      sub?.remove();
+    }
+  }
+
+  const streamUrl = await createStreamTicketUrl(
+    buildDownloadPayload(track, serverFormat),
+  );
+  if (__DEV__) console.log('[Download] Streaming from:', streamUrl);
+  const filePath = await downloadStream(streamUrl, destination.uri, onProgress);
+  return { filePath, format: serverFormat };
+}
+
 export async function downloadTrack(track: Track): Promise<DownloadResult> {
   if (activeDownloads.has(track.id)) {
     throw new Error('Already downloading');
@@ -224,26 +286,24 @@ export async function downloadTrack(track: Track): Promise<DownloadResult> {
       .getState()
       .setDownloadProgress(track.id, 0, 'fetching_url');
 
-    const payload = buildDownloadPayload(track, downloadFormat);
-    const streamUrl = await createStreamTicketUrl(payload);
-    if (__DEV__) console.log('[Download] Streaming from:', streamUrl);
+    const onProgress = (p: number) => {
+      if (state.status !== 'downloading') {
+        state.status = 'downloading';
+      }
+      state.progress = p;
+      emit(state);
+      useDownloadStore
+        .getState()
+        .setDownloadProgress(track.id, p, 'downloading');
+    };
 
-    state.status = 'downloading';
-    emit(state);
-    useDownloadStore.getState().setDownloadProgress(track.id, 0, 'downloading');
-
-    const [lyrics, filePath] = await Promise.all([
+    const [lyrics, saved] = await Promise.all([
       fetchLyrics(track.artist.name, track.title, track.durationSec),
-      downloadStream(streamUrl, destination.uri, (p: number) => {
-        state.progress = p;
-        emit(state);
-        useDownloadStore
-          .getState()
-          .setDownloadProgress(track.id, p, 'downloading');
-      }),
+      downloadAudio(track, downloadFormat, destination, onProgress),
     ]);
+    const { filePath, format: savedFormat } = saved;
 
-    await insertDownloadedTrack(track, filePath, downloadFormat, lyrics);
+    await insertDownloadedTrack(track, filePath, savedFormat, lyrics);
     void syncDownloadedTrack(track);
     useDownloadStore.getState().markDownloaded(track.id);
 

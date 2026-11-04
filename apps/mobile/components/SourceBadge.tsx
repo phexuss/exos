@@ -1,7 +1,5 @@
 import { View } from 'react-native';
 
-import { DeezerIcon } from '@/components/icons/DeezerIcon';
-import { SoundCloudIcon } from '@/components/icons/SoundCloudIcon';
 import { AppText } from '@/components/ui/AppText';
 import { SOURCES, type SourceKey } from '@/constants/sources';
 
@@ -9,47 +7,41 @@ type SourceBadgeProps = {
   source: SourceKey | null | undefined;
 };
 
-const SOURCE_ICON: Partial<
-  Record<SourceKey, (color: string) => React.ReactNode>
-> = {
-  soundcloud: (color) => <SoundCloudIcon size={7} color={color} />,
-  deezer: (color) => <DeezerIcon size={12} color={color} />,
+// Same pill as the desktop track table (`.src-pill`): the source name in a
+// lighter tint of its brand color on a 16% wash of it.
+const PILL_TEXT: Partial<Record<SourceKey, string>> = {
+  deezer: '#C78BFF',
+  soundcloud: '#FF8A4C',
 };
 
 export function SourceBadge({ source }: SourceBadgeProps) {
   const safeSource = source && source in SOURCES ? source : 'deezer';
-  const srcColor = SOURCES[safeSource].color;
-  const renderIcon = SOURCE_ICON[safeSource];
+  const { color, label } = SOURCES[safeSource];
 
   return (
     <View
       style={{
-        paddingHorizontal: 5,
-        paddingVertical: 3,
-        borderRadius: 4,
-        borderWidth: 0.5,
-        borderColor: `${srcColor}40`,
-        backgroundColor: `${srcColor}1A`,
+        height: 18,
+        paddingHorizontal: 6,
+        borderRadius: 5,
+        backgroundColor: `${color}29`,
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      {renderIcon ? (
-        renderIcon(srcColor)
-      ) : (
-        <AppText
-          variant="caption"
-          weight="medium"
-          style={{
-            fontSize: 9,
-            lineHeight: 12,
-            letterSpacing: 1,
-            color: srcColor,
-          }}
-        >
-          {SOURCES[safeSource].badge}
-        </AppText>
-      )}
+      <AppText
+        variant="caption"
+        weight="bold"
+        numberOfLines={1}
+        style={{
+          fontSize: 10.5,
+          lineHeight: 14,
+          letterSpacing: 0.4,
+          color: PILL_TEXT[safeSource] ?? color,
+        }}
+      >
+        {label.toUpperCase()}
+      </AppText>
     </View>
   );
 }

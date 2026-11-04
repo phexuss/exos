@@ -519,11 +519,14 @@ export default function PlayerScreen() {
               <AnimatedPressable
                 scaleValue={0.82}
                 onPress={togglePlayback}
+                // Desktop player: a solid white disc with a dark glyph.
                 style={{
-                  width: 76,
-                  height: 76,
+                  width: 72,
+                  height: 72,
+                  borderRadius: 36,
                   alignItems: 'center',
                   justifyContent: 'center',
+                  backgroundColor: COLORS.textPrimary,
                 }}
               >
                 <Animated.View
@@ -534,8 +537,8 @@ export default function PlayerScreen() {
                 >
                   <AppIcon
                     name={isPlaying ? 'pause' : 'play'}
-                    size={46}
-                    color={COLORS.textPrimary}
+                    size={30}
+                    color={COLORS.background}
                   />
                 </Animated.View>
               </AnimatedPressable>
