@@ -89,11 +89,11 @@ class ExosYtdlpModule : Module() {
 
     // Downloads the audio into app storage and returns the file path plus a
     // few metadata fields printed by yt-dlp after the file is in place.
-    AsyncFunction("download") { id: String, url: String, format: String, extraArgs: List<String>, promise: Promise ->
+    AsyncFunction("download") { id: String, url: String, format: String, extraArgs: List<String>, outTemplate: String, promise: Promise ->
       work(promise) {
         ensureInit()
         val request = baseRequest(url, format, extraArgs).apply {
-          addOption("-o", "${outDir.absolutePath}/%(extractor_key)s-%(id)s.%(ext)s")
+          addOption("-o", outTemplate.ifBlank { "${outDir.absolutePath}/%(extractor_key)s-%(id)s.%(ext)s" })
           addOption("--no-mtime")
           addOption("--newline")
           addOption("--progress")

@@ -479,7 +479,7 @@ export default function YtdlpLabScreen() {
         if (!alive) return;
         setEngine({
           kind: 'ready',
-          version: version ?? '?',
+          version: version ?? 'built-in',
           seconds: seconds(elapsedMs),
         });
       })
