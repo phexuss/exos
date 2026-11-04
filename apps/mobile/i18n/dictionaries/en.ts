@@ -325,6 +325,8 @@ export const en = {
     updating: 'Updating...',
     updated: 'Updated to {version}',
     upToDate: 'Already up to date ({version})',
+    startupMeasure: 'Python startup',
+    startupResult: 'Bare yt-dlp start: {seconds} s (paid on every call)',
     urlPlaceholder: 'Track link',
     download: 'Download',
     resolve: 'Link only',

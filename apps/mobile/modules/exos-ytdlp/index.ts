@@ -21,12 +21,15 @@ declare class ExosYtdlpNative extends NativeModule<{
     id: string,
     url: string,
     format: string,
-  ): Promise<Timed<{ json: string }>>;
+    extraArgs: string[],
+  ): Promise<Timed<{ json: string; log: string }>>;
   download(
     id: string,
     url: string,
     format: string,
-  ): Promise<Timed<{ json: string }>>;
+    extraArgs: string[],
+  ): Promise<Timed<{ json: string; log: string }>>;
+  startupCost(): Promise<Timed<object>>;
   cancel(id: string): boolean;
   outputDir(): string;
 }
@@ -81,19 +84,37 @@ export function updateYtdlp(channel: 'stable' | 'nightly' = 'stable') {
 export async function resolveYtdlp(
   id: string,
   url: string,
+  extraArgs: string[] = [],
   format = DEFAULT_AUDIO_FORMAT,
-): Promise<Timed<{ info: YtdlpInfo }>> {
-  const { json, elapsedMs } = await requireNative().resolve(id, url, format);
-  return { info: JSON.parse(json) as YtdlpInfo, elapsedMs };
+): Promise<Timed<{ info: YtdlpInfo; log: string }>> {
+  const { json, log, elapsedMs } = await requireNative().resolve(
+    id,
+    url,
+    format,
+    extraArgs,
+  );
+  return { info: JSON.parse(json) as YtdlpInfo, log, elapsedMs };
 }
 
 export async function downloadYtdlp(
   id: string,
   url: string,
+  extraArgs: string[] = [],
   format = DEFAULT_AUDIO_FORMAT,
-): Promise<Timed<{ info: YtdlpInfo }>> {
-  const { json, elapsedMs } = await requireNative().download(id, url, format);
-  return { info: JSON.parse(json) as YtdlpInfo, elapsedMs };
+): Promise<Timed<{ info: YtdlpInfo; log: string }>> {
+  const { json, log, elapsedMs } = await requireNative().download(
+    id,
+    url,
+    format,
+    extraArgs,
+  );
+  return { info: JSON.parse(json) as YtdlpInfo, log, elapsedMs };
+}
+
+/** Milliseconds a bare `yt-dlp --version` takes: Python startup + import. */
+export async function measureYtdlpStartup(): Promise<number> {
+  const { elapsedMs } = await requireNative().startupCost();
+  return elapsedMs;
 }
 
 export function cancelYtdlp(id: string): boolean {

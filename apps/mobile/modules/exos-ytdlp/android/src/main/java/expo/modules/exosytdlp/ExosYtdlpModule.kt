@@ -70,10 +70,10 @@ class ExosYtdlpModule : Module() {
 
     // `yt-dlp -J`: metadata plus the direct audio URL and the headers it
     // needs. Returned as raw JSON; the JS side picks what it needs.
-    AsyncFunction("resolve") { id: String, url: String, format: String, promise: Promise ->
+    AsyncFunction("resolve") { id: String, url: String, format: String, extraArgs: List<String>, promise: Promise ->
       work(promise) {
         ensureInit()
-        val request = baseRequest(url, format).apply {
+        val request = baseRequest(url, format, extraArgs).apply {
           addOption("--dump-single-json")
           addOption("--skip-download")
         }
@@ -81,6 +81,7 @@ class ExosYtdlpModule : Module() {
         val response = YoutubeDL.getInstance().execute(request, id)
         mapOf(
           "json" to response.out,
+          "log" to tail(response.err),
           "elapsedMs" to SystemClock.elapsedRealtime() - started,
         )
       }
@@ -88,10 +89,10 @@ class ExosYtdlpModule : Module() {
 
     // Downloads the audio into app storage and returns the file path plus a
     // few metadata fields printed by yt-dlp after the file is in place.
-    AsyncFunction("download") { id: String, url: String, format: String, promise: Promise ->
+    AsyncFunction("download") { id: String, url: String, format: String, extraArgs: List<String>, promise: Promise ->
       work(promise) {
         ensureInit()
-        val request = baseRequest(url, format).apply {
+        val request = baseRequest(url, format, extraArgs).apply {
           addOption("-o", "${outDir.absolutePath}/%(extractor_key)s-%(id)s.%(ext)s")
           addOption("--no-mtime")
           addOption("--newline")
@@ -117,8 +118,20 @@ class ExosYtdlpModule : Module() {
           ?: throw IllegalStateException("yt-dlp finished without printing the file path:\n${tail(response.out)}")
         mapOf(
           "json" to info,
+          "log" to tail(response.err),
           "elapsedMs" to SystemClock.elapsedRealtime() - started,
         )
+      }
+    }
+
+    // Bare `yt-dlp --version`: what every call pays for starting Python and
+    // importing yt-dlp, before any network request.
+    AsyncFunction("startupCost") { promise: Promise ->
+      work(promise) {
+        ensureInit()
+        val started = SystemClock.elapsedRealtime()
+        YoutubeDL.getInstance().execute(YoutubeDLRequest(emptyList<String>()).apply { addOption("--version") })
+        mapOf("elapsedMs" to SystemClock.elapsedRealtime() - started)
       }
     }
 
@@ -145,13 +158,14 @@ class ExosYtdlpModule : Module() {
     }
   }
 
-  private fun baseRequest(url: String, format: String) = YoutubeDLRequest(url).apply {
+  private fun baseRequest(url: String, format: String, extraArgs: List<String>) = YoutubeDLRequest(url).apply {
     addOption("--no-playlist")
     addOption("-f", format.ifBlank { "bestaudio[ext=m4a]/bestaudio/best" })
     // Keeps solved player JS between runs, so only the first YouTube call
     // per player version pays for QuickJS.
     addOption("--cache-dir", cacheDir.absolutePath)
     addOption("--socket-timeout", "20")
+    addCommands(extraArgs)
   }
 
   private fun work(promise: Promise, block: () -> Any?) {

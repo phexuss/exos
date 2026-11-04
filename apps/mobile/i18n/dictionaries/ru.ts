@@ -324,6 +324,8 @@ export const ru = {
     updating: 'Обновляю...',
     updated: 'Обновлено до {version}',
     upToDate: 'Уже свежий ({version})',
+    startupMeasure: 'Запуск Python',
+    startupResult: 'Голый запуск yt-dlp: {seconds} с (платим на каждом вызове)',
     urlPlaceholder: 'Ссылка на трек',
     download: 'Скачать',
     resolve: 'Только ссылка',

@@ -14,6 +14,7 @@ import {
   downloadYtdlp,
   initYtdlp,
   isYtdlpAvailable,
+  measureYtdlpStartup,
   onYtdlpProgress,
   resolveYtdlp,
   updateYtdlp,
@@ -22,12 +23,36 @@ import {
 import { usePlayerStore } from '@/store/usePlayerStore';
 import type { Track } from '@/types/domain';
 
+type Preset = { label: string; args: string[] };
+
 type Case = {
   key: string;
   label: string;
   source: SourceKey;
   defaultUrl: string;
+  presets: Preset[];
 };
+
+const DEFAULT_PRESET: Preset = { label: 'default', args: [] };
+
+function ytClient(client: string, extra = ''): Preset {
+  return {
+    label: extra ? `${client} + skip` : client,
+    args: ['--extractor-args', `youtube:player_client=${client}${extra}`],
+  };
+}
+
+// Clients differ in how many API calls they make and whether their formats
+// need the JS challenge (QuickJS) at all. The lab times each one.
+const YT_PRESETS: Preset[] = [
+  DEFAULT_PRESET,
+  ytClient('android_vr'),
+  ytClient('android_vr', ';player_skip=webpage,configs,js'),
+  ytClient('tv_simply'),
+  ytClient('tv'),
+  ytClient('web_safari'),
+  ytClient('ios'),
+];
 
 const CASES: Case[] = [
   {
@@ -35,12 +60,14 @@ const CASES: Case[] = [
     label: 'YouTube',
     source: 'youtube',
     defaultUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    presets: YT_PRESETS,
   },
   {
     key: 'sc',
     label: 'SoundCloud',
     source: 'soundcloud',
     defaultUrl: 'https://soundcloud.com/forss/flickermood',
+    presets: [DEFAULT_PRESET],
   },
 ];
 
@@ -52,9 +79,11 @@ type EngineState =
 type CaseState =
   | { kind: 'idle' }
   | { kind: 'busy'; jobId: string; percent: number | null }
-  | { kind: 'resolved'; info: YtdlpInfo; seconds: string }
-  | { kind: 'downloaded'; info: YtdlpInfo; seconds: string }
+  | { kind: 'resolved'; info: YtdlpInfo; seconds: string; log: string }
+  | { kind: 'downloaded'; info: YtdlpInfo; seconds: string; log: string }
   | { kind: 'error'; message: string };
+
+type Run = { key: number; text: string; ok: boolean };
 
 function seconds(ms: number): string {
   return (ms / 1000).toFixed(1);
@@ -132,6 +161,41 @@ function Button({
   );
 }
 
+function Chip({
+  label,
+  active,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={{
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: active ? COLORS.accent : COLORS.border,
+        backgroundColor: active ? COLORS.accentSubtle : 'transparent',
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      <AppText
+        variant="caption"
+        style={{ color: active ? COLORS.accent : COLORS.textSecondary }}
+      >
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
 function ErrorBox({ message, hint }: { message: string; hint: string }) {
   return (
     <View style={{ gap: SPACING.xs }}>
@@ -154,6 +218,9 @@ function CaseCard({ item, engineReady }: { item: Case; engineReady: boolean }) {
   const [url, setUrl] = useState(item.defaultUrl);
   const [state, setState] = useState<CaseState>({ kind: 'idle' });
   const [lastLine, setLastLine] = useState('');
+  const [preset, setPreset] = useState<Preset>(item.presets[0]);
+  const [verbose, setVerbose] = useState(false);
+  const [runs, setRuns] = useState<Run[]>([]);
   const jobRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -175,21 +242,43 @@ function CaseCard({ item, engineReady }: { item: Case; engineReady: boolean }) {
       jobRef.current = jobId;
       setLastLine('');
       setState({ kind: 'busy', jobId, percent: null });
+      const args = verbose ? [...preset.args, '-v'] : preset.args;
+      const started = Date.now();
+      const record = (ok: boolean, detail: string) =>
+        setRuns((prev) =>
+          [
+            {
+              key: started,
+              ok,
+              text: `${mode === 'download' ? '⬇' : '🔗'} ${preset.label} · ${seconds(Date.now() - started)} s${detail}`,
+            },
+            ...prev,
+          ].slice(0, 10),
+        );
       try {
-        if (mode === 'download') {
-          const { info, elapsedMs } = await downloadYtdlp(jobId, url.trim());
-          setState({ kind: 'downloaded', info, seconds: seconds(elapsedMs) });
-        } else {
-          const { info, elapsedMs } = await resolveYtdlp(jobId, url.trim());
-          setState({ kind: 'resolved', info, seconds: seconds(elapsedMs) });
-        }
+        const run =
+          mode === 'download'
+            ? await downloadYtdlp(jobId, url.trim(), args)
+            : await resolveYtdlp(jobId, url.trim(), args);
+        const base = {
+          info: run.info,
+          seconds: seconds(run.elapsedMs),
+          log: verbose ? run.log : '',
+        };
+        setState(
+          mode === 'download'
+            ? { kind: 'downloaded', ...base }
+            : { kind: 'resolved', ...base },
+        );
+        record(true, ` · ${codecOf(run.info)}`);
       } catch (error) {
         setState({ kind: 'error', message: errorText(error) });
+        record(false, '');
       } finally {
         if (jobRef.current === jobId) jobRef.current = null;
       }
     },
-    [item.key, url],
+    [item.key, url, preset, verbose],
   );
 
   const busy = state.kind === 'busy';
@@ -224,6 +313,25 @@ function CaseCard({ item, engineReady }: { item: Case; engineReady: boolean }) {
           backgroundColor: COLORS.surfaceMuted,
         }}
       />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs }}>
+        {item.presets.length > 1
+          ? item.presets.map((p) => (
+              <Chip
+                key={p.label}
+                label={p.label}
+                active={p === preset}
+                disabled={busy}
+                onPress={() => setPreset(p)}
+              />
+            ))
+          : null}
+        <Chip
+          label="-v"
+          active={verbose}
+          disabled={busy}
+          onPress={() => setVerbose((v) => !v)}
+        />
+      </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>
         {busy ? (
           <Button
@@ -307,6 +415,35 @@ function CaseCard({ item, engineReady }: { item: Case; engineReady: boolean }) {
       {state.kind === 'error' ? (
         <ErrorBox message={state.message} hint={t('ytdlpLab.copy')} />
       ) : null}
+
+      {(state.kind === 'downloaded' || state.kind === 'resolved') &&
+      state.log ? (
+        <AppText
+          selectable
+          variant="caption"
+          style={{ color: COLORS.textMuted, fontFamily: 'monospace' }}
+        >
+          {state.log}
+        </AppText>
+      ) : null}
+
+      {runs.length > 0 ? (
+        <View style={{ gap: 2 }}>
+          {runs.map((run) => (
+            <AppText
+              key={run.key}
+              selectable
+              variant="caption"
+              style={{
+                color: run.ok ? COLORS.textSecondary : COLORS.danger,
+                fontFamily: 'monospace',
+              }}
+            >
+              {run.text}
+            </AppText>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -322,6 +459,17 @@ export default function YtdlpLabScreen() {
   const [engine, setEngine] = useState<EngineState>({ kind: 'starting' });
   const [updateNote, setUpdateNote] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [startup, setStartup] = useState<string | null>(null);
+
+  const measureStartup = async () => {
+    setStartup('…');
+    try {
+      const ms = await measureYtdlpStartup();
+      setStartup(t('ytdlpLab.startupResult', { seconds: seconds(ms) }));
+    } catch (error) {
+      setStartup(errorText(error));
+    }
+  };
 
   useEffect(() => {
     if (!isYtdlpAvailable) return;
@@ -422,7 +570,13 @@ export default function YtdlpLabScreen() {
             ) : (
               <ErrorBox message={engine.message} hint={t('ytdlpLab.copy')} />
             )}
-            <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: SPACING.sm,
+              }}
+            >
               <Button
                 primary
                 label={updating ? t('ytdlpLab.updating') : t('ytdlpLab.update')}
@@ -434,7 +588,17 @@ export default function YtdlpLabScreen() {
                 disabled={!engineReady || updating}
                 onPress={() => void update('nightly')}
               />
+              <Button
+                label={t('ytdlpLab.startupMeasure')}
+                disabled={!engineReady || updating}
+                onPress={() => void measureStartup()}
+              />
             </View>
+            {startup ? (
+              <AppText variant="caption" style={{ color: COLORS.textMuted }}>
+                {startup}
+              </AppText>
+            ) : null}
             {updateNote ? (
               <AppText
                 selectable
