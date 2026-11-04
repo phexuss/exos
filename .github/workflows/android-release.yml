@@ -32,7 +32,9 @@ permissions:
 env:
   EXPO_PUBLIC_API_URL: https://exos-api.phexuss.dev/api
   # Real devices only; drop x86/x86_64 to halve build time and APK size.
-  ARCHITECTURES: arm64-v8a,armeabi-v7a
+  # PR test builds are arm64 only: half the native compile time, and every
+  # phone from the last several years is arm64.
+  ARCHITECTURES: ${{ github.event_name == 'pull_request' && 'arm64-v8a' || 'arm64-v8a,armeabi-v7a' }}
   # Certificate of the EAS keystore that signed every earlier release. A release
   # signed with any other key cannot be installed over an existing install.
   RELEASE_CERT_SHA256: 314a0cab1f88e9bf91f8c6d78064ae9e645d2a69c6112346d4f56b6913c667b2
@@ -103,6 +105,10 @@ jobs:
           java-version: 17
 
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          # PR builds also save the Gradle cache, so the next push to the
+          # same branch reuses compiled native code.
+          cache-read-only: false
 
       # metro.config.js also resolves from the monorepo root node_modules; Metro
       # fails to start if that folder is missing.
