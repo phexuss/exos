@@ -308,4 +308,31 @@ export const ru = {
   album: {
     notFound: 'Альбом не найден',
   },
+  ytdlpLab: {
+    settingsRow: 'yt-dlp на телефоне',
+    settingsRowDesc: 'Тест: скачать с YouTube и SoundCloud без сервера',
+    title: 'yt-dlp на телефоне',
+    intro:
+      'yt-dlp работает прямо на телефоне, с твоего IP, как в десктопе. Сервер EXØS не участвует.',
+    unavailable:
+      'В этой сборке нет yt-dlp. Поставь APK EXØS, в Expo Go он не запускается.',
+    engine: 'Движок',
+    starting: 'Запускаю yt-dlp...',
+    ready: 'yt-dlp {version} · запуск за {seconds} с',
+    update: 'Обновить yt-dlp',
+    updateNightly: 'Nightly',
+    updating: 'Обновляю...',
+    updated: 'Обновлено до {version}',
+    upToDate: 'Уже свежий ({version})',
+    urlPlaceholder: 'Ссылка на трек',
+    download: 'Скачать',
+    resolve: 'Только ссылка',
+    play: 'Играть',
+    cancel: 'Отмена',
+    downloading: 'Качаю {percent}%',
+    preparing: 'Готовлю...',
+    resolved: 'Ссылка за {seconds} с · {protocol} · {codec}',
+    downloaded: 'Скачано за {seconds} с · {size} · {codec}',
+    copy: 'Текст ошибки можно выделить и скопировать',
+  },
 } as const;

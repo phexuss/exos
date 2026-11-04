@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { type ReactNode, useState } from 'react';
 import {
   Pressable,
@@ -66,6 +67,7 @@ export function SettingsScreen() {
   } = useSettingsStore();
   const closeSettings = useOverlayStore((s) => s.closeSettings);
   const openFaq = useOverlayStore((s) => s.openFaq);
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const [showRestoreLibrary, setShowRestoreLibrary] = useState(false);
   const [showSpotifyImport, setShowSpotifyImport] = useState(false);
@@ -458,6 +460,33 @@ export function SettingsScreen() {
             <AppText variant="label" weight="medium">
               {t('settings.faq')}
             </AppText>
+            <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              closeSettings();
+              router.push('/ytdlp-lab' as never);
+            }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 14,
+              borderBottomWidth: 0.5,
+              borderBottomColor: COLORS.divider,
+            }}
+          >
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <AppText variant="label" weight="medium">
+                {t('ytdlpLab.settingsRow')}
+              </AppText>
+              <AppText
+                variant="caption"
+                style={{ color: COLORS.textMuted, marginTop: 2 }}
+              >
+                {t('ytdlpLab.settingsRowDesc')}
+              </AppText>
+            </View>
             <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
           </Pressable>
         </SettingsGroup>
