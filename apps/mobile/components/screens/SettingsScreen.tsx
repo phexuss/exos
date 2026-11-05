@@ -18,6 +18,7 @@ import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS } from '@/constants/colors';
 import { useI18n } from '@/hooks/useI18n';
+import { hasYoutubeCookies, isYtdlpAvailable } from '@/modules/exos-ytdlp';
 import * as audio from '@/services/audio/audioService';
 import { clearLocalDatabase } from '@/services/db/database';
 import { clearDownloadedTrackFiles } from '@/services/download/downloadService';
@@ -462,6 +463,41 @@ export function SettingsScreen() {
             </AppText>
             <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
           </Pressable>
+          {isYtdlpAvailable ? (
+            <Pressable
+              onPress={() => {
+                closeSettings();
+                router.push('/youtube-login' as never);
+              }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingVertical: 14,
+                borderBottomWidth: 0.5,
+                borderBottomColor: COLORS.divider,
+              }}
+            >
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <AppText variant="label" weight="medium">
+                  {t('youtubeLogin.settingsRow')}
+                </AppText>
+                <AppText
+                  variant="caption"
+                  style={{ color: COLORS.textMuted, marginTop: 2 }}
+                >
+                  {hasYoutubeCookies()
+                    ? t('youtubeLogin.settingsRowSignedIn')
+                    : t('youtubeLogin.settingsRowSignedOut')}
+                </AppText>
+              </View>
+              <AppIcon
+                name="chevron-right"
+                size={16}
+                color={COLORS.textMuted}
+              />
+            </Pressable>
+          ) : null}
           <Pressable
             onPress={() => {
               closeSettings();
