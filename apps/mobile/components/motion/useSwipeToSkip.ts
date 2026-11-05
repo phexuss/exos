@@ -11,7 +11,7 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 
-import { DESKTOP_SPRING, EASE_OUT, MOTION } from '@/constants/motion';
+import { DESKTOP_SPRING, EASE_OUT_UI, MOTION } from '@/constants/motion';
 
 /** Share of the surface width a swipe must cover to change track. */
 const SKIP_DISTANCE = 0.3;
@@ -62,7 +62,7 @@ export function useSwipeToSkip(
           shift.set(
             withTiming(
               dir * width,
-              { duration: MOTION.dur.quick, easing: EASE_OUT },
+              { duration: MOTION.dur.quick, easing: EASE_OUT_UI },
               (done) => {
                 if (!done) return;
                 runOnJS(dir < 0 ? onNext : onPrevious)();
