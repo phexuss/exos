@@ -14,8 +14,14 @@ import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
 import { useI18n } from '@/hooks/useI18n';
-import { cloudTrackToTrack, getCloudDownloads } from '@/services/api/library';
-import { syncLocalLibraryNow } from '@/services/sync/librarySyncService';
+import {
+  cloudTrackToTrack,
+  getAllCloudDownloads,
+} from '@/services/api/library';
+import {
+  restorePlaylistsFromCloud,
+  syncLocalLibraryNow,
+} from '@/services/sync/librarySyncService';
 import type { Track } from '@/types/domain';
 
 type RestoreLibraryModalProps = {
@@ -37,11 +43,15 @@ export function RestoreLibraryModal({
     setLoading(true);
     setError(null);
     try {
+      // Playlists first, so tracks downloaded from this list land in them.
+      await restorePlaylistsFromCloud().catch((e) =>
+        console.warn('[RestoreLibrary] Playlists skipped:', e),
+      );
       await syncLocalLibraryNow();
-      const cloudTracks = await getCloudDownloads(500);
+      const cloudTracks = await getAllCloudDownloads();
       setTracks(cloudTracks.map(cloudTrackToTrack));
     } catch (e) {
-      if (__DEV__) console.warn('[RestoreLibrary] Load failed:', e);
+      console.warn('[RestoreLibrary] Load failed:', e);
       setError(t('settings.restoreLibraryError'));
     } finally {
       setLoading(false);

@@ -107,6 +107,62 @@ export class LibraryQueryDto {
   @Max(500)
   @IsOptional()
   limit = 100;
+
+  /** Rows to skip, for paging past the 500-row limit. */
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000)
+  @IsOptional()
+  offset = 0;
+}
+
+/** Identifies one library row: a Deezer id or a SoundCloud page URL. */
+export class LibraryKeyDto {
+  @IsString()
+  @IsOptional()
+  @MaxLength(128)
+  deezerId?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(2048)
+  scUrl?: string;
+}
+
+export class RemoveLibraryTracksDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LibraryKeyDto)
+  @ArrayMaxSize(500)
+  tracks!: LibraryKeyDto[];
+}
+
+export class PlaylistDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
+  clientId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  name!: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(2048)
+  coverUrl?: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LibraryTrackDto)
+  @ArrayMaxSize(5000)
+  tracks!: LibraryTrackDto[];
+
+  @IsDateString()
+  @IsOptional()
+  updatedAt?: string;
 }
 
 export class BulkLibraryResponseDto {

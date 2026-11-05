@@ -320,14 +320,69 @@ export function getDownloadedTrack(
   );
 }
 
+/**
+ * Playlist membership is kept: deleting a download to free space used to
+ * drop the track from every playlist for good. Playlists show downloaded
+ * tracks only, so it reappears there once downloaded again.
+ */
 export function deleteDownloadedTrack(trackId: string): Promise<void> {
   return withDb(async (database) => {
     await database.runAsync('DELETE FROM tracks WHERE id = ?', trackId);
-    await database.runAsync(
-      'DELETE FROM playlist_tracks WHERE track_id = ?',
-      trackId,
-    );
   });
+}
+
+/** Every track id in the playlist, downloaded or not, in order. */
+export function getPlaylistTrackIds(playlistId: string): Promise<string[]> {
+  return withDb(async (database) => {
+    const rows = await database.getAllAsync<{ track_id: string }>(
+      'SELECT track_id FROM playlist_tracks WHERE playlist_id = ? ORDER BY position',
+      playlistId,
+    );
+    return rows.map((r) => r.track_id);
+  });
+}
+
+/** Rebuilds a playlist from the cloud backup under its original id. */
+export function restorePlaylist(
+  id: string,
+  name: string,
+  coverUrl: string | null,
+  trackIds: string[],
+): Promise<void> {
+  return withDb((database) =>
+    database.withTransactionAsync(async () => {
+      await database.runAsync(
+        'INSERT OR IGNORE INTO playlists (id, name, cover_url, created_at) VALUES (?, ?, ?, ?)',
+        id,
+        name,
+        coverUrl,
+        Date.now(),
+      );
+      let position = 0;
+      for (const trackId of trackIds) {
+        await database.runAsync(
+          'INSERT OR IGNORE INTO playlist_tracks (playlist_id, track_id, position) VALUES (?, ?, ?)',
+          id,
+          trackId,
+          position++,
+        );
+      }
+    }),
+  );
+}
+
+type PlaylistListener = (playlistId: string, deleted: boolean) => void;
+let playlistListener: PlaylistListener | null = null;
+
+/** The cloud backup listens here, so every playlist change gets synced. */
+export function setPlaylistListener(listener: PlaylistListener): void {
+  playlistListener = listener;
+}
+
+function playlistChanged(playlistId: string, deleted = false): void {
+  try {
+    playlistListener?.(playlistId, deleted);
+  } catch {}
 }
 
 export type PlaylistRow = {
@@ -351,6 +406,7 @@ export function createPlaylist(
       coverUrl ?? null,
       Date.now(),
     );
+    playlistChanged(id);
     return id;
   });
 }
@@ -358,9 +414,10 @@ export function createPlaylist(
 export function getPlaylists(): Promise<PlaylistRow[]> {
   return withDb((database) =>
     database.getAllAsync<PlaylistRow>(`
-      SELECT p.*, COUNT(pt.track_id) as track_count
+      SELECT p.*, COUNT(t.id) as track_count
       FROM playlists p
       LEFT JOIN playlist_tracks pt ON p.id = pt.playlist_id
+      LEFT JOIN tracks t ON t.id = pt.track_id
       GROUP BY p.id
       ORDER BY p.created_at DESC
     `),
@@ -374,6 +431,7 @@ export function deletePlaylist(playlistId: string): Promise<void> {
       'DELETE FROM playlist_tracks WHERE playlist_id = ?',
       playlistId,
     );
+    playlistChanged(playlistId, true);
   });
 }
 
@@ -387,6 +445,7 @@ export function renamePlaylist(
       name,
       playlistId,
     );
+    playlistChanged(playlistId);
   });
 }
 
@@ -400,6 +459,7 @@ export function updatePlaylistCover(
       coverUrl,
       playlistId,
     );
+    playlistChanged(playlistId);
   });
 }
 
@@ -419,6 +479,7 @@ export function addTrackToPlaylist(
       trackId,
       position,
     );
+    playlistChanged(playlistId);
   });
 }
 
@@ -432,6 +493,7 @@ export function removeTrackFromPlaylist(
       playlistId,
       trackId,
     );
+    playlistChanged(playlistId);
   });
 }
 

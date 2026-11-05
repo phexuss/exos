@@ -1,5 +1,5 @@
 import type { SourceKey } from '@/constants/sources';
-import { apiGet, apiPost } from '@/services/api/client';
+import { apiDelete, apiGet, apiPost } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
 import type { Track } from '@/types/domain';
 
@@ -111,10 +111,66 @@ export function cloudTrackToTrack(track: CloudLibraryTrack): Track {
   };
 }
 
-export function getCloudDownloads(limit = 500): Promise<CloudLibraryTrack[]> {
+const PAGE = 500;
+
+export function getCloudDownloads(
+  limit = PAGE,
+  offset = 0,
+): Promise<CloudLibraryTrack[]> {
   return apiGet<CloudLibraryTrack[]>(`${API_ENDPOINTS.library}/downloads`, {
     limit: String(limit),
+    offset: String(offset),
   });
+}
+
+/** Every backed-up download, page by page (the API caps a page at 500). */
+export async function getAllCloudDownloads(): Promise<CloudLibraryTrack[]> {
+  const all: CloudLibraryTrack[] = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const page = await getCloudDownloads(PAGE, offset);
+    all.push(...page);
+    if (page.length < PAGE || offset > 50_000) return all;
+  }
+}
+
+export type CloudTrackKey = { deezerId?: string; scUrl?: string };
+
+export function cloudKeyForTrack(track: Track): CloudTrackKey | null {
+  if (track.source === 'deezer') return { deezerId: track.id };
+  if (track.source === 'soundcloud' && track.isrc) return { scUrl: track.isrc };
+  return null;
+}
+
+export function removeCloudDownloads(
+  tracks: CloudTrackKey[],
+): Promise<BulkResponse> {
+  return apiPost<BulkResponse>(`${API_ENDPOINTS.library}/downloads/remove`, {
+    tracks,
+  });
+}
+
+export type CloudPlaylist = {
+  clientId: string;
+  name: string;
+  coverUrl?: string;
+  tracks: CloudLibraryTrack[];
+  updatedAt?: string;
+};
+
+export function getCloudPlaylists(): Promise<CloudPlaylist[]> {
+  return apiGet<CloudPlaylist[]>(`${API_ENDPOINTS.library}/playlists`);
+}
+
+export function upsertCloudPlaylist(
+  playlist: CloudPlaylist,
+): Promise<CloudPlaylist> {
+  return apiPost<CloudPlaylist>(`${API_ENDPOINTS.library}/playlists`, playlist);
+}
+
+export function deleteCloudPlaylist(clientId: string): Promise<void> {
+  return apiDelete<void>(
+    `${API_ENDPOINTS.library}/playlists/${encodeURIComponent(clientId)}`,
+  );
 }
 
 export function upsertCloudDownload(

@@ -7,6 +7,7 @@ import { API_ENDPOINTS } from '@/services/api/endpoints';
 import {
   deleteDownloadedTrack as deleteFromDb,
   getDownloadedTrack,
+  getDownloadedTracks,
   insertDownloadedTrack,
 } from '@/services/db/database';
 import {
@@ -14,7 +15,10 @@ import {
   isLocalEngineAvailable,
 } from '@/services/engine/localEngine';
 import { fetchLyrics } from '@/services/lyrics/lyricsService';
-import { syncDownloadedTrack } from '@/services/sync/librarySyncService';
+import {
+  syncDownloadedTrack,
+  syncRemovedTracks,
+} from '@/services/sync/librarySyncService';
 import { useDownloadStore } from '@/store/useDownloadStore';
 import type { Track } from '@/types/domain';
 
@@ -376,7 +380,12 @@ export async function downloadTrack(track: Track): Promise<DownloadResult> {
 }
 
 export async function deleteTrack(trackId: string): Promise<void> {
-  const track = await getDownloadedTrack(trackId);
+  const [track, full] = await Promise.all([
+    getDownloadedTrack(trackId),
+    getDownloadedTracks()
+      .then((all) => all.find((t) => t.id === trackId))
+      .catch(() => undefined),
+  ]);
   if (track?.filePath) {
     try {
       const file = new File(track.filePath);
@@ -389,5 +398,6 @@ export async function deleteTrack(trackId: string): Promise<void> {
   }
   await deleteFromDb(trackId);
   useDownloadStore.getState().markRemoved(trackId);
+  if (full) void syncRemovedTracks([full]);
   if (__DEV__) console.log('[Delete] Track removed:', trackId);
 }
