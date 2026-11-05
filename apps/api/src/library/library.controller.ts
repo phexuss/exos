@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -13,6 +23,8 @@ import {
   BulkLibraryTracksDto,
   LibraryQueryDto,
   LibraryTrackDto,
+  PlaylistDto,
+  RemoveLibraryTracksDto,
 } from './dto/library.dto';
 import { LibraryService } from './library.service';
 
@@ -34,7 +46,11 @@ export class LibraryController {
     @Req() req: Request,
     @Query() query: LibraryQueryDto,
   ): Promise<LibraryTrackDto[]> {
-    return this.libraryService.getDownloads(this.getUserId(req), query.limit);
+    return this.libraryService.getDownloads(
+      this.getUserId(req),
+      query.limit,
+      query.offset,
+    );
   }
 
   @ApiOperation({ summary: 'Upsert one downloaded track metadata record' })
@@ -61,6 +77,48 @@ export class LibraryController {
     return { count };
   }
 
+  @ApiOperation({ summary: 'Remove deleted downloads from the backup' })
+  @ApiOkResponse({ type: BulkLibraryResponseDto })
+  @HttpCode(200)
+  @Post('downloads/remove')
+  async removeDownloads(
+    @Req() req: Request,
+    @Body() dto: RemoveLibraryTracksDto,
+  ): Promise<BulkLibraryResponseDto> {
+    const count = await this.libraryService.removeDownloads(
+      this.getUserId(req),
+      dto.tracks,
+    );
+    return { count };
+  }
+
+  @ApiOperation({ summary: 'Get backed up playlists' })
+  @ApiOkResponse({ type: PlaylistDto, isArray: true })
+  @Get('playlists')
+  getPlaylists(@Req() req: Request): Promise<PlaylistDto[]> {
+    return this.libraryService.getPlaylists(this.getUserId(req));
+  }
+
+  @ApiOperation({ summary: 'Create or replace one backed up playlist' })
+  @ApiCreatedResponse({ type: PlaylistDto })
+  @Post('playlists')
+  upsertPlaylist(
+    @Req() req: Request,
+    @Body() dto: PlaylistDto,
+  ): Promise<PlaylistDto> {
+    return this.libraryService.upsertPlaylist(this.getUserId(req), dto);
+  }
+
+  @ApiOperation({ summary: 'Delete one backed up playlist' })
+  @HttpCode(204)
+  @Delete('playlists/:clientId')
+  async deletePlaylist(
+    @Req() req: Request,
+    @Param('clientId') clientId: string,
+  ): Promise<void> {
+    await this.libraryService.deletePlaylist(this.getUserId(req), clientId);
+  }
+
   @ApiOperation({ summary: 'Get synced recently played history' })
   @ApiOkResponse({ type: LibraryTrackDto, isArray: true })
   @Get('recent')
@@ -71,6 +129,7 @@ export class LibraryController {
     return this.libraryService.getRecentlyPlayed(
       this.getUserId(req),
       query.limit,
+      query.offset,
     );
   }
 

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { LibraryTrackDto } from './dto/library.dto';
+import { LibraryKeyDto, LibraryTrackDto, PlaylistDto } from './dto/library.dto';
 
 type LibraryTrackRecord = {
   trackId: string | null;
@@ -144,11 +144,13 @@ export class LibraryService {
   async getDownloads(
     userId: string,
     limit: number,
+    offset = 0,
   ): Promise<LibraryTrackDto[]> {
     const records = await this.prismaService.userLibrary.findMany({
       where: { userId },
-      orderBy: { addedAt: 'desc' },
+      orderBy: [{ addedAt: 'desc' }, { id: 'asc' }],
       take: limit,
+      skip: offset,
     });
 
     return records.map((record) => this.toDownloadDto(record));
@@ -284,11 +286,13 @@ export class LibraryService {
   async getRecentlyPlayed(
     userId: string,
     limit: number,
+    offset = 0,
   ): Promise<LibraryTrackDto[]> {
     const records = await this.prismaService.userRecentlyPlayed.findMany({
       where: { userId },
-      orderBy: { playedAt: 'desc' },
+      orderBy: [{ playedAt: 'desc' }, { id: 'asc' }],
       take: limit,
+      skip: offset,
     });
 
     return records.map((record) => this.toRecentDto(record));
@@ -421,5 +425,102 @@ export class LibraryService {
     ]);
 
     return tracks.length;
+  }
+
+  /**
+   * Removes downloads the user deleted on a device, so a restore elsewhere
+   * no longer offers them back.
+   */
+  async removeDownloads(
+    userId: string,
+    keys: LibraryKeyDto[],
+  ): Promise<number> {
+    const deezerIds = keys
+      .map((k) => this.clean(k.deezerId))
+      .filter((id): id is string => !!id);
+    const scUrls = keys
+      .map((k) => this.clean(k.scUrl))
+      .filter((url): url is string => !!url);
+    if (deezerIds.length === 0 && scUrls.length === 0) return 0;
+
+    const { count } = await this.prismaService.userLibrary.deleteMany({
+      where: {
+        userId,
+        OR: [
+          ...(deezerIds.length ? [{ deezerId: { in: deezerIds } }] : []),
+          ...(scUrls.length ? [{ scUrl: { in: scUrls } }] : []),
+        ],
+      },
+    });
+    return count;
+  }
+
+  /** Covers picked from the phone's gallery are file:// paths: useless elsewhere. */
+  private remoteCover(value?: string): string | null {
+    const url = this.clean(value);
+    return url && /^https?:\/\//i.test(url) ? url : null;
+  }
+
+  private snapshot(dto: LibraryTrackDto): LibraryTrackDto {
+    const data = this.baseData(dto);
+    return {
+      trackId: data.trackId ?? undefined,
+      deezerId: data.deezerId ?? undefined,
+      scUrl: data.scUrl ?? undefined,
+      source: data.source,
+      title: data.title,
+      artistName: data.artistName,
+      artistId: data.artistId ?? undefined,
+      album: data.album ?? undefined,
+      coverUrl: data.coverUrl ?? undefined,
+      duration: data.duration,
+      durationSec: data.durationSec,
+      previewUrl: data.previewUrl ?? undefined,
+      isrc: data.isrc ?? undefined,
+    };
+  }
+
+  async getPlaylists(userId: string): Promise<PlaylistDto[]> {
+    const rows = await this.prismaService.userPlaylist.findMany({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' },
+      take: 500,
+    });
+    return rows.map((row) => ({
+      clientId: row.clientId,
+      name: row.name,
+      coverUrl: row.coverUrl ?? undefined,
+      tracks: Array.isArray(row.tracks)
+        ? (row.tracks as unknown as LibraryTrackDto[])
+        : [],
+      updatedAt: row.updatedAt.toISOString(),
+    }));
+  }
+
+  async upsertPlaylist(userId: string, dto: PlaylistDto): Promise<PlaylistDto> {
+    const clientId = dto.clientId.trim();
+    const data = {
+      name: dto.name.trim(),
+      coverUrl: this.remoteCover(dto.coverUrl),
+      tracks: dto.tracks.map((t) => this.snapshot(t)) as unknown as object[],
+    };
+    const row = await this.prismaService.userPlaylist.upsert({
+      where: { userId_clientId: { userId, clientId } },
+      create: { userId, clientId, ...data },
+      update: data,
+    });
+    return {
+      clientId: row.clientId,
+      name: row.name,
+      coverUrl: row.coverUrl ?? undefined,
+      tracks: row.tracks as unknown as LibraryTrackDto[],
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  async deletePlaylist(userId: string, clientId: string): Promise<void> {
+    await this.prismaService.userPlaylist.deleteMany({
+      where: { userId, clientId },
+    });
   }
 }
