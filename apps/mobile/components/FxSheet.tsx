@@ -59,8 +59,10 @@ export function FxSheet({ visible, onClose, accentColor }: FxSheetProps) {
         paddingBottom: 34,
       }}
     >
-      {/* A Modal renders outside the app's gesture root on Android. */}
-      <GestureHandlerRootView>
+      {/* A Modal renders outside the app's gesture root on Android. Its
+          default style is flex: 1, which collapses to zero height inside a
+          sheet that sizes to its content, so give it a plain one. */}
+      <GestureHandlerRootView style={{ width: '100%' }}>
         <View style={{ alignItems: 'center', paddingVertical: 12 }}>
           <View
             style={{
