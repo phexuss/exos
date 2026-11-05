@@ -18,6 +18,7 @@ import { DownloadButton } from '@/components/DownloadButton';
 import { FxSheet } from '@/components/FxSheet';
 import { GlassSurface } from '@/components/glass/GlassSurface';
 import { LyricsView } from '@/components/LyricsView';
+import { MarqueeText } from '@/components/motion/MarqueeText';
 import { PlayRing } from '@/components/motion/PlayRing';
 import { Pop } from '@/components/motion/Pop';
 import { Presence } from '@/components/motion/Presence';
@@ -465,9 +466,9 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
         >
           {/* Desktop player text: a new track's title rises into place. */}
           <Rise key={currentTrack.id} style={{ flex: 1, gap: 4 }}>
-            <AppText variant="title" weight="bold" numberOfLines={2}>
+            <MarqueeText variant="title" weight="bold">
               {currentTrack.title}
-            </AppText>
+            </MarqueeText>
             <Pressable
               onPress={() => {
                 if (

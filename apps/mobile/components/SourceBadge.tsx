@@ -7,8 +7,9 @@ type SourceBadgeProps = {
   source: SourceKey | null | undefined;
 };
 
-// Same pill as the desktop track table (`.src-pill`): the source name in a
-// lighter tint of its brand color on a 16% wash of it.
+// Desktop track-table pill (`.src-pill`) with the short code (SC, DZR), so
+// it fits next to long titles: a lighter tint of the brand color on a 16%
+// wash of it. The full name stays for screen readers.
 const PILL_TEXT: Partial<Record<SourceKey, string>> = {
   deezer: '#C78BFF',
   soundcloud: '#FF8A4C',
@@ -16,10 +17,12 @@ const PILL_TEXT: Partial<Record<SourceKey, string>> = {
 
 export function SourceBadge({ source }: SourceBadgeProps) {
   const safeSource = source && source in SOURCES ? source : 'deezer';
-  const { color, label } = SOURCES[safeSource];
+  const { color, label, badge } = SOURCES[safeSource];
 
   return (
     <View
+      accessible
+      accessibilityLabel={label}
       style={{
         height: 18,
         paddingHorizontal: 6,
@@ -40,7 +43,7 @@ export function SourceBadge({ source }: SourceBadgeProps) {
           color: PILL_TEXT[safeSource] ?? color,
         }}
       >
-        {label.toUpperCase()}
+        {badge}
       </AppText>
     </View>
   );

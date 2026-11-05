@@ -2,7 +2,7 @@
   "expo": {
     "name": "EXØS",
     "slug": "mobile",
-    "version": "0.8.1",
+    "version": "0.9.0",
     "newArchEnabled": true,
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
