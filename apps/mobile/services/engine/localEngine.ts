@@ -6,6 +6,7 @@
 import { File, Paths } from 'expo-file-system';
 
 import {
+  cancelYtdlp,
   downloadYtdlp,
   isYtdlpAvailable,
   resolveYtdlp,
@@ -18,6 +19,32 @@ import type { Track } from '@/types/domain';
 export const isLocalEngineAvailable = isYtdlpAvailable;
 
 /**
+ * yt-dlp runs have no timeout of their own, so a dead network or a stuck
+ * extractor would hang playback with no error and the server fallback
+ * would never start. Past these limits the run is killed and rejected.
+ */
+const RESOLVE_TIMEOUT_MS = 60_000;
+const DOWNLOAD_TIMEOUT_MS = 10 * 60_000;
+// A stuck update must not make every later call wait UPDATE_WAIT_MS.
+const UPDATE_GIVE_UP_MS = 3 * 60_000;
+
+function withTimeout<T>(
+  run: Promise<T>,
+  ms: number,
+  jobId: string,
+  what: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      cancelYtdlp(jobId);
+      reject(new Error(`yt-dlp ${what} timed out after ${ms / 1000} s`));
+    }, ms);
+  });
+  return Promise.race([run, timeout]).finally(() => clearTimeout(timer));
+}
+
+/**
  * The yt-dlp inside the APK is whatever youtubedl-android shipped with, and
  * YouTube stops accepting old versions within weeks. Pull the latest release
  * once a day, like the desktop does on start. Calls wait for it (capped), so
@@ -26,6 +53,7 @@ export const isLocalEngineAvailable = isYtdlpAvailable;
 const UPDATE_EVERY_MS = 12 * 60 * 60 * 1000;
 const UPDATE_WAIT_MS = 30_000;
 let updating: Promise<void> | null = null;
+let updateStartedAt = 0;
 
 function updateStamp(): File {
   return new File(Paths.document, 'ytdlp-updated-at');
@@ -43,26 +71,37 @@ function lastUpdate(): number {
 export function ensureFreshYtdlp(): Promise<void> {
   if (!isYtdlpAvailable) return Promise.resolve();
   if (!updating) {
-    updating =
-      Date.now() - lastUpdate() < UPDATE_EVERY_MS
-        ? Promise.resolve()
-        : updateYtdlp('stable')
-            .then(({ status, version }) => {
-              console.log('[LocalEngine] yt-dlp update:', status, version);
-              try {
-                const file = updateStamp();
-                if (!file.exists) file.create();
-                file.write(String(Date.now()));
-              } catch {}
-            })
-            .catch((error) => {
-              // Offline or GitHub rate limit: keep the current copy, retry
-              // on the next call.
-              console.warn('[LocalEngine] yt-dlp update failed:', error);
-              updating = null;
-            });
+    if (Date.now() - lastUpdate() < UPDATE_EVERY_MS) {
+      updating = Promise.resolve();
+    } else {
+      const startedAt = Date.now();
+      const current = updateYtdlp('stable')
+        .then(({ status, version }) => {
+          console.log('[LocalEngine] yt-dlp update:', status, version);
+          try {
+            const file = updateStamp();
+            if (!file.exists) file.create();
+            file.write(String(Date.now()));
+          } catch {}
+        })
+        .catch((error) => {
+          // Offline or GitHub rate limit: keep the current copy, retry on
+          // the next call.
+          console.warn('[LocalEngine] yt-dlp update failed:', error);
+          if (updating === current) updating = null;
+        });
+      updating = current;
+      updateStartedAt = startedAt;
+    }
+  } else if (
+    updateStartedAt &&
+    Date.now() - updateStartedAt > UPDATE_GIVE_UP_MS
+  ) {
+    // The native update never settled: stop waiting on it.
+    updating = Promise.resolve();
+    updateStartedAt = 0;
   }
-  const pending = updating ?? Promise.resolve();
+  const pending = updating;
   return Promise.race([
     pending,
     new Promise<void>((resolve) => setTimeout(resolve, UPDATE_WAIT_MS)),
@@ -157,9 +196,15 @@ export function resolveLocalStream(track: Track): Promise<LocalStream> {
   if (cached && Date.now() - cached.at < cached.ttl) return cached.stream;
 
   const stream = ensureFreshYtdlp()
-    .then(() =>
-      resolveYtdlp(nextJobId('resolve'), source, [], formatFor(source)),
-    )
+    .then(() => {
+      const jobId = nextJobId('resolve');
+      return withTimeout(
+        resolveYtdlp(jobId, source, [], formatFor(source)),
+        RESOLVE_TIMEOUT_MS,
+        jobId,
+        'resolve',
+      );
+    })
     .then(({ info }) => toStream(info));
 
   const entry: CacheEntry = {
@@ -172,6 +217,11 @@ export function resolveLocalStream(track: Track): Promise<LocalStream> {
     if (streamCache.get(source) === entry) streamCache.delete(source);
   });
   return stream;
+}
+
+/** Drops a cached link after the player failed on it (expired, 403). */
+export function invalidateLocalStream(track: Track): void {
+  streamCache.delete(localSource(track));
 }
 
 export function prefetchLocalStream(track: Track): void {
@@ -226,12 +276,11 @@ async function runDownload(
 ): Promise<{ path: string; ext: string }> {
   const source = localSource(track);
   const template = `${basePath}.%(ext)s`;
-  const { info } = await downloadYtdlp(
+  const { info } = await withTimeout(
+    downloadYtdlp(jobId, source, [], formatFor(source), template),
+    DOWNLOAD_TIMEOUT_MS,
     jobId,
-    source,
-    [],
-    formatFor(source),
-    template,
+    'download',
   );
   if (!info.filepath) throw new Error('yt-dlp returned no file');
   const ext = info.filepath.split('.').pop() ?? info.ext ?? 'm4a';
@@ -255,14 +304,20 @@ export async function fetchLyricsDirect(
   });
   if (durationSec > 0) params.set('duration', String(Math.round(durationSec)));
   const headers = { 'User-Agent': 'EXOS (https://github.com/phexuss/exos)' };
+  // Covers both requests and their bodies, so a stalled LRCLIB never
+  // leaves the lyrics tab spinning.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  const { signal } = controller;
   try {
     const exact = await fetch(`https://lrclib.net/api/get?${params}`, {
       headers,
+      signal,
     });
     if (exact.ok) return (await exact.json()) as LrclibResult;
     const search = await fetch(
       `https://lrclib.net/api/search?${new URLSearchParams({ q: `${artist} ${title}` })}`,
-      { headers },
+      { headers, signal },
     );
     if (!search.ok) return null;
     const results = (await search.json()) as LrclibResult[];
@@ -273,5 +328,7 @@ export async function fetchLyricsDirect(
     );
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }

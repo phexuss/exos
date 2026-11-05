@@ -66,6 +66,17 @@ function MiniPlayerGestures({ width, children }: MiniPlayerGesturesProps) {
       .onUpdate((e) => {
         lift.setValue(Math.min(0, e.translationY) * LIFT_FOLLOW);
       })
+      .onFinalize((_e, success) => {
+        // Cancelled (system back, a call, another gesture won): onEnd
+        // never runs, so put the view back here.
+        if (!success) {
+          Animated.spring(lift, {
+            toValue: 0,
+            ...DESKTOP_SPRING,
+            useNativeDriver: true,
+          }).start();
+        }
+      })
       .onEnd((e) => {
         if (e.translationY < -OPEN_DISTANCE || e.velocityY < -OPEN_VELOCITY) {
           openPlayer();

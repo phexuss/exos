@@ -1,5 +1,7 @@
 export const en = {
   common: {
+    saveFailed: "Couldn't save.",
+    loadFailed: "Couldn't load this. Check your connection.",
     home: 'Home',
     search: 'Search',
     library: 'Library',
@@ -57,6 +59,7 @@ export const en = {
     filters: 'Filters',
     results: 'Results',
     noResults: 'No results found',
+    failed: "Search didn't go through. Check your connection.",
   },
   library: {
     title: 'Library',
@@ -285,6 +288,9 @@ export const en = {
       'Create an account or sign in to sync your library across devices and access your profile.',
   },
   count: {
+    albums_one: '{count} album',
+    albums_few: '{count} albums',
+    albums_many: '{count} albums',
     tracks_one: '{count} track',
     tracks_few: '{count} tracks',
     tracks_many: '{count} tracks',
@@ -296,6 +302,7 @@ export const en = {
     selectedTracks_many: '{count} selected tracks',
   },
   playlist: {
+    notFound: 'Playlist not found',
     empty: 'No tracks in this playlist',
     addCover: 'Add cover',
     deletePlaylist: 'Delete playlist',

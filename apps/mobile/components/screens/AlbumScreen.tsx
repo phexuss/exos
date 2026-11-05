@@ -8,6 +8,7 @@ import { Rise } from '@/components/motion/Rise';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import { LoadFailed } from '@/components/ui/LoadFailed';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS } from '@/constants/colors';
 import { LAYOUT } from '@/constants/layout';
@@ -31,12 +32,15 @@ export function AlbumScreen({ id, titleHint }: Props) {
   const background = glassMode ? 'transparent' : COLORS.background;
   const [album, setAlbum] = useState<AlbumDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   const play = usePlayerStore((s) => s.play);
   const setQueue = usePlayerStore((s) => s.setQueue);
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const closeAlbum = useOverlayStore((s) => s.closeAlbum);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` re-runs the load on retry.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -46,7 +50,9 @@ export function AlbumScreen({ id, titleHint }: Props) {
         if (!cancelled) setAlbum(a);
       })
       .catch((e) => {
-        if (!cancelled && __DEV__) console.warn('[Album] Load error:', e);
+        if (cancelled) return;
+        console.warn('[Album] Load error:', e);
+        setFailed(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -55,7 +61,7 @@ export function AlbumScreen({ id, titleHint }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, attempt]);
 
   const handlePlay = useCallback(
     (track: Track) => {
@@ -103,18 +109,12 @@ export function AlbumScreen({ id, titleHint }: Props) {
 
   if (!album) {
     return (
-      <SafeAreaView
-        style={{
-          flex: 1,
-          backgroundColor: background,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <AppText variant="body" style={{ color: COLORS.textMuted }}>
-          {t('album.notFound')}
-        </AppText>
-      </SafeAreaView>
+      <LoadFailed
+        message={t('album.notFound')}
+        onRetry={failed ? () => setAttempt((n) => n + 1) : undefined}
+        onClose={closeAlbum}
+        background={background}
+      />
     );
   }
 

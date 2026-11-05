@@ -30,6 +30,7 @@ import { useGlassBottomInset } from '@/hooks/useGlassBottomInset';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import { searchSoundCloud, searchTracks } from '@/services/api/search';
+import { useAuthStore } from '@/store/useAuthStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import type { Track } from '@/types/domain';
 
@@ -96,6 +97,11 @@ export default function SearchScreen() {
   );
   const [results, setResults] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const requestRef = useRef(0);
+  // The Deezer catalog goes through the EXØS API, which needs an account;
+  // without one "All" searches SoundCloud straight from the phone.
+  const signedIn = useAuthStore((s) => !!s.user);
   const play = usePlayerStore((s) => s.play);
   const setQueue = usePlayerStore((s) => s.setQueue);
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
@@ -106,27 +112,39 @@ export default function SearchScreen() {
 
   const fetchResults = useCallback(
     async (q: string) => {
+      // Answers can come back out of order: only the latest one counts.
+      const request = ++requestRef.current;
       if (!q.trim()) {
         setResults([]);
+        setFailed(false);
+        setLoading(false);
         return;
       }
       setLoading(true);
+      setFailed(false);
       try {
         const effectiveSource =
-          selectedSource === 'all' ? 'deezer' : selectedSource;
+          selectedSource === 'all'
+            ? signedIn
+              ? 'deezer'
+              : 'soundcloud'
+            : selectedSource;
         const data =
           effectiveSource === 'soundcloud'
             ? await searchSoundCloud(q)
             : await searchTracks(q);
+        if (request !== requestRef.current) return;
         setResults(data);
-        setQueue(data);
       } catch (e) {
-        if (__DEV__) console.warn('Search error:', e);
+        if (request !== requestRef.current) return;
+        console.warn('[Search] failed:', e);
+        setResults([]);
+        setFailed(true);
       } finally {
-        setLoading(false);
+        if (request === requestRef.current) setLoading(false);
       }
     },
-    [setQueue, selectedSource],
+    [selectedSource, signedIn],
   );
 
   useEffect(() => {
@@ -142,11 +160,14 @@ export default function SearchScreen() {
     return results.filter((track) => track.source === selectedSource);
   }, [results, selectedSource]);
 
+  // The queue becomes the results only when one of them is played, so
+  // typing a new search no longer swaps the queue of what is playing.
   const handlePlay = useCallback(
     (track: Track) => {
+      setQueue(filteredResults);
       play(track);
     },
-    [play],
+    [play, setQueue, filteredResults],
   );
 
   const renderTrack = useCallback<ListRenderItem<Track>>(
@@ -269,10 +290,21 @@ export default function SearchScreen() {
       ))}
     </View>
   ) : query.trim() ? (
-    <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+    <View style={{ paddingVertical: 40, alignItems: 'center', gap: 12 }}>
       <AppText variant="body" style={{ color: COLORS.textMuted }}>
-        {t('search.noResults')}
+        {failed ? t('search.failed') : t('search.noResults')}
       </AppText>
+      {failed ? (
+        <Pressable onPress={() => void fetchResults(query)} hitSlop={8}>
+          <AppText
+            variant="label"
+            weight="medium"
+            style={{ color: accentColor }}
+          >
+            {t('common.retry')}
+          </AppText>
+        </Pressable>
+      ) : null}
     </View>
   ) : null;
 

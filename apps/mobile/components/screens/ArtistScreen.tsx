@@ -13,6 +13,7 @@ import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
+import { LoadFailed } from '@/components/ui/LoadFailed';
 import { COLORS } from '@/constants/colors';
 import { LAYOUT } from '@/constants/layout';
 import { MOTION } from '@/constants/motion';
@@ -93,7 +94,7 @@ type Props = {
 };
 
 export function ArtistScreen({ id }: Props) {
-  const { t } = useI18n();
+  const { t, tn } = useI18n();
   const glassMode = useGlassMode();
   // Glass mode: the overlay draws the ambient glow behind this screen.
   const background = glassMode ? 'transparent' : COLORS.background;
@@ -101,6 +102,8 @@ export function ArtistScreen({ id }: Props) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [albums, setAlbums] = useState<ArtistAlbum[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   const play = usePlayerStore((s) => s.play);
   const setQueue = usePlayerStore((s) => s.setQueue);
@@ -108,19 +111,28 @@ export function ArtistScreen({ id }: Props) {
   const closeArtist = useOverlayStore((s) => s.closeArtist);
   const insets = useSafeAreaInsets();
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` re-runs the load on retry.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setFailed(false);
 
-    Promise.all([getArtist(id), getArtistTopTracks(id), getArtistAlbums(id)])
+    // Top tracks and albums are extras: a failure there keeps the page.
+    Promise.allSettled([
+      getArtist(id),
+      getArtistTopTracks(id),
+      getArtistAlbums(id),
+    ])
       .then(([a, t, al]) => {
         if (cancelled) return;
-        setArtist(a);
-        setTracks(t);
-        setAlbums(al);
-      })
-      .catch((e) => {
-        if (!cancelled && __DEV__) console.warn('[Artist] Load error:', e);
+        if (a.status === 'rejected') {
+          console.warn('[Artist] Load error:', a.reason);
+          setFailed(true);
+          return;
+        }
+        setArtist(a.value);
+        setTracks(t.status === 'fulfilled' ? t.value : []);
+        setAlbums(al.status === 'fulfilled' ? al.value : []);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -129,7 +141,7 @@ export function ArtistScreen({ id }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, attempt]);
 
   const handlePlay = useCallback(
     (track: Track) => {
@@ -177,18 +189,12 @@ export function ArtistScreen({ id }: Props) {
 
   if (!artist) {
     return (
-      <SafeAreaView
-        style={{
-          flex: 1,
-          backgroundColor: background,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <AppText variant="body" style={{ color: COLORS.textMuted }}>
-          {t('artist.notFound')}
-        </AppText>
-      </SafeAreaView>
+      <LoadFailed
+        message={t('artist.notFound')}
+        onRetry={failed ? () => setAttempt((n) => n + 1) : undefined}
+        onClose={closeArtist}
+        background={background}
+      />
     );
   }
 
@@ -262,7 +268,7 @@ export function ArtistScreen({ id }: Props) {
             )}
             {artist.albumCount > 0 && (
               <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-                {artist.albumCount} albums
+                {tn('albums', artist.albumCount)}
               </AppText>
             )}
           </View>

@@ -83,7 +83,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
       const me = await getMe();
       set({ user: me, isHydrated: true, isLoading: false });
-      runInitialLibrarySync();
+      runInitialLibrarySync(me.id);
     } catch {
       set({ user: null, isHydrated: true, isLoading: false });
     }
@@ -105,7 +105,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       await apiLogin(username, password);
       const me = await getMe();
       set({ user: me });
-      runInitialLibrarySync();
+      runInitialLibrarySync(me.id);
     } finally {
       set({ isLoading: false });
     }
@@ -127,7 +127,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       await apiVerifyEmail(userId, code);
       const me = await getMe();
       set({ user: me });
-      runInitialLibrarySync();
+      runInitialLibrarySync(me.id);
     } finally {
       set({ isLoading: false });
     }

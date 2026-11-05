@@ -52,21 +52,42 @@ function vibrateHex(hex: string): string {
   return `#${toHex(hue2rgb(p, q, h + 1 / 3))}${toHex(hue2rgb(p, q, h))}${toHex(hue2rgb(p, q, h - 1 / 3))}`;
 }
 
+const LRC_TAG = /\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]/g;
+
+/**
+ * `[mm:ss.xx]` lines, plus what LRCLIB also serves: several tags on one
+ * line (a repeated chorus), one-digit minutes, `[mm:ss:xx]`, no fraction,
+ * and an `[offset:±ms]` header.
+ */
 function parseLRC(lrc: string): LyricLine[] {
   const lines: LyricLine[] = [];
-  const regex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
+  const offsetMatch = lrc.match(/\[offset:\s*([+-]?\d+)\s*\]/i);
+  // Positive offset = lyrics come sooner.
+  const offset = offsetMatch ? Number(offsetMatch[1]) / 1000 : 0;
   for (const line of lrc.split('\n')) {
-    const match = line.match(regex);
-    if (match) {
+    const times: number[] = [];
+    let rest = line;
+    LRC_TAG.lastIndex = 0;
+    for (const match of line.matchAll(LRC_TAG)) {
       const minutes = parseInt(match[1], 10);
       const seconds = parseInt(match[2], 10);
-      const ms = parseInt(match[3].padEnd(3, '0'), 10);
-      const time = minutes * 60 + seconds + ms / 1000;
-      const text = match[4].trim();
-      if (text) lines.push({ time, text });
+      const frac = match[3] ? parseInt(match[3].padEnd(3, '0'), 10) : 0;
+      times.push(Math.max(0, minutes * 60 + seconds + frac / 1000 - offset));
+      rest = rest.replace(match[0], '');
     }
+    const text = rest.trim();
+    if (!text) continue;
+    for (const time of times) lines.push({ time, text });
   }
   return lines.sort((a, b) => a.time - b.time);
+}
+
+/** Synced lyrics nobody could parse are still worth showing as text. */
+function stripLrcTags(lrc: string): string {
+  return lrc
+    .split('\n')
+    .map((l) => l.replace(/\[[^\]]*\]/g, '').trim())
+    .join('\n');
 }
 
 const SPRING = { damping: 28, stiffness: 65, mass: 0.7 };
@@ -371,7 +392,9 @@ export function LyricsView({
     );
   }
 
-  const plainLines = plainLyrics?.split('\n').filter((l) => l.trim()) ?? [];
+  const plainText =
+    plainLyrics || (syncedLyrics ? stripLrcTags(syncedLyrics) : '');
+  const plainLines = plainText.split('\n').filter((l) => l.trim());
 
   return (
     <View style={{ flex: 1 }}>

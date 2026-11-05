@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
@@ -51,7 +51,9 @@ export function TrackActionsSheet({
 
   useEffect(() => {
     if (visible) {
-      getPlaylists().then(setPlaylists);
+      getPlaylists()
+        .then(setPlaylists)
+        .catch((error) => console.warn('[TrackActions] Playlists:', error));
     } else {
       setShowPlaylists(false);
       setShowCreate(false);
@@ -86,21 +88,42 @@ export function TrackActionsSheet({
     }
   }, [track, deleting, onDeleted, onClose]);
 
-  const handleAddToPlaylist = useCallback(
-    async (playlistId: string) => {
-      if (!track) return;
-      await addTrackToPlaylist(playlistId, track.id);
-      onClose();
+  // A double tap used to create the playlist (or add the track) twice.
+  const busy = useRef(false);
+
+  const runOnce = useCallback(
+    async (work: () => Promise<void>) => {
+      if (busy.current) return;
+      busy.current = true;
+      try {
+        await work();
+        onClose();
+      } catch (error) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        console.warn('[TrackActions] Playlist change failed:', error);
+      } finally {
+        busy.current = false;
+      }
     },
-    [track, onClose],
+    [onClose],
   );
 
-  const handleCreatePlaylist = useCallback(async () => {
-    if (!newName.trim() || !track) return;
-    const id = await createPlaylist(newName.trim());
-    await addTrackToPlaylist(id, track.id);
-    onClose();
-  }, [newName, track, onClose]);
+  const handleAddToPlaylist = useCallback(
+    (playlistId: string) => {
+      if (!track) return;
+      void runOnce(() => addTrackToPlaylist(playlistId, track.id));
+    },
+    [track, runOnce],
+  );
+
+  const handleCreatePlaylist = useCallback(() => {
+    const name = newName.trim();
+    if (!name || !track) return;
+    void runOnce(async () => {
+      const id = await createPlaylist(name);
+      await addTrackToPlaylist(id, track.id);
+    });
+  }, [newName, track, runOnce]);
 
   const activeTrack = track ?? presentedTrack;
 

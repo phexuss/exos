@@ -36,6 +36,17 @@ export function useDragToDismiss(onDismiss: () => void) {
         .onUpdate((e) => {
           drag.setValue(Math.max(e.translationY, 0));
         })
+        .onFinalize((_e, success) => {
+          // Cancelled (system back, a call, another gesture won): onEnd
+          // never runs, so put the view back here.
+          if (!success) {
+            Animated.spring(drag, {
+              toValue: 0,
+              ...DESKTOP_SPRING,
+              useNativeDriver: true,
+            }).start();
+          }
+        })
         .onEnd((e) => {
           const close =
             e.translationY > height * CLOSE_DISTANCE ||
