@@ -8,12 +8,14 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
+import { Rise } from '@/components/motion/Rise';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
 import { COLORS } from '@/constants/colors';
 import { LAYOUT } from '@/constants/layout';
+import { MOTION } from '@/constants/motion';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import {
@@ -138,15 +140,20 @@ export function ArtistScreen({ id }: Props) {
   );
 
   const renderTrack = useCallback<ListRenderItem<Track>>(
-    ({ item }) => (
-      <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
+    ({ item, index }) => (
+      <Rise
+        index={index}
+        after={2}
+        animate={index <= MOTION.staggerCap}
+        style={{ paddingHorizontal: 12, paddingTop: 8 }}
+      >
         <TrackItem
           track={item}
           onPress={handlePlay}
           isActive={currentTrackId === item.id}
           showDownload
         />
-      </View>
+      </Rise>
     ),
     [handlePlay, currentTrackId],
   );

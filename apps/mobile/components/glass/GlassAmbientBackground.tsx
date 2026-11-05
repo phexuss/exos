@@ -2,7 +2,9 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
+import { AccentGlow } from '@/components/motion/AccentGlow';
 import { COLORS } from '@/constants/colors';
+import { MOTION } from '@/constants/motion';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { usePlayerStore } from '@/store/usePlayerStore';
 
@@ -33,10 +35,7 @@ export function GlassAmbientBackground() {
           overflow: 'hidden',
         }}
       >
-        <LinearGradient
-          colors={[accentColor, COLORS.background]}
-          style={[StyleSheet.absoluteFill, { opacity: 0.35 }]}
-        />
+        <AccentGlow color={accentColor} opacity={0.35} />
         {coverUrl ? (
           <Image
             source={{ uri: coverUrl }}
@@ -46,7 +45,7 @@ export function GlassAmbientBackground() {
             ]}
             contentFit="cover"
             blurRadius={80}
-            transition={900}
+            transition={MOTION.dur.glide}
           />
         ) : null}
         <LinearGradient

@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
 import { GlassSurface } from '@/components/glass/GlassSurface';
+import { Rise } from '@/components/motion/Rise';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
@@ -20,6 +21,7 @@ import { SourcePill } from '@/components/ui/SourcePill';
 import { COLORS } from '@/constants/colors';
 import { GLASS, SECONDARY_BLUR } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
+import { MOTION } from '@/constants/motion';
 import type { SourceKey } from '@/constants/sources';
 import { SPACING } from '@/constants/spacing';
 import { FONT_FAMILY } from '@/constants/typography';
@@ -148,14 +150,16 @@ export default function SearchScreen() {
   );
 
   const renderTrack = useCallback<ListRenderItem<Track>>(
-    ({ item }) => (
-      <TrackItem
-        track={item}
-        onPress={handlePlay}
-        showDownload
-        isActive={currentTrackId === item.id}
-        accentColor={accentColor}
-      />
+    ({ item, index }) => (
+      <Rise index={index} animate={index <= MOTION.staggerCap}>
+        <TrackItem
+          track={item}
+          onPress={handlePlay}
+          showDownload
+          isActive={currentTrackId === item.id}
+          accentColor={accentColor}
+        />
+      </Rise>
     ),
     [handlePlay, currentTrackId, accentColor],
   );

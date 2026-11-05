@@ -2,14 +2,14 @@ import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
+import { GestureDetector, type PanGesture } from 'react-native-gesture-handler';
 import Animated, {
-  FadeIn,
-  FadeOut,
   SlideInDown,
   SlideOutDown,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
   ZoomIn,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,6 +22,9 @@ import {
   glassPresentExiting,
 } from '@/components/glass/transitions';
 import { LyricsView } from '@/components/LyricsView';
+import { PlayRing } from '@/components/motion/PlayRing';
+import { Rise } from '@/components/motion/Rise';
+import { useSwipeToSkip } from '@/components/motion/useSwipeToSkip';
 import { SeekBar } from '@/components/SeekBar';
 import { SourceBadge } from '@/components/SourceBadge';
 import { TrackItem } from '@/components/TrackItem';
@@ -30,8 +33,10 @@ import { AppText } from '@/components/ui/AppText';
 import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
-import { GLASS_SPRING, SECONDARY_BLUR } from '@/constants/glass';
+import { GLASS, SECONDARY_BLUR } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
+import { DESKTOP_SPRING, EASE_OUT, MOTION } from '@/constants/motion';
+import { SPACING } from '@/constants/spacing';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
@@ -108,6 +113,61 @@ function PlaybackProgress({
         </AppText>
       </View>
     </View>
+  );
+}
+
+/** Cover and lyrics swap with a short fade and a settle, not a plain cut. */
+function swapEntering() {
+  'worklet';
+  return {
+    initialValues: { opacity: 0, transform: [{ scale: MOTION.rise.scale }] },
+    animations: {
+      opacity: withTiming(1, { duration: MOTION.dur.base, easing: EASE_OUT }),
+      transform: [{ scale: withSpring(1, DESKTOP_SPRING) }],
+    },
+  };
+}
+
+function swapExiting() {
+  'worklet';
+  return {
+    initialValues: { opacity: 1 },
+    animations: {
+      opacity: withTiming(0, { duration: MOTION.dur.quick, easing: EASE_OUT }),
+    },
+  };
+}
+
+type SwipeArtworkProps = {
+  coverUrl?: string;
+  radius: number;
+};
+
+/** The big cover: swipe it left for the next track, right for the previous. */
+function SwipeArtwork({ coverUrl, radius }: SwipeArtworkProps) {
+  const [width, setWidth] = useState(0);
+  const skipNext = usePlayerStore((s) => s.skipNext);
+  const skipPrevious = usePlayerStore((s) => s.skipPrevious);
+  const swipe = useSwipeToSkip(width, skipNext, skipPrevious);
+
+  return (
+    <GestureDetector gesture={swipe.gesture}>
+      <Animated.View
+        style={[{ flex: 1 }, swipe.style]}
+        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      >
+        {coverUrl ? (
+          <Image
+            source={{ uri: coverUrl }}
+            style={{ flex: 1, borderRadius: radius }}
+            contentFit="cover"
+            transition={MOTION.dur.base}
+          />
+        ) : (
+          <Skeleton width="100%" height="100%" radius={radius} />
+        )}
+      </Animated.View>
+    </GestureDetector>
   );
 }
 
@@ -228,14 +288,23 @@ function QueueOverlay({
           data={queue}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => <TrackItem track={item} onPress={onPlay} />}
+          renderItem={({ item, index }) => (
+            <Rise index={index} after={2} animate={index <= MOTION.staggerCap}>
+              <TrackItem track={item} onPress={onPlay} />
+            </Rise>
+          )}
         />
       </View>
     </Animated.View>
   );
 }
 
-export default function PlayerScreen() {
+type PlayerScreenProps = {
+  /** Pull-down-to-close, from the overlay that hosts the player. */
+  dismissGesture?: { body: PanGesture; handle: PanGesture };
+};
+
+export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
   const { t } = useI18n();
   const [showLyrics, setShowLyrics] = useState(false);
   const currentTrack = usePlayerStore((s) => s.currentTrack);
@@ -263,12 +332,12 @@ export default function PlayerScreen() {
   const lyrics = useTrackLyrics(currentTrack, trackDurationSec);
 
   useEffect(() => {
-    // Apple Music-style: the artwork recedes while paused.
+    // Desktop now-playing: the artwork sinks back while paused.
     artScale.value = withSpring(
-      glassMode && !isPlaying ? 0.84 : 1,
-      GLASS_SPRING.smooth,
+      isPlaying ? 1 : MOTION.pausedArtScale,
+      DESKTOP_SPRING,
     );
-  }, [glassMode, isPlaying, artScale]);
+  }, [isPlaying, artScale]);
 
   const artStyle = useAnimatedStyle(() => ({
     transform: [{ scale: artScale.value }],
@@ -306,6 +375,300 @@ export default function PlayerScreen() {
     );
   }
 
+  const scrollableOpen = showLyrics || showQueue;
+  const bodyGesture = dismissGesture?.body.enabled(!scrollableOpen);
+  const handleGesture = dismissGesture?.handle.enabled(scrollableOpen);
+  const artRadius = glassMode ? 22 : 16;
+
+  const header = (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: LAYOUT.headerHeight,
+      }}
+    >
+      <HeaderIconButton
+        icon="chevron-down"
+        onPress={() => closePlayer()}
+        accessibilityLabel={t('common.close')}
+      />
+      <View
+        style={{
+          alignItems: 'center',
+          gap: SPACING.xs,
+        }}
+      >
+        {/* Grabber: says the whole player can be pulled down. */}
+        <View
+          style={{
+            width: SPACING.huge,
+            height: SPACING.xs,
+            borderRadius: SPACING.xs / 2,
+            backgroundColor: GLASS.rimStrong,
+          }}
+        />
+        <AppText
+          variant="caption"
+          weight="medium"
+          style={{
+            color: glassMode ? COLORS.textSecondary : COLORS.textMuted,
+            letterSpacing: 1,
+            fontSize: 10,
+          }}
+        >
+          {t('player.title').toUpperCase()}
+        </AppText>
+      </View>
+      <HeaderIconButton
+        icon="queue"
+        onPress={() => setShowQueue(true)}
+        accessibilityLabel={t('player.queue')}
+      />
+    </View>
+  );
+
+  const body = (
+    <View style={{ flex: 1, paddingHorizontal: 24 }}>
+      {handleGesture ? (
+        <GestureDetector gesture={handleGesture}>{header}</GestureDetector>
+      ) : (
+        header
+      )}
+
+      <View style={{ flex: 1, justifyContent: 'center', gap: 24 }}>
+        <Animated.View
+          style={[
+            {
+              aspectRatio: 1,
+              width: '100%',
+            },
+            glassMode && Platform.OS === 'ios'
+              ? {
+                  shadowColor: '#000',
+                  shadowOpacity: 0.45,
+                  shadowRadius: 30,
+                  shadowOffset: { width: 0, height: 18 },
+                }
+              : undefined,
+            artStyle,
+          ]}
+        >
+          <Animated.View
+            key={showLyrics ? 'lyrics' : 'art'}
+            entering={swapEntering}
+            exiting={swapExiting}
+            style={{ flex: 1 }}
+          >
+            {showLyrics ? (
+              <LyricsView
+                key={currentTrack.id}
+                syncedLyrics={lyrics.syncedLyrics}
+                plainLyrics={lyrics.plainLyrics}
+                loading={lyrics.loading}
+                duration={trackDurationSec}
+                onSeekToTime={handleLyricSeek}
+                accentColor={accentColor}
+              />
+            ) : (
+              <SwipeArtwork
+                coverUrl={currentTrack.coverUrl}
+                radius={artRadius}
+              />
+            )}
+          </Animated.View>
+        </Animated.View>
+
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          {/* Desktop player text: a new track's title rises into place. */}
+          <Rise key={currentTrack.id} style={{ flex: 1, gap: 4 }}>
+            <AppText variant="title" weight="bold" numberOfLines={2}>
+              {currentTrack.title}
+            </AppText>
+            <Pressable
+              onPress={() => {
+                if (
+                  currentTrack.source === 'deezer' &&
+                  currentTrack.artist.id
+                ) {
+                  closePlayer();
+                  useOverlayStore.getState().openArtist(currentTrack.artist.id);
+                }
+              }}
+              hitSlop={4}
+            >
+              <AppText
+                variant="body"
+                numberOfLines={1}
+                style={{
+                  color: COLORS.textSecondary,
+                  textDecorationLine:
+                    currentTrack.source === 'deezer' ? 'underline' : 'none',
+                }}
+              >
+                {currentTrack.artist.name}
+              </AppText>
+            </Pressable>
+          </Rise>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <SourceBadge source={currentTrack.source} />
+            <DownloadButton
+              track={currentTrack}
+              size={18}
+              accentColor={accentColor}
+            />
+            <AnimatedPressable
+              scaleValue={0.85}
+              hitSlop={10}
+              onPress={() => setShowLyrics((v) => !v)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: showLyrics }}
+            >
+              <AppIcon
+                name="lyrics"
+                size={20}
+                color={showLyrics ? accentColor : COLORS.textSecondary}
+              />
+            </AnimatedPressable>
+          </View>
+        </View>
+
+        <PlaybackProgress
+          durationSec={trackDurationSec}
+          durationLabel={currentTrack.duration}
+          isPlaying={isPlaying}
+          accentColor={accentColor}
+          glass={glassMode}
+          onSeek={handleSeek}
+        />
+
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 4,
+          }}
+        >
+          <AnimatedPressable
+            scaleValue={0.85}
+            onPress={toggleShuffle}
+            hitSlop={12}
+            style={{
+              width: 40,
+              height: 40,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <AppIcon
+              name="shuffle"
+              size={20}
+              color={shuffle ? accentColor : COLORS.textMuted}
+            />
+          </AnimatedPressable>
+
+          <AnimatedPressable
+            scaleValue={0.85}
+            onPress={skipPrevious}
+            hitSlop={12}
+            style={{
+              width: 48,
+              height: 48,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <AppIcon
+              name="previous"
+              size={glassMode ? 32 : 24}
+              color={COLORS.textPrimary}
+            />
+          </AnimatedPressable>
+
+          <AnimatedPressable
+            scaleValue={0.9}
+            onPress={togglePlayback}
+            // Desktop player: a solid white disc with a dark glyph, and an
+            // accent ring that breathes out of it while music plays.
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 36,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: COLORS.textPrimary,
+            }}
+          >
+            <PlayRing playing={isPlaying} color={accentColor} />
+            <Animated.View
+              key={isPlaying ? 'pause' : 'play'}
+              entering={ZoomIn.springify()
+                .damping(DESKTOP_SPRING.damping)
+                .stiffness(DESKTOP_SPRING.stiffness)
+                .mass(DESKTOP_SPRING.mass)}
+            >
+              <AppIcon
+                name={isPlaying ? 'pause' : 'play'}
+                size={30}
+                color={COLORS.background}
+              />
+            </Animated.View>
+          </AnimatedPressable>
+
+          <AnimatedPressable
+            scaleValue={0.85}
+            onPress={skipNext}
+            hitSlop={12}
+            style={{
+              width: 48,
+              height: 48,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <AppIcon
+              name="next"
+              size={glassMode ? 32 : 24}
+              color={COLORS.textPrimary}
+            />
+          </AnimatedPressable>
+
+          <AnimatedPressable
+            scaleValue={0.85}
+            onPress={cycleRepeat}
+            hitSlop={12}
+            style={{
+              width: 40,
+              height: 40,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <AppIcon
+              name={repeat === 'one' ? 'repeat-one' : 'repeat'}
+              size={20}
+              color={repeat !== 'off' ? accentColor : COLORS.textMuted}
+            />
+          </AnimatedPressable>
+        </View>
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView
       style={{
@@ -313,296 +676,11 @@ export default function PlayerScreen() {
         backgroundColor: glassMode ? 'transparent' : COLORS.background,
       }}
     >
-      <View style={{ flex: 1, paddingHorizontal: 24 }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            height: LAYOUT.headerHeight,
-          }}
-        >
-          <HeaderIconButton
-            icon="chevron-down"
-            onPress={() => closePlayer()}
-            accessibilityLabel={t('common.close')}
-          />
-          <AppText
-            variant="caption"
-            weight="medium"
-            style={{
-              color: glassMode ? COLORS.textSecondary : COLORS.textMuted,
-              letterSpacing: 1,
-              fontSize: 10,
-            }}
-          >
-            {t('player.title').toUpperCase()}
-          </AppText>
-          <HeaderIconButton
-            icon="queue"
-            onPress={() => setShowQueue(true)}
-            accessibilityLabel={t('player.queue')}
-          />
-        </View>
-
-        <View style={{ flex: 1, justifyContent: 'center', gap: 24 }}>
-          <Animated.View
-            style={[
-              {
-                aspectRatio: 1,
-                width: '100%',
-              },
-              glassMode && Platform.OS === 'ios'
-                ? {
-                    shadowColor: '#000',
-                    shadowOpacity: 0.45,
-                    shadowRadius: 30,
-                    shadowOffset: { width: 0, height: 18 },
-                  }
-                : undefined,
-              artStyle,
-            ]}
-          >
-            <Animated.View
-              key={showLyrics ? 'lyrics' : 'art'}
-              entering={FadeIn.duration(350)}
-              exiting={FadeOut.duration(250)}
-              style={{
-                flex: 1,
-              }}
-            >
-              {showLyrics ? (
-                <LyricsView
-                  key={currentTrack.id}
-                  syncedLyrics={lyrics.syncedLyrics}
-                  plainLyrics={lyrics.plainLyrics}
-                  loading={lyrics.loading}
-                  duration={trackDurationSec}
-                  onSeekToTime={handleLyricSeek}
-                  accentColor={accentColor}
-                />
-              ) : currentTrack.coverUrl ? (
-                <Image
-                  source={{ uri: currentTrack.coverUrl }}
-                  style={{
-                    flex: 1,
-                    borderRadius: glassMode ? 22 : 16,
-                  }}
-                  contentFit="cover"
-                  transition={glassMode ? 400 : undefined}
-                />
-              ) : (
-                <Skeleton
-                  width="100%"
-                  height="100%"
-                  radius={glassMode ? 22 : 16}
-                />
-              )}
-            </Animated.View>
-          </Animated.View>
-
-          <View style={{ gap: 6 }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <View style={{ flex: 1, gap: 4 }}>
-                <AppText variant="title" weight="bold">
-                  {currentTrack.title}
-                </AppText>
-                <Pressable
-                  onPress={() => {
-                    if (
-                      currentTrack.source === 'deezer' &&
-                      currentTrack.artist.id
-                    ) {
-                      closePlayer();
-                      useOverlayStore
-                        .getState()
-                        .openArtist(currentTrack.artist.id);
-                    }
-                  }}
-                  hitSlop={4}
-                >
-                  <AppText
-                    variant="body"
-                    style={{
-                      color: COLORS.textSecondary,
-                      textDecorationLine:
-                        currentTrack.source === 'deezer' ? 'underline' : 'none',
-                    }}
-                  >
-                    {currentTrack.artist.name}
-                  </AppText>
-                </Pressable>
-              </View>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                }}
-              >
-                <SourceBadge source={currentTrack.source} />
-                <DownloadButton
-                  track={currentTrack}
-                  size={18}
-                  accentColor={accentColor}
-                />
-                <Pressable
-                  hitSlop={10}
-                  onPress={() => setShowLyrics((v) => !v)}
-                >
-                  <AppIcon
-                    name="lyrics"
-                    size={20}
-                    color={showLyrics ? accentColor : COLORS.textSecondary}
-                  />
-                </Pressable>
-              </View>
-            </View>
-          </View>
-
-          <PlaybackProgress
-            durationSec={trackDurationSec}
-            durationLabel={currentTrack.duration}
-            isPlaying={isPlaying}
-            accentColor={accentColor}
-            glass={glassMode}
-            onSeek={handleSeek}
-          />
-
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingHorizontal: 4,
-            }}
-          >
-            <Pressable
-              onPress={toggleShuffle}
-              hitSlop={12}
-              style={{
-                width: 40,
-                height: 40,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <AppIcon
-                name="shuffle"
-                size={20}
-                color={shuffle ? accentColor : COLORS.textMuted}
-              />
-            </Pressable>
-
-            <AnimatedPressable
-              scaleValue={0.9}
-              onPress={skipPrevious}
-              hitSlop={12}
-              style={{
-                width: 48,
-                height: 48,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <AppIcon
-                name="previous"
-                size={glassMode ? 32 : 24}
-                color={COLORS.textPrimary}
-              />
-            </AnimatedPressable>
-
-            {glassMode ? (
-              <AnimatedPressable
-                scaleValue={0.82}
-                onPress={togglePlayback}
-                // Desktop player: a solid white disc with a dark glyph.
-                style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: 36,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: COLORS.textPrimary,
-                }}
-              >
-                <Animated.View
-                  key={isPlaying ? 'pause' : 'play'}
-                  entering={ZoomIn.springify()
-                    .damping(GLASS_SPRING.snappy.damping)
-                    .stiffness(GLASS_SPRING.snappy.stiffness)}
-                >
-                  <AppIcon
-                    name={isPlaying ? 'pause' : 'play'}
-                    size={30}
-                    color={COLORS.background}
-                  />
-                </Animated.View>
-              </AnimatedPressable>
-            ) : (
-              <AnimatedPressable
-                scaleValue={0.98}
-                onPress={togglePlayback}
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 32,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: COLORS.textPrimary,
-                }}
-              >
-                <AppIcon
-                  name={isPlaying ? 'pause' : 'play'}
-                  size={28}
-                  color={COLORS.background}
-                />
-              </AnimatedPressable>
-            )}
-
-            <AnimatedPressable
-              scaleValue={0.9}
-              onPress={skipNext}
-              hitSlop={12}
-              style={{
-                width: 48,
-                height: 48,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <AppIcon
-                name="next"
-                size={glassMode ? 32 : 24}
-                color={COLORS.textPrimary}
-              />
-            </AnimatedPressable>
-
-            <Pressable
-              onPress={cycleRepeat}
-              hitSlop={12}
-              style={{
-                width: 40,
-                height: 40,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <AppIcon
-                name={repeat === 'one' ? 'repeat-one' : 'repeat'}
-                size={20}
-                color={repeat !== 'off' ? accentColor : COLORS.textMuted}
-              />
-            </Pressable>
-          </View>
-        </View>
-      </View>
+      {bodyGesture ? (
+        <GestureDetector gesture={bodyGesture}>{body}</GestureDetector>
+      ) : (
+        body
+      )}
 
       {showQueue ? (
         <QueueOverlay
