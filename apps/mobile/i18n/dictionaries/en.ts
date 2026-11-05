@@ -321,6 +321,24 @@ export const en = {
   album: {
     notFound: 'Album not found',
   },
+  youtubeLogin: {
+    settingsRow: 'YouTube account',
+    settingsRowSignedIn: 'Signed in: yt-dlp reaches YouTube with your account',
+    settingsRowSignedOut:
+      "Sign in if YouTube asks you to confirm you're not a bot",
+    title: 'YouTube account',
+    intro:
+      'YouTube keeps turning away phones without an account ("confirm you\'re not a bot"). Sign in to Google here and the on-phone yt-dlp will reach YouTube with your session.',
+    statusSignedIn: 'Signed in',
+    statusSignedOut: 'Not signed in',
+    signIn: 'Sign in with Google',
+    switch: 'Use another account',
+    signOut: 'Sign out',
+    done: 'Done',
+    notSignedIn:
+      "Sign-in isn't finished yet. Sign in to your account, then tap Done.",
+    note: 'Cookies stay on this phone and only go to YouTube. A spare account is safer than your main one.',
+  },
   ytdlpLab: {
     settingsRow: 'yt-dlp on this phone',
     settingsRowDesc:

@@ -2,6 +2,7 @@ package expo.modules.exosytdlp
 
 import android.content.Context
 import android.os.SystemClock
+import android.webkit.CookieManager
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
@@ -19,6 +20,11 @@ import java.util.concurrent.Executors
  */
 class ExosYtdlpModule : Module() {
   private val workers = Executors.newCachedThreadPool()
+
+  // Each `-J` starts a Python process (~100 MB). Skipping through tracks
+  // used to start one per track and push the phone into swap, so stream
+  // lookups queue behind two at a time. Downloads are capped in JS.
+  private val resolvers = Executors.newFixedThreadPool(2)
   private val initLock = Any()
 
   @Volatile
@@ -32,6 +38,9 @@ class ExosYtdlpModule : Module() {
 
   private val cacheDir: File
     get() = File(context.cacheDir, "yt-dlp")
+
+  private val cookiesFile: File
+    get() = File(context.filesDir, "youtube-cookies.txt")
 
   override fun definition() = ModuleDefinition {
     Name("ExosYtdlp")
@@ -71,7 +80,7 @@ class ExosYtdlpModule : Module() {
     // `yt-dlp -J`: metadata plus the direct audio URL and the headers it
     // needs. Returned as raw JSON; the JS side picks what it needs.
     AsyncFunction("resolve") { id: String, url: String, format: String, extraArgs: List<String>, promise: Promise ->
-      work(promise) {
+      work(promise, resolvers) {
         ensureInit()
         val request = baseRequest(url, format, extraArgs).apply {
           addOption("--dump-single-json")
@@ -143,8 +152,60 @@ class ExosYtdlpModule : Module() {
       outDir.absolutePath
     }
 
+    // After the user signs in to Google in the WebView, copies the YouTube
+    // and Google cookies into a Netscape cookies.txt that every YouTube call
+    // passes to yt-dlp. Signed-in requests skip the "confirm you're not a
+    // bot" wall that YouTube shows to phones without an account.
+    AsyncFunction("exportCookies") { promise: Promise ->
+      work(promise) {
+        val manager = CookieManager.getInstance()
+        manager.flush()
+        val lines = mutableListOf("# Netscape HTTP Cookie File")
+        val names = mutableSetOf<String>()
+        // WebView hides expiry dates; a year ahead is what yt-dlp needs to
+        // treat the cookies as live. Google rotates them while in use.
+        val expiry = System.currentTimeMillis() / 1000 + 365L * 24 * 3600
+        for (host in COOKIE_HOSTS) {
+          val header = manager.getCookie("https://www.$host") ?: continue
+          for (pair in header.split(";")) {
+            val eq = pair.indexOf('=')
+            if (eq <= 0) continue
+            val name = pair.substring(0, eq).trim()
+            val value = pair.substring(eq + 1).trim()
+            if (name.isEmpty()) continue
+            names += name
+            lines += listOf(".$host", "TRUE", "/", "TRUE", expiry.toString(), name, value).joinToString("\t")
+          }
+        }
+        val signedIn = SIGNED_IN_COOKIES.any { it in names }
+        if (signedIn) {
+          cookiesFile.writeText(lines.joinToString("\n", postfix = "\n"))
+        }
+        mapOf("count" to lines.size - 1, "signedIn" to signedIn)
+      }
+    }
+
+    AsyncFunction("clearCookies") { promise: Promise ->
+      work(promise) {
+        cookiesFile.delete()
+        val manager = CookieManager.getInstance()
+        val done = java.util.concurrent.CountDownLatch(1)
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+          manager.removeAllCookies { done.countDown() }
+        }
+        done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+        manager.flush()
+        true
+      }
+    }
+
+    Function("hasCookies") {
+      cookiesFile.isFile && cookiesFile.length() > 0
+    }
+
     OnDestroy {
       workers.shutdownNow()
+      resolvers.shutdownNow()
     }
   }
 
@@ -165,11 +226,17 @@ class ExosYtdlpModule : Module() {
     // per player version pays for QuickJS.
     addOption("--cache-dir", cacheDir.absolutePath)
     addOption("--socket-timeout", "20")
+    if (isYoutube(url) && cookiesFile.isFile) {
+      addOption("--cookies", cookiesFile.absolutePath)
+    }
     addCommands(extraArgs)
   }
 
-  private fun work(promise: Promise, block: () -> Any?) {
-    workers.execute {
+  private fun isYoutube(url: String) =
+    url.startsWith("ytsearch") || YOUTUBE_URL.containsMatchIn(url)
+
+  private fun work(promise: Promise, pool: java.util.concurrent.ExecutorService = workers, block: () -> Any?) {
+    pool.execute {
       try {
         promise.resolve(block())
       } catch (e: YoutubeDL.CanceledException) {
@@ -182,4 +249,10 @@ class ExosYtdlpModule : Module() {
 
   private fun tail(text: String, max: Int = 4000) =
     if (text.length <= max) text else "…" + text.takeLast(max)
+
+  companion object {
+    private val COOKIE_HOSTS = listOf("youtube.com", "google.com")
+    private val SIGNED_IN_COOKIES = setOf("SAPISID", "__Secure-3PAPISID", "__Secure-3PSID", "LOGIN_INFO")
+    private val YOUTUBE_URL = Regex("^https?://([a-z0-9-]+\\.)*(youtube\\.com|youtu\\.be)/", RegexOption.IGNORE_CASE)
+  }
 }

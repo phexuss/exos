@@ -69,16 +69,6 @@ export function ensureFreshYtdlp(): Promise<void> {
   ]);
 }
 
-/**
- * android_vr returns plain m4a links without the JS challenge; measured on
- * a phone at ~3.7 s vs ~7.6 s for yt-dlp's default client mix. Some videos
- * (age-gated, music-only) need the default clients, hence the retry.
- */
-const FAST_YOUTUBE_ARGS = [
-  '--extractor-args',
-  'youtube:player_client=android_vr',
-];
-
 const YOUTUBE_FORMAT =
   'bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio[protocol^=http]/bestaudio';
 // Progressive mp3 is gone for most SoundCloud tracks; HLS AAC is next.
@@ -109,31 +99,12 @@ export function localSource(track: Track): string {
   return `ytsearch1:${track.artist.name} ${track.title}`;
 }
 
-function argsFor(source: string, fast: boolean): string[] {
-  return fast && !isSoundCloudUrl(source) ? FAST_YOUTUBE_ARGS : [];
-}
-
 function formatFor(source: string): string {
   return isSoundCloudUrl(source) ? SOUNDCLOUD_FORMAT : YOUTUBE_FORMAT;
 }
 
 let jobCounter = 0;
 const nextJobId = (kind: string) => `${kind}-${Date.now()}-${++jobCounter}`;
-
-/** Runs `run` with the fast YouTube client, then once more with the default. */
-async function withFallback<T>(
-  source: string,
-  run: (args: string[]) => Promise<T>,
-): Promise<T> {
-  const fast = argsFor(source, true);
-  if (fast.length === 0) return run([]);
-  try {
-    return await run(fast);
-  } catch (error) {
-    console.warn('[LocalEngine] android_vr failed, retrying default:', error);
-    return run([]);
-  }
-}
 
 /**
  * `-J` on `ytsearch1:` prints a playlist with the video in `entries`; a
@@ -187,9 +158,7 @@ export function resolveLocalStream(track: Track): Promise<LocalStream> {
 
   const stream = ensureFreshYtdlp()
     .then(() =>
-      withFallback(source, (args) =>
-        resolveYtdlp(nextJobId('resolve'), source, args, formatFor(source)),
-      ),
+      resolveYtdlp(nextJobId('resolve'), source, [], formatFor(source)),
     )
     .then(({ info }) => toStream(info));
 
@@ -257,8 +226,12 @@ async function runDownload(
 ): Promise<{ path: string; ext: string }> {
   const source = localSource(track);
   const template = `${basePath}.%(ext)s`;
-  const { info } = await withFallback(source, (args) =>
-    downloadYtdlp(jobId, source, args, formatFor(source), template),
+  const { info } = await downloadYtdlp(
+    jobId,
+    source,
+    [],
+    formatFor(source),
+    template,
   );
   if (!info.filepath) throw new Error('yt-dlp returned no file');
   const ext = info.filepath.split('.').pop() ?? info.ext ?? 'm4a';

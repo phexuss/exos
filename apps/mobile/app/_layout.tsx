@@ -65,7 +65,7 @@ function useAuthRedirect() {
     const segment = segments[0] as string | undefined;
     const inAuthGroup = segment === '(auth)';
     // The yt-dlp lab needs no account or server.
-    if (segment === 'ytdlp-lab') return;
+    if (segment === 'ytdlp-lab' || segment === 'youtube-login') return;
 
     if (!user && !isOffline && !inAuthGroup) {
       useOverlayStore.getState().closeAll();
@@ -88,6 +88,7 @@ function RootNavigator() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="ytdlp-lab" options={{ headerShown: false }} />
+      <Stack.Screen name="youtube-login" options={{ headerShown: false }} />
     </Stack>
   );
 }

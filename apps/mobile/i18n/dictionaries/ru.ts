@@ -321,6 +321,24 @@ export const ru = {
   album: {
     notFound: 'Альбом не найден',
   },
+  youtubeLogin: {
+    settingsRow: 'Аккаунт YouTube',
+    settingsRowSignedIn:
+      'Вход выполнен: yt-dlp ходит в YouTube от твоего аккаунта',
+    settingsRowSignedOut:
+      'Войди, если YouTube просит подтвердить, что ты не бот',
+    title: 'Аккаунт YouTube',
+    intro:
+      'YouTube всё чаще не пускает телефоны без аккаунта («подтвердите, что вы не бот»). Войди в Google здесь, и yt-dlp на телефоне будет ходить в YouTube с твоей сессией.',
+    statusSignedIn: 'Вход выполнен',
+    statusSignedOut: 'Не выполнен вход',
+    signIn: 'Войти через Google',
+    switch: 'Войти другим аккаунтом',
+    signOut: 'Выйти',
+    done: 'Готово',
+    notSignedIn: 'Вход ещё не завершён. Войди в аккаунт и нажми «Готово».',
+    note: 'Куки хранятся только на этом телефоне и уходят только в YouTube. Лучше использовать второй аккаунт, а не основной.',
+  },
   ytdlpLab: {
     settingsRow: 'yt-dlp на телефоне',
     settingsRowDesc: 'Тест: скачать с YouTube и SoundCloud без сервера',

@@ -33,6 +33,9 @@ declare class ExosYtdlpNative extends NativeModule<{
   startupCost(): Promise<Timed<object>>;
   cancel(id: string): boolean;
   outputDir(): string;
+  exportCookies(): Promise<{ count: number; signedIn: boolean }>;
+  clearCookies(): Promise<boolean>;
+  hasCookies(): boolean;
 }
 
 // Missing in Expo Go and on iOS/web: callers check `isYtdlpAvailable`.
@@ -135,4 +138,21 @@ export function onYtdlpProgress(
   listener: (event: YtdlpProgressEvent) => void,
 ): { remove(): void } | null {
   return native?.addListener('onProgress', listener) ?? null;
+}
+
+/**
+ * Saves the Google/YouTube cookies from the sign-in WebView for yt-dlp.
+ * Writes the file only when the session is signed in.
+ */
+export function exportYoutubeCookies() {
+  return requireNative().exportCookies();
+}
+
+/** Signs out: deletes the cookies file and the WebView's cookies. */
+export function clearYoutubeCookies() {
+  return requireNative().clearCookies();
+}
+
+export function hasYoutubeCookies(): boolean {
+  return native?.hasCookies() ?? false;
 }
