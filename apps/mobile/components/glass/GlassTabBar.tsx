@@ -26,6 +26,7 @@ type GlassTabBarProps = BottomTabBarProps & {
 
 type GlassTabProps = {
   icon: IconName;
+  label?: string;
   focused: boolean;
   onPress: () => void;
   onLongPress: () => void;
@@ -46,7 +47,13 @@ function spring(
 // React Native Animated on the native driver throughout: on Android every
 // Reanimated frame commits the whole shadow tree, kept-alive tab screens
 // included, so each tab switch got slower the more those screens held.
-function GlassTab({ icon, focused, onPress, onLongPress }: GlassTabProps) {
+function GlassTab({
+  icon,
+  label,
+  focused,
+  onPress,
+  onLongPress,
+}: GlassTabProps) {
   const [scale] = useState(() => new Animated.Value(focused ? 1 : 0.92));
   const [pressScale] = useState(() => new Animated.Value(1));
 
@@ -61,7 +68,8 @@ function GlassTab({ icon, focused, onPress, onLongPress }: GlassTabProps) {
 
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole="tab"
+      accessibilityLabel={label}
       accessibilityState={focused ? { selected: true } : {}}
       onPressIn={() => {
         spring(pressScale, 0.8, 'press');
@@ -89,7 +97,12 @@ function GlassTab({ icon, focused, onPress, onLongPress }: GlassTabProps) {
  * Floating liquid-glass tab bar. The selection "droplet" stretches while it
  * travels between tabs and settles with a spring, like iOS 26.
  */
-export function GlassTabBar({ state, navigation, icons }: GlassTabBarProps) {
+export function GlassTabBar({
+  state,
+  navigation,
+  descriptors,
+  icons,
+}: GlassTabBarProps) {
   const insets = useSafeAreaInsets();
   const covered = useTabChromeCovered();
   const tabCount = state.routes.length;
@@ -205,6 +218,7 @@ export function GlassTabBar({ state, navigation, icons }: GlassTabBarProps) {
               <GlassTab
                 key={route.key}
                 icon={icons[route.name] ?? 'home'}
+                label={descriptors[route.key]?.options.title}
                 focused={focused}
                 onPress={() => {
                   const event = navigation.emit({

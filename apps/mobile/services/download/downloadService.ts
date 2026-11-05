@@ -19,6 +19,15 @@ import { useDownloadStore } from '@/store/useDownloadStore';
 import type { Track } from '@/types/domain';
 
 const TRACKS_DIR = new Directory(Paths.document, 'tracks');
+
+/**
+ * Track ids come from the API (and from cloud restore), and end up in file
+ * names and yt-dlp's `-o` template. Keep them to one safe path segment.
+ * Deezer and SoundCloud ids are digits, so real ids are unchanged.
+ */
+function fileStem(trackId: string): string {
+  return trackId.replace(/[^A-Za-z0-9_-]/g, '_') || 'track';
+}
 const DEFAULT_DOWNLOAD_FORMAT = 'm4a';
 type DownloadFormat = typeof DEFAULT_DOWNLOAD_FORMAT | 'mp3';
 const APPROX_TRACK_BYTES = 5 * 1024 * 1024;
@@ -85,6 +94,10 @@ export function onDownloadProgress(trackId: string, fn: Listener): () => void {
 
 export function isDownloading(trackId: string): boolean {
   return activeDownloads.has(trackId);
+}
+
+export function hasActiveDownloads(): boolean {
+  return activeDownloads.size > 0;
 }
 
 export async function clearDownloadedTrackFiles(): Promise<void> {
@@ -189,7 +202,7 @@ function removeLeftovers(trackId: string, keep: File): void {
     for (const entry of TRACKS_DIR.list()) {
       if (!(entry instanceof File)) continue;
       if (entry.uri === keep.uri) continue;
-      if (entry.name.startsWith(`${trackId}.`)) entry.delete();
+      if (entry.name.startsWith(`${fileStem(trackId)}.`)) entry.delete();
     }
   } catch (error) {
     console.warn('[Download] Cleanup failed:', error);
@@ -231,7 +244,7 @@ async function downloadAudio(
       }
     });
     try {
-      const base = toFsPath(new File(TRACKS_DIR, track.id).uri);
+      const base = toFsPath(new File(TRACKS_DIR, fileStem(track.id)).uri);
       const { path, ext } = await downloadLocal(track, jobId, base);
       const saved = new File(`file://${path}`);
       if (!saved.exists || saved.size < MIN_AUDIO_BYTES) {
@@ -272,9 +285,19 @@ async function downloadAudio(
   }
 }
 
+// A track is ~5-15 MB; leave headroom so the phone itself doesn't run out.
+const MIN_FREE_BYTES = 100 * 1024 * 1024;
+
 export async function downloadTrack(track: Track): Promise<DownloadResult> {
   if (activeDownloads.has(track.id)) {
     throw new Error('Already downloading');
+  }
+  let freeBytes = Number.POSITIVE_INFINITY;
+  try {
+    freeBytes = Paths.availableDiskSpace;
+  } catch {}
+  if (freeBytes < MIN_FREE_BYTES) {
+    throw new Error('Not enough free space on the phone');
   }
   activeDownloads.add(track.id);
 
@@ -291,7 +314,10 @@ export async function downloadTrack(track: Track): Promise<DownloadResult> {
   try {
     ensureDir();
     const downloadFormat = getDownloadFormat(track);
-    destination = new File(TRACKS_DIR, `${track.id}.${downloadFormat}`);
+    destination = new File(
+      TRACKS_DIR,
+      `${fileStem(track.id)}.${downloadFormat}`,
+    );
     if (destination.exists) {
       destination.delete();
     }

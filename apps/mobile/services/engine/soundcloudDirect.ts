@@ -12,14 +12,18 @@ const UA =
   'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36';
 const TIMEOUT_MS = 15_000;
 
-async function get(url: string): Promise<Response> {
+type Fetched = { status: number; ok: boolean; text: string };
+
+/** GET with one timeout over headers and body (the body used to be unbounded). */
+async function get(url: string): Promise<Fetched> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    return await fetch(url, {
+    const res = await fetch(url, {
       headers: { 'User-Agent': UA },
       signal: controller.signal,
     });
+    return { status: res.status, ok: res.ok, text: await res.text() };
   } finally {
     clearTimeout(timer);
   }
@@ -34,16 +38,22 @@ export function findClientId(js: string): string | null {
 async function scrapeClientId(): Promise<string> {
   const res = await get('https://soundcloud.com/');
   if (!res.ok) throw new Error(`soundcloud.com HTTP ${res.status}`);
-  const html = await res.text();
   const scripts = [
-    ...html.matchAll(/<script[^>]+src="(https:\/\/[^"]+\.js)"/g),
+    ...res.text.matchAll(/<script[^>]+src="(https:\/\/[^"]+\.js)"/g),
   ].map((m) => m[1]);
-  // The id lives in one of the last bundles.
-  for (const src of scripts.reverse()) {
-    try {
-      const id = findClientId(await (await get(src)).text());
-      if (id) return id;
-    } catch {}
+  // The id lives in one of the last bundles: fetch those together instead
+  // of one by one (each could take the full timeout).
+  const lastFirst = scripts.reverse();
+  for (let i = 0; i < lastFirst.length; i += 4) {
+    const found = await Promise.all(
+      lastFirst.slice(i, i + 4).map((src) =>
+        get(src)
+          .then((r) => findClientId(r.text))
+          .catch(() => null),
+      ),
+    );
+    const id = found.find((x): x is string => !!x);
+    if (id) return id;
   }
   throw new Error('SoundCloud client_id not found');
 }
@@ -81,16 +91,38 @@ async function clientId(refresh: boolean): Promise<string> {
 }
 
 /** GET with the client id, scraping a new one once if SoundCloud rotated it. */
+// After a fresh id is refused too, every search would scrape again; go
+// straight to the server for a while instead.
+const REFUSED_PAUSE_MS = 10 * 60_000;
+let refusedUntil = 0;
+
 async function apiGet<T>(path: string, params: Record<string, string>) {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const id = await clientId(attempt === 1);
+  if (Date.now() < refusedUntil) {
+    throw new Error('SoundCloud direct paused after refusals');
+  }
+  let rescraped = false;
+  let retried = false;
+  for (;;) {
+    const id = await clientId(rescraped);
     const query = new URLSearchParams({ ...params, client_id: id });
     const res = await get(`${API}${path}?${query}`);
-    if ((res.status === 401 || res.status === 403) && attempt === 0) continue;
+    if (res.status === 401 || res.status === 403) {
+      if (rescraped) {
+        refusedUntil = Date.now() + REFUSED_PAUSE_MS;
+        throw new Error('SoundCloud refused the client_id');
+      }
+      rescraped = true;
+      continue;
+    }
+    // Rate limit or a hiccup: one retry before the server fallback.
+    if ((res.status === 429 || res.status >= 500) && !retried) {
+      retried = true;
+      await new Promise((r) => setTimeout(r, 1000));
+      continue;
+    }
     if (!res.ok) throw new Error(`SoundCloud HTTP ${res.status}`);
-    return (await res.json()) as T;
+    return JSON.parse(res.text) as T;
   }
-  throw new Error('SoundCloud refused the client_id');
 }
 
 type ApiTrack = {

@@ -55,22 +55,32 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   },
 }));
 
+/**
+ * One unreadable or malformed key used to reset every setting to its
+ * default. Each key now falls back on its own.
+ */
+async function readBool(key: string, fallback: boolean): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(key);
+    if (raw === null) return fallback;
+    const value = JSON.parse(raw);
+    return typeof value === 'boolean' ? value : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 Promise.all([
-  AsyncStorage.getItem(STORAGE_KEY),
-  AsyncStorage.getItem(FAQ_KEY),
-  AsyncStorage.getItem(GLASS_KEY),
-  AsyncStorage.getItem(GLASS_BLUR_KEY),
-])
-  .then(([accentRaw, faqRaw, glassRaw, glassBlurRaw]) => {
-    useSettingsStore.setState({
-      dynamicAccent: accentRaw !== null ? JSON.parse(accentRaw) : true,
-      hasSeenFaq: faqRaw !== null ? JSON.parse(faqRaw) : false,
-      glassMode: glassRaw !== null ? JSON.parse(glassRaw) : true,
-      glassBlur:
-        glassBlurRaw !== null ? JSON.parse(glassBlurRaw) : GLASS_BLUR_DEFAULT,
-      _hydrated: true,
-    });
-  })
-  .catch(() => {
-    useSettingsStore.setState({ _hydrated: true });
+  readBool(STORAGE_KEY, true),
+  readBool(FAQ_KEY, false),
+  readBool(GLASS_KEY, true),
+  readBool(GLASS_BLUR_KEY, GLASS_BLUR_DEFAULT),
+]).then(([dynamicAccent, hasSeenFaq, glassMode, glassBlur]) => {
+  useSettingsStore.setState({
+    dynamicAccent,
+    hasSeenFaq,
+    glassMode,
+    glassBlur,
+    _hydrated: true,
   });
+});

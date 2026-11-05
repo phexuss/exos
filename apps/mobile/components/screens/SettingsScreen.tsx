@@ -21,7 +21,10 @@ import { useI18n } from '@/hooks/useI18n';
 import { hasYoutubeCookies, isYtdlpAvailable } from '@/modules/exos-ytdlp';
 import * as audio from '@/services/audio/audioService';
 import { clearLocalDatabase } from '@/services/db/database';
-import { clearDownloadedTrackFiles } from '@/services/download/downloadService';
+import {
+  clearDownloadedTrackFiles,
+  hasActiveDownloads,
+} from '@/services/download/downloadService';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useDownloadStore } from '@/store/useDownloadStore';
 import { useOverlayStore } from '@/store/useOverlayStore';
@@ -80,10 +83,14 @@ export function SettingsScreen() {
     setClearCacheBusy(true);
     setClearCacheError(null);
     try {
+      if (hasActiveDownloads()) throw new Error('Downloads are still running');
       audio.releaseAudio();
-      await clearDownloadedTrackFiles();
+      // Database first: if it fails, the files are still there and the
+      // library stays consistent. Files after: a failure there only leaves
+      // orphans, not "downloaded" tracks with no audio.
       await clearLocalDatabase();
       useDownloadStore.getState().clearAll();
+      await clearDownloadedTrackFiles();
       setShowClearCache(false);
     } catch (e) {
       if (__DEV__) console.warn('[Settings] Clear cache failed:', e);

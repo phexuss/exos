@@ -111,7 +111,9 @@ export default function RootLayout() {
       .then((tracks) => {
         useDownloadStore.getState().setDownloadedIds(tracks.map((t) => t.id));
       })
-      .catch(() => {});
+      .catch((error) =>
+        console.warn('[Startup] Downloaded tracks not loaded:', error),
+      );
 
     useAuthStore.getState().checkAuth();
     // Fresh yt-dlp before the first track: YouTube rejects stale versions.

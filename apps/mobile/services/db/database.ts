@@ -54,10 +54,13 @@ export async function withDb<T>(
 
 export function clearLocalDatabase(): Promise<void> {
   return withDb(async (database) => {
-    await database.runAsync('DELETE FROM playlist_tracks');
-    await database.runAsync('DELETE FROM playlists');
-    await database.runAsync('DELETE FROM tracks');
-    await database.runAsync('DELETE FROM recently_played');
+    // All or nothing: a half-cleared library is worse than none.
+    await database.withTransactionAsync(async () => {
+      await database.runAsync('DELETE FROM playlist_tracks');
+      await database.runAsync('DELETE FROM playlists');
+      await database.runAsync('DELETE FROM tracks');
+      await database.runAsync('DELETE FROM recently_played');
+    });
     try {
       await database.runAsync('VACUUM');
     } catch (e) {

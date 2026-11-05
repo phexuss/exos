@@ -53,9 +53,11 @@ export const useDownloadStore = create<DownloadStoreState>((set) => ({
       return { downloadedIds: next, revision: s.revision + 1 };
     }),
 
+  // Startup hydration runs while a download may already have finished:
+  // merge, so a just-marked id is not wiped by the older DB snapshot.
   setDownloadedIds: (ids) =>
     set((s) => ({
-      downloadedIds: new Set(ids),
+      downloadedIds: new Set([...s.downloadedIds, ...ids]),
       revision: s.revision + 1,
     })),
 
