@@ -1,5 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, Length } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  Length,
+  MaxLength,
+} from 'class-validator';
 
 export class UpdateUserDto {
   @ApiPropertyOptional({
@@ -25,10 +31,20 @@ export class UpdateUserDto {
   username?: string;
 
   @ApiPropertyOptional({
-    description: 'User email. Changing email will reset verification status.',
+    description:
+      'User email. Changing it requires `currentPassword`, resets verification ' +
+      'status, notifies the old address and signs out every other session.',
     example: 'user@example.com',
   })
   @IsOptional()
   @IsEmail({}, { message: 'Invalid email address' })
   email?: string;
+
+  @ApiPropertyOptional({
+    description: 'Current password. Required when changing email.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(256)
+  currentPassword?: string;
 }

@@ -46,9 +46,11 @@ export class SessionCacheService {
     this.sessions.delete(sessionId);
   }
 
-  forgetUser(userId: string): void {
+  forgetUser(userId: string, keepSessionId?: string): void {
     for (const [sessionId, entry] of this.sessions) {
-      if (entry.userId === userId) this.sessions.delete(sessionId);
+      if (entry.userId === userId && sessionId !== keepSessionId) {
+        this.sessions.delete(sessionId);
+      }
     }
   }
 

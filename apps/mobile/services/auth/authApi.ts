@@ -149,6 +149,8 @@ export type UpdateProfilePayload = {
   name?: string;
   username?: string;
   email?: string;
+  /** Required by the API when `email` changes. */
+  currentPassword?: string;
 };
 
 export async function updateProfile(

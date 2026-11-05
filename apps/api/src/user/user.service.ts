@@ -3,8 +3,10 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
+import { SessionCacheService } from 'src/auth/session-cache.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreateUserDto,
@@ -20,7 +22,10 @@ function normalizeIdentifier(value: string): string {
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly sessionCache: SessionCacheService,
+  ) {}
 
   private toPublic(user: {
     id: string;
@@ -106,7 +111,11 @@ export class UserService {
   ): Promise<void> {
     await this.prismaService.user.update({
       where: { id },
-      data: { verifyToken: await argon2.hash(code), verifyTokenExp: expiresAt },
+      data: {
+        verifyToken: await argon2.hash(code),
+        verifyTokenExp: expiresAt,
+        verifyAttempts: 0,
+      },
     });
   }
 
@@ -127,13 +136,19 @@ export class UserService {
     return this.toPublic(user);
   }
 
+  /**
+   * `sessionId` is the caller's session: on an email change every other
+   * session is revoked, so a stolen access token cannot quietly take the
+   * account over by moving it to a new address.
+   */
   async updateProfile(
     id: string,
+    sessionId: string,
     dto: UpdateUserDto,
   ): Promise<{
     user: UserPublicDto;
     emailChanged: boolean;
-
+    previousEmail: string;
     verificationCode: string | null;
   }> {
     const current = await this.prismaService.user.findUnique({ where: { id } });
@@ -166,18 +181,27 @@ export class UserService {
       if (taken && taken.id !== id) {
         throw new ConflictException('Email is already in use');
       }
+
+      if (
+        !dto.currentPassword ||
+        !(await argon2.verify(current.passwordHash, dto.currentPassword))
+      ) {
+        throw new UnauthorizedException(
+          'Current password is required to change email',
+        );
+      }
     }
 
     let verificationCode: string | null = null;
-    let verifyTokenHash: string | null | undefined = undefined;
-    let verifyTokenExp: Date | null | undefined = undefined;
+    let verifyTokenHash: string | null | undefined;
+    let verifyTokenExp: Date | null | undefined;
     if (emailChanged) {
       verificationCode = randomInt(100000, 1000000).toString();
       verifyTokenHash = await argon2.hash(verificationCode);
       verifyTokenExp = new Date(Date.now() + 30 * 60 * 1000);
     }
 
-    const updated = await this.prismaService.user.update({
+    const updateUser = this.prismaService.user.update({
       where: { id },
       data: {
         name: nextName ?? undefined,
@@ -186,9 +210,33 @@ export class UserService {
         isVerified: emailChanged ? false : undefined,
         verifyToken: emailChanged ? verifyTokenHash : undefined,
         verifyTokenExp: emailChanged ? verifyTokenExp : undefined,
+        verifyAttempts: emailChanged ? 0 : undefined,
       },
     });
 
-    return { user: this.toPublic(updated), emailChanged, verificationCode };
+    let updated: Awaited<typeof updateUser>;
+    if (emailChanged) {
+      // Pending password-reset codes went to the old address; drop them along
+      // with every session except the one making this request.
+      [updated] = await this.prismaService.$transaction([
+        updateUser,
+        this.prismaService.verificationCode.deleteMany({
+          where: { userId: id },
+        }),
+        this.prismaService.session.deleteMany({
+          where: { userId: id, id: { not: sessionId } },
+        }),
+      ]);
+      this.sessionCache.forgetUser(id, sessionId);
+    } else {
+      updated = await updateUser;
+    }
+
+    return {
+      user: this.toPublic(updated),
+      emailChanged,
+      previousEmail: current.email,
+      verificationCode,
+    };
   }
 }

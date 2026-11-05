@@ -19,8 +19,10 @@ type EditFieldModalProps = {
   keyboardType?: 'default' | 'email-address';
   autoCapitalize?: 'none' | 'sentences' | 'words';
   maxLength?: number;
+  /** Ask for the current password too (the API requires it for email). */
+  requirePassword?: boolean;
   onClose: () => void;
-  onSubmit: (value: string) => Promise<void>;
+  onSubmit: (value: string, currentPassword?: string) => Promise<void>;
 };
 
 export function EditFieldModal({
@@ -32,18 +34,21 @@ export function EditFieldModal({
   keyboardType,
   autoCapitalize = 'none',
   maxLength,
+  requirePassword = false,
   onClose,
   onSubmit,
 }: EditFieldModalProps) {
   const { t } = useI18n();
   const glassMode = useGlassMode();
   const [value, setValue] = useState(initialValue);
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setValue(initialValue);
+      setPassword('');
       setError(null);
     }
   }, [visible, initialValue]);
@@ -54,10 +59,14 @@ export function EditFieldModal({
       onClose();
       return;
     }
+    if (requirePassword && !password) {
+      setError(t('profile.currentPassword'));
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      await onSubmit(trimmed);
+      await onSubmit(trimmed, requirePassword ? password : undefined);
       onClose();
     } catch (e) {
       const message = e instanceof Error ? e.message : t('common.error');
@@ -95,8 +104,18 @@ export function EditFieldModal({
             keyboardType={keyboardType}
             autoCapitalize={autoCapitalize}
             maxLength={maxLength}
-            error={error}
+            error={requirePassword ? null : error}
           />
+          {requirePassword ? (
+            <AuthTextField
+              label={t('profile.currentPassword')}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoComplete="password"
+              error={error}
+            />
+          ) : null}
           <View style={{ flexDirection: 'row', gap: SPACING.md }}>
             <View style={{ flex: 1 }}>
               <PrimaryButton

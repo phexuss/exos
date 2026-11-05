@@ -1,103 +1,137 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
-import { firstValueFrom } from 'rxjs';
 import {
-  type DeezerChartResponse,
-  type DeezerErrorResponse,
-  type DeezerSearchResponse,
-  type DeezerTrackFull,
+  BadGatewayException,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { firstValueFrom } from 'rxjs';
+import type {
+  DeezerChartResponse,
+  DeezerErrorResponse,
+  DeezerSearchResponse,
+  DeezerTrackFull,
 } from 'src/providers/deezer/deezer.types';
 
 const DEEZER_QUOTA_ERROR_CODE = 4;
+const DEEZER_NOT_FOUND_ERROR_CODE = 800;
 
-export class DeezerQuotaError extends Error {
+export class DeezerQuotaError extends ServiceUnavailableException {
   constructor() {
-    super('Deezer quota exceeded');
+    super('Deezer quota exceeded, try again shortly');
     this.name = 'DeezerQuotaError';
   }
 }
 
+type Shape = 'list' | 'entity' | 'chart';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isDeezerError(value: unknown): value is DeezerErrorResponse {
+  return isRecord(value) && isRecord(value.error);
+}
+
+function hasShape(value: unknown, shape: Shape): boolean {
+  if (!isRecord(value)) return false;
+  switch (shape) {
+    case 'list':
+      return Array.isArray(value.data);
+    case 'entity':
+      return typeof value.id === 'number';
+    case 'chart':
+      return isRecord(value.tracks) && Array.isArray(value.tracks.data);
+  }
+}
+
+/**
+ * Deezer reports quota hits and outages as HTTP 200 with an `{ error }` body.
+ * Every call goes through `request`, which throws on such bodies (and on
+ * anything that does not look like the expected payload), so callers only
+ * ever cache real data.
+ */
 @Injectable()
 export class DeezerService {
   private readonly BASE_URL = 'https://api.deezer.com';
 
   constructor(private readonly httpService: HttpService) {}
 
-  async searchTracks(query: string): Promise<DeezerSearchResponse> {
+  private async request<T>(
+    path: string,
+    shape: Shape,
+    params?: Record<string, string | number>,
+  ): Promise<T> {
     const { data } = await firstValueFrom(
-      this.httpService.get<DeezerSearchResponse>(`${this.BASE_URL}/search`, {
-        params: { q: query },
-      }),
+      this.httpService.get<unknown>(`${this.BASE_URL}${path}`, { params }),
     );
-    return data;
+
+    if (isDeezerError(data)) {
+      const code = Number(data.error.code);
+      if (code === DEEZER_QUOTA_ERROR_CODE) throw new DeezerQuotaError();
+      if (code === DEEZER_NOT_FOUND_ERROR_CODE) {
+        throw new NotFoundException('Not found on Deezer');
+      }
+      throw new BadGatewayException(`Deezer error ${code || 'unknown'}`);
+    }
+
+    if (!hasShape(data, shape)) {
+      throw new BadGatewayException('Unexpected response from Deezer');
+    }
+
+    return data as T;
   }
 
-  async getTrack(id: number): Promise<DeezerTrackFull> {
-    const { data } = await firstValueFrom(
-      this.httpService.get<DeezerTrackFull>(`${this.BASE_URL}/track/${id}`),
-    );
-    return data;
+  searchTracks(query: string): Promise<DeezerSearchResponse> {
+    return this.request('/search', 'list', { q: query });
+  }
+
+  getTrack(id: number): Promise<DeezerTrackFull> {
+    return this.request(`/track/${id}`, 'entity');
   }
 
   /**
-   * Exact lookup by ISRC. Deezer answers 200 with an `error` body when the
-   * code is unknown (code 800) or the quota is spent (code 4), so the body
-   * is inspected instead of the status.
+   * Exact lookup by ISRC. An unknown code is a normal miss, so it resolves to
+   * null; a spent quota throws `DeezerQuotaError` for the caller to retry.
    */
   async getTrackByIsrc(isrc: string): Promise<DeezerTrackFull | null> {
-    const { data } = await firstValueFrom(
-      this.httpService.get<DeezerTrackFull | DeezerErrorResponse>(
-        `${this.BASE_URL}/track/isrc:${encodeURIComponent(isrc)}`,
-      ),
-    );
-    if ('error' in data) {
-      if (data.error.code === DEEZER_QUOTA_ERROR_CODE) {
-        throw new DeezerQuotaError();
-      }
-      return null;
+    try {
+      return await this.request<DeezerTrackFull>(
+        `/track/isrc:${encodeURIComponent(isrc)}`,
+        'entity',
+      );
+    } catch (error) {
+      if (error instanceof NotFoundException) return null;
+      throw error;
     }
-    return data;
   }
 
-  async getArtist(id: number) {
-    const { data } = await firstValueFrom(
-      this.httpService.get(`${this.BASE_URL}/artist/${id}`),
-    );
-    return data;
+  // biome-ignore lint/suspicious/noExplicitAny: raw Deezer payload passed through
+  getArtist(id: number): Promise<any> {
+    return this.request(`/artist/${id}`, 'entity');
   }
 
-  async getArtistTracks(id: number) {
-    const { data } = await firstValueFrom(
-      this.httpService.get(`${this.BASE_URL}/artist/${id}/top?limit=50`),
-    );
-    return data;
+  // biome-ignore lint/suspicious/noExplicitAny: raw Deezer payload passed through
+  getArtistTracks(id: number): Promise<any> {
+    return this.request(`/artist/${id}/top`, 'list', { limit: 50 });
   }
 
-  async getArtistAlbums(id: number) {
-    const { data } = await firstValueFrom(
-      this.httpService.get(`${this.BASE_URL}/artist/${id}/albums`),
-    );
-    return data;
+  // biome-ignore lint/suspicious/noExplicitAny: raw Deezer payload passed through
+  getArtistAlbums(id: number): Promise<any> {
+    return this.request(`/artist/${id}/albums`, 'list');
   }
 
-  async getAlbum(id: number) {
-    const { data } = await firstValueFrom(
-      this.httpService.get(`${this.BASE_URL}/album/${id}`),
-    );
-    return data;
+  // biome-ignore lint/suspicious/noExplicitAny: raw Deezer payload passed through
+  getAlbum(id: number): Promise<any> {
+    return this.request(`/album/${id}`, 'entity');
   }
 
-  async getAlbumTracks(id: number) {
-    const { data } = await firstValueFrom(
-      this.httpService.get(`${this.BASE_URL}/album/${id}/tracks`),
-    );
-    return data;
+  // biome-ignore lint/suspicious/noExplicitAny: raw Deezer payload passed through
+  getAlbumTracks(id: number): Promise<any> {
+    return this.request(`/album/${id}/tracks`, 'list');
   }
 
-  async getChart(): Promise<DeezerChartResponse> {
-    const { data } = await firstValueFrom(
-      this.httpService.get<DeezerChartResponse>(`${this.BASE_URL}/chart`),
-    );
-    return data;
+  getChart(): Promise<DeezerChartResponse> {
+    return this.request('/chart', 'chart');
   }
 }
