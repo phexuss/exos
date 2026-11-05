@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, View } from 'react-native';
+import { View } from 'react-native';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { AuthTextField } from '@/components/auth/AuthTextField';
@@ -83,7 +83,7 @@ export function EditFieldModal({
       onBackdropPress={onClose}
       backdropStyle={{ paddingHorizontal: SPACING.xxl }}
     >
-      <KeyboardAvoidingView behavior="padding">
+      <View>
         <View
           style={{
             // In Glass mode AnimatedModal supplies the frosted surface.
@@ -133,7 +133,7 @@ export function EditFieldModal({
             </View>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </AnimatedModal>
   );
 }

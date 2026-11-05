@@ -1,12 +1,7 @@
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Pressable,
-  type TextInput as RNTextInput,
-  ScrollView,
-  View,
-} from 'react-native';
+import { Pressable, type TextInput as RNTextInput, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AuthTextField } from '@/components/auth/AuthTextField';
@@ -84,121 +79,120 @@ export default function RegisterScreen() {
       style={{ flex: 1, backgroundColor: COLORS.background }}
       edges={['top', 'bottom']}
     >
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingHorizontal: SPACING.xxl,
-            paddingTop: SPACING.lg,
-            paddingBottom: SPACING.xxl,
-          }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <HeaderIconButton
-            icon="chevron-left"
-            onPress={() => router.back()}
-            accessibilityLabel={t('common.back')}
+      <KeyboardAwareScrollView
+        bottomOffset={SPACING.xxl}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingHorizontal: SPACING.xxl,
+          paddingTop: SPACING.lg,
+          paddingBottom: SPACING.xxl,
+        }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <HeaderIconButton
+          icon="chevron-left"
+          onPress={() => router.back()}
+          accessibilityLabel={t('common.back')}
+        />
+
+        <View style={{ marginTop: SPACING.xxl, gap: 6 }}>
+          <AppText variant="display" weight="bold">
+            {t('auth.registerTitle')}
+          </AppText>
+          <AppText
+            variant="body"
+            style={{ color: COLORS.textSecondary, fontSize: 14 }}
+          >
+            {t('auth.registerSubtitle')}
+          </AppText>
+        </View>
+
+        <View style={{ marginTop: SPACING.xxl, gap: SPACING.lg }}>
+          <AuthTextField
+            label={t('auth.name')}
+            value={name}
+            onChangeText={setName}
+            placeholder={t('auth.namePlaceholder')}
+            autoCapitalize="words"
+            autoComplete="name"
+            textContentType="name"
+            returnKeyType="next"
+            onSubmitEditing={() => usernameRef.current?.focus()}
+            maxLength={16}
           />
-
-          <View style={{ marginTop: SPACING.xxl, gap: 6 }}>
-            <AppText variant="display" weight="bold">
-              {t('auth.registerTitle')}
-            </AppText>
+          <AuthTextField
+            ref={usernameRef}
+            label={t('auth.username')}
+            value={username}
+            onChangeText={setUsername}
+            placeholder={t('auth.usernamePlaceholder')}
+            autoComplete="username"
+            textContentType="username"
+            returnKeyType="next"
+            onSubmitEditing={() => emailRef.current?.focus()}
+            maxLength={36}
+          />
+          <AuthTextField
+            ref={emailRef}
+            label={t('auth.email')}
+            value={email}
+            onChangeText={setEmail}
+            placeholder={t('auth.emailPlaceholder')}
+            keyboardType="email-address"
+            autoComplete="email"
+            textContentType="emailAddress"
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
+          />
+          <AuthTextField
+            ref={passwordRef}
+            label={t('auth.password')}
+            value={password}
+            onChangeText={setPassword}
+            placeholder={t('auth.passwordPlaceholder')}
+            secureTextEntry
+            autoComplete="new-password"
+            textContentType="password"
+            returnKeyType="go"
+            onSubmitEditing={handleSubmit}
+          />
+          {error ? (
             <AppText
-              variant="body"
-              style={{ color: COLORS.textSecondary, fontSize: 14 }}
+              variant="caption"
+              style={{ color: COLORS.danger, fontSize: 12 }}
             >
-              {t('auth.registerSubtitle')}
+              {error}
             </AppText>
-          </View>
+          ) : null}
+        </View>
 
-          <View style={{ marginTop: SPACING.xxl, gap: SPACING.lg }}>
-            <AuthTextField
-              label={t('auth.name')}
-              value={name}
-              onChangeText={setName}
-              placeholder={t('auth.namePlaceholder')}
-              autoCapitalize="words"
-              autoComplete="name"
-              textContentType="name"
-              returnKeyType="next"
-              onSubmitEditing={() => usernameRef.current?.focus()}
-              maxLength={16}
-            />
-            <AuthTextField
-              ref={usernameRef}
-              label={t('auth.username')}
-              value={username}
-              onChangeText={setUsername}
-              placeholder={t('auth.usernamePlaceholder')}
-              autoComplete="username"
-              textContentType="username"
-              returnKeyType="next"
-              onSubmitEditing={() => emailRef.current?.focus()}
-              maxLength={36}
-            />
-            <AuthTextField
-              ref={emailRef}
-              label={t('auth.email')}
-              value={email}
-              onChangeText={setEmail}
-              placeholder={t('auth.emailPlaceholder')}
-              keyboardType="email-address"
-              autoComplete="email"
-              textContentType="emailAddress"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
-            />
-            <AuthTextField
-              ref={passwordRef}
-              label={t('auth.password')}
-              value={password}
-              onChangeText={setPassword}
-              placeholder={t('auth.passwordPlaceholder')}
-              secureTextEntry
-              autoComplete="new-password"
-              textContentType="password"
-              returnKeyType="go"
-              onSubmitEditing={handleSubmit}
-            />
-            {error ? (
-              <AppText
-                variant="caption"
-                style={{ color: COLORS.danger, fontSize: 12 }}
-              >
-                {error}
-              </AppText>
-            ) : null}
-          </View>
-
-          <View style={{ marginTop: SPACING.xxl, gap: SPACING.lg }}>
-            <PrimaryButton
-              label={t('auth.createAccount')}
-              onPress={handleSubmit}
-              loading={isLoading}
-            />
-            <Pressable
-              onPress={() => router.replace('/(auth)/login' as never)}
-              hitSlop={8}
-              style={{ alignItems: 'center', paddingVertical: 8 }}
+        <View style={{ marginTop: SPACING.xxl, gap: SPACING.lg }}>
+          <PrimaryButton
+            label={t('auth.createAccount')}
+            onPress={handleSubmit}
+            loading={isLoading}
+          />
+          <Pressable
+            onPress={() => router.replace('/(auth)/login' as never)}
+            hitSlop={8}
+            style={{ alignItems: 'center', paddingVertical: 8 }}
+          >
+            <AppText
+              variant="caption"
+              style={{ color: COLORS.textSecondary, fontSize: 13 }}
             >
+              {t('auth.alreadyHaveAccount')}{' '}
               <AppText
                 variant="caption"
-                style={{ color: COLORS.textSecondary, fontSize: 13 }}
+                weight="bold"
+                style={{ color: COLORS.accent, fontSize: 13 }}
               >
-                {t('auth.alreadyHaveAccount')}{' '}
-                <AppText
-                  variant="caption"
-                  weight="bold"
-                  style={{ color: COLORS.accent, fontSize: 13 }}
-                >
-                  {t('auth.signIn')}
-                </AppText>
+                {t('auth.signIn')}
               </AppText>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+            </AppText>
+          </Pressable>
+        </View>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
