@@ -3,16 +3,71 @@
  * every request leaves from the user's own IP, like the desktop engine. The
  * EXØS server is only a fallback when this fails.
  */
+import { File, Paths } from 'expo-file-system';
+
 import {
   downloadYtdlp,
   isYtdlpAvailable,
   resolveYtdlp,
+  updateYtdlp,
   type YtdlpFormat,
   type YtdlpInfo,
 } from '@/modules/exos-ytdlp';
 import type { Track } from '@/types/domain';
 
 export const isLocalEngineAvailable = isYtdlpAvailable;
+
+/**
+ * The yt-dlp inside the APK is whatever youtubedl-android shipped with, and
+ * YouTube stops accepting old versions within weeks. Pull the latest release
+ * once a day, like the desktop does on start. Calls wait for it (capped), so
+ * a fresh install does not hit YouTube with the stale copy first.
+ */
+const UPDATE_EVERY_MS = 12 * 60 * 60 * 1000;
+const UPDATE_WAIT_MS = 30_000;
+let updating: Promise<void> | null = null;
+
+function updateStamp(): File {
+  return new File(Paths.document, 'ytdlp-updated-at');
+}
+
+function lastUpdate(): number {
+  try {
+    const file = updateStamp();
+    return file.exists ? Number(file.textSync()) || 0 : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function ensureFreshYtdlp(): Promise<void> {
+  if (!isYtdlpAvailable) return Promise.resolve();
+  if (!updating) {
+    updating =
+      Date.now() - lastUpdate() < UPDATE_EVERY_MS
+        ? Promise.resolve()
+        : updateYtdlp('stable')
+            .then(({ status, version }) => {
+              console.log('[LocalEngine] yt-dlp update:', status, version);
+              try {
+                const file = updateStamp();
+                if (!file.exists) file.create();
+                file.write(String(Date.now()));
+              } catch {}
+            })
+            .catch((error) => {
+              // Offline or GitHub rate limit: keep the current copy, retry
+              // on the next call.
+              console.warn('[LocalEngine] yt-dlp update failed:', error);
+              updating = null;
+            });
+  }
+  const pending = updating ?? Promise.resolve();
+  return Promise.race([
+    pending,
+    new Promise<void>((resolve) => setTimeout(resolve, UPDATE_WAIT_MS)),
+  ]);
+}
 
 /**
  * android_vr returns plain m4a links without the JS challenge; measured on
@@ -130,9 +185,13 @@ export function resolveLocalStream(track: Track): Promise<LocalStream> {
   const cached = streamCache.get(source);
   if (cached && Date.now() - cached.at < cached.ttl) return cached.stream;
 
-  const stream = withFallback(source, (args) =>
-    resolveYtdlp(nextJobId('resolve'), source, args, formatFor(source)),
-  ).then(({ info }) => toStream(info));
+  const stream = ensureFreshYtdlp()
+    .then(() =>
+      withFallback(source, (args) =>
+        resolveYtdlp(nextJobId('resolve'), source, args, formatFor(source)),
+      ),
+    )
+    .then(({ info }) => toStream(info));
 
   const entry: CacheEntry = {
     at: Date.now(),
@@ -159,6 +218,7 @@ export async function downloadLocal(
   jobId: string,
   basePath: string,
 ): Promise<{ path: string; ext: string }> {
+  await ensureFreshYtdlp();
   await acquireDownloadSlot();
   try {
     return await runDownload(track, jobId, basePath);

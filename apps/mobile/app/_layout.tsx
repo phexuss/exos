@@ -18,6 +18,7 @@ import { COLORS } from '@/constants/colors';
 import { LanguageProvider } from '@/providers/LanguageProvider';
 import { setUnauthorizedHandler } from '@/services/api/client';
 import { getDownloadedTracks } from '@/services/db/database';
+import { ensureFreshYtdlp } from '@/services/engine/localEngine';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useDownloadStore } from '@/store/useDownloadStore';
 import { useOverlayStore } from '@/store/useOverlayStore';
@@ -112,6 +113,8 @@ export default function RootLayout() {
       .catch(() => {});
 
     useAuthStore.getState().checkAuth();
+    // Fresh yt-dlp before the first track: YouTube rejects stale versions.
+    void ensureFreshYtdlp();
 
     setUnauthorizedHandler(() => {
       useAuthStore.setState({ user: null });
