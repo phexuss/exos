@@ -35,7 +35,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
 import { GLASS, SECONDARY_BLUR } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
-import { DESKTOP_SPRING, EASE_OUT, MOTION } from '@/constants/motion';
+import { DESKTOP_SPRING, EASE_OUT_UI, MOTION } from '@/constants/motion';
 import { SPACING } from '@/constants/spacing';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassMode } from '@/hooks/useGlassMode';
@@ -122,7 +122,10 @@ function swapEntering() {
   return {
     initialValues: { opacity: 0, transform: [{ scale: MOTION.rise.scale }] },
     animations: {
-      opacity: withTiming(1, { duration: MOTION.dur.base, easing: EASE_OUT }),
+      opacity: withTiming(1, {
+        duration: MOTION.dur.base,
+        easing: EASE_OUT_UI,
+      }),
       transform: [{ scale: withSpring(1, DESKTOP_SPRING) }],
     },
   };
@@ -133,7 +136,10 @@ function swapExiting() {
   return {
     initialValues: { opacity: 1 },
     animations: {
-      opacity: withTiming(0, { duration: MOTION.dur.quick, easing: EASE_OUT }),
+      opacity: withTiming(0, {
+        duration: MOTION.dur.quick,
+        easing: EASE_OUT_UI,
+      }),
     },
   };
 }
