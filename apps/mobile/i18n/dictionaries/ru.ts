@@ -199,6 +199,17 @@ export const ru = {
     quality: 'Качество',
     noTrack: 'Трек не выбран',
   },
+  fx: {
+    title: 'Звук',
+    button: 'Скорость и реверб',
+    off: 'Обычный',
+    sped: 'Sped up',
+    slowed: 'Slowed + reverb',
+    speed: 'Скорость',
+    reverb: 'Реверб',
+    hint: 'Тон меняется вместе со скоростью, как в sped up и slowed-версиях. Работает на лету на любом треке.',
+    reset: 'Сбросить',
+  },
   nowPlayingBar: {
     label: 'Сейчас играет',
   },

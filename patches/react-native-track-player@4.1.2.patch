@@ -1,5 +1,5 @@
 diff --git a/android/src/main/java/com/doublesymmetry/trackplayer/module/MusicModule.kt b/android/src/main/java/com/doublesymmetry/trackplayer/module/MusicModule.kt
-index b2409a09939164c49c0f7a16bb6d3284e8eab8fb..db910e952b7fb6825aac1e8f663163e1c5b1565e 100644
+index b2409a0..ca45456 100644
 --- a/android/src/main/java/com/doublesymmetry/trackplayer/module/MusicModule.kt
 +++ b/android/src/main/java/com/doublesymmetry/trackplayer/module/MusicModule.kt
 @@ -251,87 +251,97 @@ class MusicModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
@@ -156,7 +156,7 @@ index b2409a09939164c49c0f7a16bb6d3284e8eab8fb..db910e952b7fb6825aac1e8f663163e1
          scope.launch {
              if (verifyServiceBoundOrReject(callback)) return@launch
  
-@@ -346,284 +356,347 @@ class MusicModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
+@@ -346,284 +356,358 @@ class MusicModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
                  callback.resolve(null)
              }
          }
@@ -328,10 +328,20 @@ index b2409a09939164c49c0f7a16bb6d3284e8eab8fb..db910e952b7fb6825aac1e8f663163e1
 +    fun pause(callback: Promise) {
 +        scope.launch {
 +            if (verifyServiceBoundOrReject(callback)) return@launch
++
++            musicService.pause()
++            callback.resolve(null)
++        }
++    }
  
 -        musicService.pause()
 -        callback.resolve(null)
-+            musicService.pause()
++    @ReactMethod
++    fun stop(callback: Promise) {
++        scope.launch {
++            if (verifyServiceBoundOrReject(callback)) return@launch
++
++            musicService.stop()
 +            callback.resolve(null)
 +        }
      }
@@ -339,25 +349,11 @@ index b2409a09939164c49c0f7a16bb6d3284e8eab8fb..db910e952b7fb6825aac1e8f663163e1
      @ReactMethod
 -    fun stop(callback: Promise) = scope.launch {
 -        if (verifyServiceBoundOrReject(callback)) return@launch
-+    fun stop(callback: Promise) {
-+        scope.launch {
-+            if (verifyServiceBoundOrReject(callback)) return@launch
- 
--        musicService.stop()
--        callback.resolve(null)
-+            musicService.stop()
-+            callback.resolve(null)
-+        }
-     }
- 
-     @ReactMethod
--    fun seekTo(seconds: Float, callback: Promise) = scope.launch {
--        if (verifyServiceBoundOrReject(callback)) return@launch
 +    fun seekTo(seconds: Float, callback: Promise) {
 +        scope.launch {
 +            if (verifyServiceBoundOrReject(callback)) return@launch
  
--        musicService.seekTo(seconds)
+-        musicService.stop()
 -        callback.resolve(null)
 +            musicService.seekTo(seconds)
 +            callback.resolve(null)
@@ -365,13 +361,13 @@ index b2409a09939164c49c0f7a16bb6d3284e8eab8fb..db910e952b7fb6825aac1e8f663163e1
      }
  
      @ReactMethod
--    fun seekBy(offset: Float, callback: Promise) = scope.launch {
+-    fun seekTo(seconds: Float, callback: Promise) = scope.launch {
 -        if (verifyServiceBoundOrReject(callback)) return@launch
 +    fun seekBy(offset: Float, callback: Promise) {
 +        scope.launch {
 +            if (verifyServiceBoundOrReject(callback)) return@launch
  
--        musicService.seekBy(offset)
+-        musicService.seekTo(seconds)
 -        callback.resolve(null)
 +            musicService.seekBy(offset)
 +            callback.resolve(null)
@@ -379,13 +375,13 @@ index b2409a09939164c49c0f7a16bb6d3284e8eab8fb..db910e952b7fb6825aac1e8f663163e1
      }
  
      @ReactMethod
--    fun retry(callback: Promise) = scope.launch {
+-    fun seekBy(offset: Float, callback: Promise) = scope.launch {
 -        if (verifyServiceBoundOrReject(callback)) return@launch
 +    fun retry(callback: Promise) {
 +        scope.launch {
 +            if (verifyServiceBoundOrReject(callback)) return@launch
  
--        musicService.retry()
+-        musicService.seekBy(offset)
 -        callback.resolve(null)
 +            musicService.retry()
 +            callback.resolve(null)
@@ -393,13 +389,13 @@ index b2409a09939164c49c0f7a16bb6d3284e8eab8fb..db910e952b7fb6825aac1e8f663163e1
      }
  
      @ReactMethod
--    fun setVolume(volume: Float, callback: Promise) = scope.launch {
+-    fun retry(callback: Promise) = scope.launch {
 -        if (verifyServiceBoundOrReject(callback)) return@launch
 +    fun setVolume(volume: Float, callback: Promise) {
 +        scope.launch {
 +            if (verifyServiceBoundOrReject(callback)) return@launch
  
--        musicService.setVolume(volume)
+-        musicService.retry()
 -        callback.resolve(null)
 +            musicService.setVolume(volume)
 +            callback.resolve(null)
@@ -407,27 +403,42 @@ index b2409a09939164c49c0f7a16bb6d3284e8eab8fb..db910e952b7fb6825aac1e8f663163e1
      }
  
      @ReactMethod
--    fun getVolume(callback: Promise) = scope.launch {
+-    fun setVolume(volume: Float, callback: Promise) = scope.launch {
 -        if (verifyServiceBoundOrReject(callback)) return@launch
 +    fun getVolume(callback: Promise) {
 +        scope.launch {
 +            if (verifyServiceBoundOrReject(callback)) return@launch
  
--        callback.resolve(musicService.getVolume())
+-        musicService.setVolume(volume)
+-        callback.resolve(null)
 +            callback.resolve(musicService.getVolume())
 +        }
      }
  
      @ReactMethod
--    fun setRate(rate: Float, callback: Promise) = scope.launch {
+-    fun getVolume(callback: Promise) = scope.launch {
 -        if (verifyServiceBoundOrReject(callback)) return@launch
 +    fun setRate(rate: Float, callback: Promise) {
 +        scope.launch {
 +            if (verifyServiceBoundOrReject(callback)) return@launch
  
+-        callback.resolve(musicService.getVolume())
++            musicService.setRate(rate)
++            callback.resolve(null)
++        }
+     }
+ 
++    /** Sped up / slowed (pitch follows speed) and reverb amount 0..1. */
+     @ReactMethod
+-    fun setRate(rate: Float, callback: Promise) = scope.launch {
+-        if (verifyServiceBoundOrReject(callback)) return@launch
++    fun setFx(speed: Float, reverb: Float, callback: Promise) {
++        scope.launch {
++            if (verifyServiceBoundOrReject(callback)) return@launch
+ 
 -        musicService.setRate(rate)
 -        callback.resolve(null)
-+            musicService.setRate(rate)
++            musicService.setFx(speed, reverb)
 +            callback.resolve(null)
 +        }
      }
@@ -652,26 +663,41 @@ index b2409a09939164c49c0f7a16bb6d3284e8eab8fb..db910e952b7fb6825aac1e8f663163e1
      }
  }
 diff --git a/android/src/main/java/com/doublesymmetry/trackplayer/service/MusicService.kt b/android/src/main/java/com/doublesymmetry/trackplayer/service/MusicService.kt
-index afa6b0f335714de0cc8741d5bbdd51b4e04bb3bb..7304e2e51dff168c6c755a6fdee5943272fba75e 100644
+index afa6b0f..85460e7 100644
 --- a/android/src/main/java/com/doublesymmetry/trackplayer/service/MusicService.kt
 +++ b/android/src/main/java/com/doublesymmetry/trackplayer/service/MusicService.kt
-@@ -3,6 +3,7 @@ package com.doublesymmetry.trackplayer.service
+@@ -3,7 +3,11 @@ package com.doublesymmetry.trackplayer.service
  import android.app.*
  import android.content.Context
  import android.content.Intent
 +import androidx.localbroadcastmanager.content.LocalBroadcastManager
  import android.content.pm.ServiceInfo
++import android.media.audiofx.AudioEffect
++import android.media.audiofx.EnvironmentalReverb
++import android.media.audiofx.PresetReverb
  import android.net.Uri
  import android.os.Binder
-@@ -32,7 +33,6 @@ import com.doublesymmetry.trackplayer.utils.BundleUtils.setRating
+ import android.os.Build
+@@ -15,6 +19,7 @@ import androidx.core.app.NotificationCompat
+ import androidx.core.app.NotificationCompat.PRIORITY_LOW
+ import com.doublesymmetry.kotlinaudio.models.*
+ import com.doublesymmetry.kotlinaudio.models.NotificationButton.*
++import com.doublesymmetry.kotlinaudio.players.BaseAudioPlayer
+ import com.doublesymmetry.kotlinaudio.players.QueuedAudioPlayer
+ import com.doublesymmetry.trackplayer.R as TrackPlayerR
+ import com.doublesymmetry.trackplayer.extensions.NumberExt.Companion.toMilliseconds
+@@ -32,7 +37,9 @@ import com.doublesymmetry.trackplayer.utils.BundleUtils.setRating
  import com.facebook.react.HeadlessJsTaskService
  import com.facebook.react.bridge.Arguments
  import com.facebook.react.jstasks.HeadlessJsTaskConfig
 -import com.facebook.react.modules.core.DeviceEventManagerModule
++import com.google.android.exoplayer2.ExoPlayer
++import com.google.android.exoplayer2.PlaybackParameters
++import com.google.android.exoplayer2.audio.AuxEffectInfo
  import com.google.android.exoplayer2.ui.R as ExoPlayerR
  import kotlinx.coroutines.*
  import kotlinx.coroutines.flow.flow
-@@ -120,7 +120,11 @@ class MusicService : HeadlessJsTaskService() {
+@@ -120,7 +127,11 @@ class MusicService : HeadlessJsTaskService() {
              notificationBuilder.foregroundServiceBehavior = NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE
          }
          val notification = notificationBuilder.build()
@@ -684,7 +710,118 @@ index afa6b0f335714de0cc8741d5bbdd51b4e04bb3bb..7304e2e51dff168c6c755a6fdee59432
          @Suppress("DEPRECATION")
          stopForeground(true)
      }
-@@ -741,19 +745,18 @@ class MusicService : HeadlessJsTaskService() {
+@@ -160,6 +171,110 @@ class MusicService : HeadlessJsTaskService() {
+         player.automaticallyUpdateNotificationMetadata = automaticallyUpdateNotificationMetadata
+         observeEvents()
+         setupForegrounding()
++        releaseReverb(null)
++        applyFx()
++    }
++
++    /*
++     * Sped up / slowed + reverb. Speed moves the pitch with it (both
++     * PlaybackParameters values), the way those edits sound. Reverb is an
++     * EnvironmentalReverb on the output mix fed through an aux send, so the
++     * dry signal stays as it is and the send level is the amount. Devices
++     * that refuse aux effects get a PresetReverb inserted on the player's
++     * audio session instead (amount is then on/off).
++     */
++    private var fxSpeed = 1f
++    private var fxReverb = 0f
++    private var reverbEffect: AudioEffect? = null
++    private var reverbInsert = false
++
++    /** KotlinAudio keeps its ExoPlayer protected; reach it by reflection. */
++    private fun exoPlayer(): ExoPlayer? {
++        if (!::player.isInitialized) return null
++        return try {
++            val field = BaseAudioPlayer::class.java.getDeclaredField("exoPlayer")
++            field.isAccessible = true
++            field.get(player) as? ExoPlayer
++        } catch (e: Exception) {
++            Timber.w(e, "ExoPlayer not reachable for fx")
++            null
++        }
++    }
++
++    @MainThread
++    fun setFx(speed: Float, reverb: Float) {
++        fxSpeed = speed.coerceIn(0.25f, 4f)
++        fxReverb = reverb.coerceIn(0f, 1f)
++        applyFx()
++    }
++
++    @MainThread
++    private fun applyFx() {
++        if (!::player.isInitialized) return
++        val exo = exoPlayer()
++        if (exo == null) {
++            player.playbackSpeed = fxSpeed
++            return
++        }
++        exo.playbackParameters = PlaybackParameters(fxSpeed, fxSpeed)
++        if (fxReverb <= 0f) {
++            releaseReverb(exo)
++            return
++        }
++        if (reverbEffect == null) {
++            reverbEffect = try {
++                createAuxReverb().also { reverbInsert = false }
++            } catch (e: Exception) {
++                Timber.w(e, "Aux reverb unavailable, trying insert reverb")
++                try {
++                    PresetReverb(0, exo.audioSessionId).apply {
++                        preset = PresetReverb.PRESET_LARGEHALL
++                        setEnabled(true)
++                    }.also { reverbInsert = true }
++                } catch (e2: Exception) {
++                    Timber.w(e2, "Reverb unavailable")
++                    null
++                }
++            }
++        }
++        val fx = reverbEffect ?: return
++        if (!reverbInsert) exo.setAuxEffectInfo(AuxEffectInfo(fx.id, fxReverb * 0.9f))
++    }
++
++    /** A large, soft hall, close to the desktop app's 3.2 s impulse. */
++    private fun createAuxReverb(): AudioEffect {
++        val reverb = EnvironmentalReverb(0, 0)
++        try {
++            reverb.roomLevel = -600
++            reverb.roomHFLevel = -900
++            reverb.decayTime = 3200
++            reverb.decayHFRatio = 800
++            reverb.reflectionsLevel = -1400
++            reverb.reflectionsDelay = 20
++            reverb.reverbLevel = 0
++            reverb.reverbDelay = 40
++            reverb.diffusion = 1000
++            reverb.density = 1000
++            reverb.setEnabled(true)
++        } catch (e: Exception) {
++            reverb.release()
++            throw e
++        }
++        return reverb
++    }
++
++    @MainThread
++    private fun releaseReverb(exo: ExoPlayer?) {
++        val fx = reverbEffect ?: return
++        if (!reverbInsert) {
++            try {
++                exo?.setAuxEffectInfo(AuxEffectInfo(AuxEffectInfo.NO_AUX_EFFECT_ID, 0f))
++            } catch (ignored: Exception) {}
++        }
++        try {
++            fx.release()
++        } catch (ignored: Exception) {}
++        reverbEffect = null
+     }
+ 
+     @MainThread
+@@ -741,19 +856,18 @@ class MusicService : HeadlessJsTaskService() {
  
      @MainThread
      private fun emit(event: String, data: Bundle? = null) {
@@ -712,3 +849,11 @@ index afa6b0f335714de0cc8741d5bbdd51b4e04bb3bb..7304e2e51dff168c6c755a6fdee59432
      }
  
      override fun getTaskConfig(intent: Intent?): HeadlessJsTaskConfig {
+@@ -799,6 +913,7 @@ class MusicService : HeadlessJsTaskService() {
+     @MainThread
+     override fun onDestroy() {
+         super.onDestroy()
++        releaseReverb(exoPlayer())
+         if (::player.isInitialized) {
+             player.destroy()
+         }
