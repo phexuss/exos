@@ -269,6 +269,8 @@ export default function HomeScreen() {
   const user = useAuthStore((s) => s.user);
   const [recent, setRecent] = useState<Track[] | null>(null);
   const [feed, setFeed] = useState<HomeFeed | null>(null);
+  const [feedFailed, setFeedFailed] = useState(false);
+  const [feedAttempt, setFeedAttempt] = useState(0);
 
   useEffect(() => {
     const { hasSeenFaq, setHasSeenFaq } = useSettingsStore.getState();
@@ -302,17 +304,22 @@ export default function HomeScreen() {
       return;
     }
     let alive = true;
+    setFeedFailed(false);
     loadHomeFeed(recent, artists)
       .then((next) => {
         if (alive) setFeed(next);
       })
-      .catch(() => {
-        if (alive) setFeed({ similar: null, mix: [] });
+      .catch((error) => {
+        if (!alive) return;
+        // Offline or the API is down: say so instead of "nothing to mix".
+        console.warn('[Home] Feed failed:', error);
+        setFeed({ similar: null, mix: [] });
+        setFeedFailed(true);
       });
     return () => {
       alive = false;
     };
-  }, [seedKey, user]);
+  }, [seedKey, user, feedAttempt]);
 
   const playFrom = useCallback(
     (list: Track[]) => (track: Track) => {
@@ -447,6 +454,25 @@ export default function HomeScreen() {
                   />
                 </Rise>
               ))}
+            </View>
+          ) : feedFailed ? (
+            <View style={{ gap: SPACING.sm, alignItems: 'flex-start' }}>
+              <AppText variant="label" style={{ color: COLORS.textMuted }}>
+                {t('common.loadFailed')}
+              </AppText>
+              <Pressable
+                onPress={() => setFeedAttempt((n) => n + 1)}
+                hitSlop={8}
+                accessibilityRole="button"
+              >
+                <AppText
+                  variant="label"
+                  weight="medium"
+                  style={{ color: accentColor ?? COLORS.accent }}
+                >
+                  {t('common.retry')}
+                </AppText>
+              </Pressable>
             </View>
           ) : (
             <AppText variant="label" style={{ color: COLORS.textMuted }}>

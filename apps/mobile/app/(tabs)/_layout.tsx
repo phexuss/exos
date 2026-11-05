@@ -15,6 +15,7 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { COLORS } from '@/constants/colors';
 import { DESKTOP_SPRING, MOTION } from '@/constants/motion';
 import { useGlassMode } from '@/hooks/useGlassMode';
+import { useI18n } from '@/hooks/useI18n';
 
 // A screen that throws while rendering shows a retry button here instead of
 // unmounting the whole app (the player and overlays stay up).
@@ -57,7 +58,7 @@ const routeSpring: NonNullable<BottomTabNavigationOptions['transitionSpec']> = {
   config: { ...DESKTOP_SPRING, overshootClamping: false },
 };
 
-function CustomTabBar({ state, navigation }: BottomTabBarProps) {
+function CustomTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -82,7 +83,8 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             <AnimatedPressable
               key={route.key}
               scaleValue={0.85}
-              accessibilityRole="button"
+              accessibilityRole="tab"
+              accessibilityLabel={descriptors[route.key]?.options.title}
               accessibilityState={focused ? { selected: true } : {}}
               onPressIn={() => {
                 if (Platform.OS === 'ios') {
@@ -126,6 +128,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 }
 
 export default function TabLayout() {
+  const { t } = useI18n();
   const glassMode = useGlassMode();
 
   return (
@@ -148,9 +151,9 @@ export default function TabLayout() {
             : undefined,
         }}
       >
-        <Tabs.Screen name="index" />
-        <Tabs.Screen name="search" />
-        <Tabs.Screen name="library" />
+        <Tabs.Screen name="index" options={{ title: t('common.home') }} />
+        <Tabs.Screen name="search" options={{ title: t('common.search') }} />
+        <Tabs.Screen name="library" options={{ title: t('common.library') }} />
       </Tabs>
     </View>
   );

@@ -247,7 +247,8 @@ function bindTrackPlayerEvents() {
     if (isTerminalPlaybackState(state)) {
       if (shouldIgnorePlaybackStateForCurrentTrack()) return;
       store().setState({ isPlaying: false });
-      if (state !== State.Paused) stopPositionTracking();
+      // Paused too: the poll woke every 250 ms just to return early.
+      stopPositionTracking();
     }
   });
 

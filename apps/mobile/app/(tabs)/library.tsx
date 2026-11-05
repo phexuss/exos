@@ -8,6 +8,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
@@ -207,13 +208,36 @@ export default function LibraryScreen() {
     [tracks, selectedIds],
   );
 
+  const [loadFailed, setLoadFailed] = useState(false);
+  // Focus, a finished download and closing a playlist can all ask for a
+  // reload at once: run one read, then at most one more for the latest ask.
+  const loading = useRef(false);
+  const reloadAgain = useRef(false);
+
   const load = useCallback(async () => {
+    if (loading.current) {
+      reloadAgain.current = true;
+      return;
+    }
+    loading.current = true;
     try {
-      const [t, p] = await Promise.all([getDownloadedTracks(), getPlaylists()]);
-      setTracks(t);
-      setPlaylists(p);
-    } catch (e) {
-      if (__DEV__) console.warn('Library fetch error:', e);
+      do {
+        reloadAgain.current = false;
+        try {
+          const [t, p] = await Promise.all([
+            getDownloadedTracks(),
+            getPlaylists(),
+          ]);
+          setTracks(t);
+          setPlaylists(p);
+          setLoadFailed(false);
+        } catch (e) {
+          console.warn('[Library] Load failed:', e);
+          setLoadFailed(true);
+        }
+      } while (reloadAgain.current);
+    } finally {
+      loading.current = false;
     }
   }, []);
 
@@ -476,8 +500,23 @@ export default function LibraryScreen() {
           <View style={{ paddingVertical: 40, alignItems: 'center', gap: 8 }}>
             <AppIcon name="download" size={28} color={COLORS.textMuted} />
             <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-              {t('library.noDownloads')}
+              {loadFailed ? t('common.loadFailed') : t('library.noDownloads')}
             </AppText>
+            {loadFailed ? (
+              <Pressable
+                onPress={() => void load()}
+                hitSlop={8}
+                accessibilityRole="button"
+              >
+                <AppText
+                  variant="label"
+                  weight="medium"
+                  style={{ color: COLORS.accent }}
+                >
+                  {t('common.retry')}
+                </AppText>
+              </Pressable>
+            ) : null}
           </View>
         }
         ItemSeparatorComponent={TrackSeparator}

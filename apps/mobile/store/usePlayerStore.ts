@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create, type StateCreator } from 'zustand';
 import { API_BASE_URL, apiPost } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
@@ -384,6 +385,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   setProgress: (value) => {
+    // Without a duration the seek is dropped; moving the bar anyway made it
+    // jump back on the next poll.
+    if (!audio.getDuration()) return;
     set({ progress: value });
     audio.seekTo(value);
   },
@@ -456,3 +460,60 @@ audio.setPlaybackErrorHandler(() => {
   retriedTrackId = track.id;
   startTrack(track, usePlayerStore.setState, usePlayerStore.getState);
 });
+
+/**
+ * The queue and current track lived only in memory: after Android killed
+ * the app (playback continues in the service), the notification's next and
+ * previous did nothing and the app reopened without a mini player.
+ */
+const SESSION_KEY = 'player:session';
+const SESSION_QUEUE_MAX = 300;
+
+function slim(track: Track): Track {
+  // Lyrics can be tens of KB per track; they are fetched again on play.
+  const { syncedLyrics: _s, plainLyrics: _p, ...rest } = track;
+  return rest;
+}
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let restored = false;
+
+usePlayerStore.subscribe((state, prev) => {
+  if (!restored) return;
+  if (state.queue === prev.queue && state.currentTrack === prev.currentTrack) {
+    return;
+  }
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const { queue, currentTrack } = usePlayerStore.getState();
+    const payload = currentTrack
+      ? JSON.stringify({
+          currentTrack: slim(currentTrack),
+          queue: queue.slice(0, SESSION_QUEUE_MAX).map(slim),
+        })
+      : null;
+    (payload
+      ? AsyncStorage.setItem(SESSION_KEY, payload)
+      : AsyncStorage.removeItem(SESSION_KEY)
+    ).catch(() => {});
+  }, 1000);
+});
+
+AsyncStorage.getItem(SESSION_KEY)
+  .then((raw) => {
+    if (!raw || usePlayerStore.getState().currentTrack) return;
+    const saved = JSON.parse(raw) as { currentTrack?: Track; queue?: Track[] };
+    if (!saved.currentTrack?.id) return;
+    // Paused: a tap on play starts it again (or the still-running service
+    // reports Playing and the UI follows).
+    usePlayerStore.setState({
+      currentTrack: saved.currentTrack,
+      queue: Array.isArray(saved.queue) ? saved.queue : [],
+      isPlaying: false,
+      progress: 0,
+    });
+  })
+  .catch(() => {})
+  .finally(() => {
+    restored = true;
+  });
