@@ -1,21 +1,15 @@
 import { useRouter } from 'expo-router';
-import { type ReactNode, useState } from 'react';
-import {
-  Pressable,
-  type StyleProp,
-  Switch,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import { useState } from 'react';
+import { Pressable, Switch, View } from 'react-native';
 
 import { AppDialog } from '@/components/AppDialog';
-import { GlassSurface } from '@/components/glass/GlassSurface';
 import { RestoreLibraryModal } from '@/components/RestoreLibraryModal';
 import { SpotifyImportModal } from '@/components/SpotifyImportModal';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SettingsGroup } from '@/components/ui/SettingsGroup';
 import { COLORS } from '@/constants/colors';
 import { useI18n } from '@/hooks/useI18n';
 import { hasYoutubeCookies, isYtdlpAvailable } from '@/modules/exos-ytdlp';
@@ -29,35 +23,6 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useDownloadStore } from '@/store/useDownloadStore';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
-
-type SettingsGroupProps = {
-  glass: boolean;
-  style?: StyleProp<ViewStyle>;
-  children: ReactNode;
-};
-
-function SettingsGroup({ glass, style, children }: SettingsGroupProps) {
-  if (glass) {
-    return (
-      <GlassSurface
-        blur={false}
-        variant="regular"
-        style={[{ borderRadius: 22 }, style]}
-        contentStyle={{ paddingHorizontal: 16 }}
-      >
-        {children}
-      </GlassSurface>
-    );
-  }
-
-  return (
-    <View
-      style={[{ borderTopWidth: 0.5, borderTopColor: COLORS.border }, style]}
-    >
-      {children}
-    </View>
-  );
-}
 
 export function SettingsScreen() {
   const { locale, setLocale, t } = useI18n();

@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
+  StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
+import { GlassIconButton } from '@/components/glass/GlassIconButton';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import { PillButton } from '@/components/ui/PillButton';
 import { COLORS } from '@/constants/colors';
+import { GLASS } from '@/constants/glass';
 import { SPACING } from '@/constants/spacing';
 import { useI18n } from '@/hooks/useI18n';
 import {
@@ -84,10 +87,10 @@ export function RestoreLibraryModal({
         width: '100%',
         maxHeight: '82%',
         backgroundColor: COLORS.surface,
-        borderRadius: 18,
-        borderWidth: 0.5,
-        borderColor: COLORS.border,
-        padding: SPACING.lg,
+        borderRadius: GLASS.radius.dialog,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: GLASS.rim,
+        padding: SPACING.xl,
         gap: SPACING.md,
       }}
     >
@@ -110,18 +113,13 @@ export function RestoreLibraryModal({
             {t('settings.restoreLibraryDesc')}
           </AppText>
         </View>
-        <Pressable
+        <GlassIconButton
+          icon="close"
           onPress={onClose}
-          hitSlop={10}
-          style={{
-            width: 36,
-            height: 36,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <AppIcon name="close" size={20} color={COLORS.textMuted} />
-        </Pressable>
+          size={36}
+          iconColor={COLORS.textSecondary}
+          accessibilityLabel={t('common.close')}
+        />
       </View>
 
       {loading ? (
@@ -139,23 +137,12 @@ export function RestoreLibraryModal({
           >
             {error}
           </AppText>
-          <Pressable
+          <PillButton
+            label={t('common.retry')}
+            tone="accent"
+            fill={false}
             onPress={load}
-            style={{
-              paddingHorizontal: 18,
-              paddingVertical: 10,
-              borderRadius: 10,
-              backgroundColor: COLORS.textPrimary,
-            }}
-          >
-            <AppText
-              variant="body"
-              weight="medium"
-              style={{ color: COLORS.background }}
-            >
-              {t('common.retry')}
-            </AppText>
-          </Pressable>
+          />
         </View>
       ) : (
         <ScrollView

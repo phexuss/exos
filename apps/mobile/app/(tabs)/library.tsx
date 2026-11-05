@@ -11,20 +11,26 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
-import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
 import { GlassSurface } from '@/components/glass/GlassSurface';
+import { Presence } from '@/components/motion/Presence';
 import { Rise } from '@/components/motion/Rise';
 import { TrackActionsSheet } from '@/components/TrackActionsSheet';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
-import { GLASS, GLASS_SPRING } from '@/constants/glass';
+import { GLASS } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
 import { MOTION } from '@/constants/motion';
 import { SPACING } from '@/constants/spacing';
@@ -47,12 +53,13 @@ import { usePlayerStore } from '@/store/usePlayerStore';
 import type { Track } from '@/types/domain';
 
 type SelectionBarProps = {
+  visible: boolean;
   glass: boolean;
   bottom: number;
   children: ReactNode;
 };
 
-function SelectionBar({ glass, bottom, children }: SelectionBarProps) {
+function SelectionBar({ visible, glass, bottom, children }: SelectionBarProps) {
   const rowStyle = {
     height: 60,
     paddingHorizontal: 10,
@@ -61,20 +68,19 @@ function SelectionBar({ glass, bottom, children }: SelectionBarProps) {
     gap: 10,
   };
 
-  if (glass) {
-    return (
-      <Animated.View
-        entering={FadeInDown.springify()
-          .damping(GLASS_SPRING.snappy.damping)
-          .stiffness(GLASS_SPRING.snappy.stiffness)}
-        exiting={FadeOutDown.duration(180)}
-        style={{
-          position: 'absolute',
-          left: SPACING.lg,
-          right: SPACING.lg,
-          bottom,
-        }}
-      >
+  return (
+    <Presence
+      visible={visible}
+      from="rise"
+      pointerEvents="box-none"
+      style={{
+        position: 'absolute',
+        left: SPACING.lg,
+        right: SPACING.lg,
+        bottom,
+      }}
+    >
+      {glass ? (
         <GlassSurface
           floating
           variant="regular"
@@ -83,26 +89,20 @@ function SelectionBar({ glass, bottom, children }: SelectionBarProps) {
         >
           {children}
         </GlassSurface>
-      </Animated.View>
-    );
-  }
-
-  return (
-    <View
-      style={{
-        ...rowStyle,
-        position: 'absolute',
-        left: SPACING.lg,
-        right: SPACING.lg,
-        bottom,
-        borderRadius: 18,
-        backgroundColor: COLORS.surfaceElevated,
-        borderWidth: 0.5,
-        borderColor: COLORS.border,
-      }}
-    >
-      {children}
-    </View>
+      ) : (
+        <View
+          style={{
+            ...rowStyle,
+            borderRadius: GLASS.radius.capsule,
+            backgroundColor: COLORS.surfaceElevated,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: GLASS.rim,
+          }}
+        >
+          {children}
+        </View>
+      )}
+    </Presence>
   );
 }
 
@@ -537,92 +537,94 @@ export default function LibraryScreen() {
           load();
         }}
       />
-      {selectionMode ? (
-        <SelectionBar glass={glassMode} bottom={SPACING.lg + glassInset}>
-          <Pressable
-            onPress={clearSelection}
-            hitSlop={10}
-            style={{
-              width: 40,
-              height: 40,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+      <SelectionBar
+        visible={selectionMode}
+        glass={glassMode}
+        bottom={SPACING.lg + glassInset}
+      >
+        <Pressable
+          onPress={clearSelection}
+          hitSlop={10}
+          style={{
+            width: 40,
+            height: 40,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <AppIcon name="close" size={22} color={COLORS.textSecondary} />
+        </Pressable>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <AppText variant="body" weight="bold" numberOfLines={1}>
+            {tn('selected', selectedCount)}
+          </AppText>
+          <AppText
+            variant="caption"
+            numberOfLines={1}
+            style={{ color: COLORS.textMuted, fontSize: 11 }}
           >
-            <AppIcon name="close" size={22} color={COLORS.textSecondary} />
-          </Pressable>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <AppText variant="body" weight="bold" numberOfLines={1}>
-              {tn('selected', selectedCount)}
-            </AppText>
-            <AppText
-              variant="caption"
-              numberOfLines={1}
-              style={{ color: COLORS.textMuted, fontSize: 11 }}
-            >
-              {t('library.downloadedTracks')}
-            </AppText>
-          </View>
-          {selectedCount === 1 ? (
-            <Pressable
-              onPress={openSelectedActions}
-              hitSlop={8}
-              style={{
-                height: 40,
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                gap: 6,
-                backgroundColor: COLORS.surfaceMuted,
-              }}
-            >
-              <AppIcon name="playlist" size={18} color={COLORS.textPrimary} />
-              <AppText variant="caption" weight="medium">
-                {t('library.more')}
-              </AppText>
-            </Pressable>
-          ) : null}
-          {selectedCount > 1 ? (
-            <Pressable
-              onPress={() => setShowBulkPlaylists(true)}
-              hitSlop={8}
-              style={{
-                height: 40,
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                gap: 6,
-                backgroundColor: COLORS.surfaceMuted,
-              }}
-            >
-              <AppIcon name="playlist" size={18} color={COLORS.textPrimary} />
-              <AppText variant="caption" weight="medium">
-                {t('library.playlistAction')}
-              </AppText>
-            </Pressable>
-          ) : null}
+            {t('library.downloadedTracks')}
+          </AppText>
+        </View>
+        {selectedCount === 1 ? (
           <Pressable
-            onPress={() => setShowBulkDelete(true)}
+            onPress={openSelectedActions}
             hitSlop={8}
             style={{
-              width: 40,
               height: 40,
-              borderRadius: 10,
+              borderRadius: GLASS.radius.capsule,
+              paddingHorizontal: 14,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: 'rgba(248, 113, 113, 0.16)',
-              borderWidth: 0.5,
-              borderColor: 'rgba(248, 113, 113, 0.35)',
+              flexDirection: 'row',
+              gap: 6,
+              backgroundColor: COLORS.fill2,
             }}
           >
-            <AppIcon name="trash" size={18} color={COLORS.danger} />
+            <AppIcon name="playlist" size={18} color={COLORS.textPrimary} />
+            <AppText variant="caption" weight="medium">
+              {t('library.more')}
+            </AppText>
           </Pressable>
-        </SelectionBar>
-      ) : null}
+        ) : null}
+        {selectedCount > 1 ? (
+          <Pressable
+            onPress={() => setShowBulkPlaylists(true)}
+            hitSlop={8}
+            style={{
+              height: 40,
+              borderRadius: GLASS.radius.capsule,
+              paddingHorizontal: 14,
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'row',
+              gap: 6,
+              backgroundColor: COLORS.fill2,
+            }}
+          >
+            <AppIcon name="playlist" size={18} color={COLORS.textPrimary} />
+            <AppText variant="caption" weight="medium">
+              {t('library.playlistAction')}
+            </AppText>
+          </Pressable>
+        ) : null}
+        <Pressable
+          onPress={() => setShowBulkDelete(true)}
+          hitSlop={8}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(248, 113, 113, 0.16)',
+            borderWidth: 0.5,
+            borderColor: 'rgba(248, 113, 113, 0.35)',
+          }}
+        >
+          <AppIcon name="trash" size={18} color={COLORS.danger} />
+        </Pressable>
+      </SelectionBar>
 
       <AnimatedModal
         visible={showBulkDelete}

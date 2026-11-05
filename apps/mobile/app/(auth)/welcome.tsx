@@ -3,15 +3,24 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { AppDialog } from '@/components/AppDialog';
+import { Aurora } from '@/components/auth/Aurora';
+import { AuthLink } from '@/components/auth/AuthScreen';
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
-import { AppIcon } from '@/components/ui/AppIcon';
+import { Rise } from '@/components/motion/Rise';
 import { AppText } from '@/components/ui/AppText';
+import { Wordmark } from '@/components/ui/Wordmark';
 import { COLORS } from '@/constants/colors';
+import { SOURCES } from '@/constants/sources';
 import { SPACING } from '@/constants/spacing';
 import { useI18n } from '@/hooks/useI18n';
 import { useAuthStore } from '@/store/useAuthStore';
+
+/** The mark at phone scale (desktop sets it at 120 beside the card). */
+const MARK_SIZE = 72;
+const SOURCE_LINE = [SOURCES.deezer, SOURCES.soundcloud, SOURCES.youtube]
+  .map((s) => s.label)
+  .join(' · ');
 
 export default function WelcomeScreen() {
   const { t } = useI18n();
@@ -24,87 +33,66 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: COLORS.background }}
-      edges={['top', 'bottom']}
-    >
-      <View
+    <View style={{ flex: 1, backgroundColor: COLORS.ink }}>
+      <Aurora />
+      <SafeAreaView
         style={{
           flex: 1,
           paddingHorizontal: SPACING.xxl,
-          paddingVertical: SPACING.xxl,
-          justifyContent: 'space-between',
+          paddingBottom: SPACING.xxl,
         }}
+        edges={['top', 'bottom']}
       >
-        <View
-          style={{
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          <AppText
-            weight="black"
-            style={{
-              fontSize: 64,
-              lineHeight: 80,
-              letterSpacing: 6,
-              color: COLORS.accent,
-              textAlign: 'center',
-              includeFontPadding: false,
-            }}
-          >
-            EXØS
-          </AppText>
-          <AppText
-            variant="body"
-            style={{
-              color: COLORS.textSecondary,
-              textAlign: 'center',
-              fontSize: 15,
-            }}
-          >
-            {t('auth.tagline')}
-          </AppText>
+        {/* Desktop `.login__art`: the mark sits low, over the glow. */}
+        <View style={{ flex: 1, justifyContent: 'flex-end', gap: 14 }}>
+          <Rise index={0}>
+            <Wordmark size={MARK_SIZE} />
+          </Rise>
+          <Rise index={2}>
+            <AppText
+              variant="body"
+              style={{
+                color: COLORS.textSecondary,
+                fontSize: 18,
+                lineHeight: 25,
+              }}
+            >
+              {t('auth.tagline')}
+            </AppText>
+          </Rise>
+          <Rise index={3}>
+            <AppText
+              variant="caption"
+              weight="medium"
+              style={{
+                color: COLORS.textMuted,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+              }}
+            >
+              {SOURCE_LINE}
+            </AppText>
+          </Rise>
         </View>
 
-        <View style={{ gap: 12 }}>
+        <Rise index={4} style={{ gap: 12, marginTop: SPACING.huge }}>
           <PrimaryButton
             label={t('auth.getStarted')}
             onPress={() => router.push('/(auth)/register' as never)}
+            arrow
           />
           <PrimaryButton
             label={t('auth.signIn')}
             onPress={() => router.push('/(auth)/login' as never)}
             variant="secondary"
           />
-          <AnimatedPressable
-            scaleValue={0.97}
+          <AuthLink
+            label={t('auth.continueOffline')}
             onPress={() => setShowOfflineWarning(true)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              paddingVertical: 14,
-              borderRadius: 12,
-              borderWidth: 0.5,
-              borderColor: COLORS.divider,
-              backgroundColor: 'rgba(255,255,255,0.03)',
-            }}
-          >
-            <AppIcon name="globe" size={16} color={COLORS.textMuted} />
-            <AppText
-              variant="body"
-              weight="medium"
-              style={{ color: COLORS.textMuted, fontSize: 14 }}
-            >
-              {t('auth.continueOffline')}
-            </AppText>
-          </AnimatedPressable>
-        </View>
-      </View>
+            align="center"
+          />
+        </Rise>
+      </SafeAreaView>
 
       <AppDialog
         visible={showOfflineWarning}
@@ -115,6 +103,6 @@ export default function WelcomeScreen() {
         onClose={() => setShowOfflineWarning(false)}
         onConfirm={confirmOffline}
       />
-    </SafeAreaView>
+    </View>
   );
 }

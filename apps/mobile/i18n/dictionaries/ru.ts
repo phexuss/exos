@@ -238,6 +238,8 @@ export const ru = {
     spotify: 'Spotify',
   },
   auth: {
+    showPassword: 'Показать пароль',
+    hidePassword: 'Скрыть пароль',
     tagline: 'Твоя музыка по-твоему',
     getStarted: 'Начать',
     signIn: 'Войти',

@@ -1,13 +1,18 @@
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
+import { AuthTextField } from '@/components/auth/AuthTextField';
+import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { AppIcon, type IconName } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import { PillButton } from '@/components/ui/PillButton';
+import { SheetItem } from '@/components/ui/SheetItem';
 import { COLORS } from '@/constants/colors';
-import { LAYOUT } from '@/constants/layout';
-import { FONT_FAMILY } from '@/constants/typography';
+import { GLASS } from '@/constants/glass';
+import { SPACING } from '@/constants/spacing';
 import { useI18n } from '@/hooks/useI18n';
 import {
   addTrackToPlaylist,
@@ -17,6 +22,9 @@ import {
 } from '@/services/db/database';
 import { deleteTrack } from '@/services/download/downloadService';
 import type { Track } from '@/types/domain';
+
+/** Cover in the sheet's head. */
+const COVER = 48;
 
 type ExtraAction = {
   label: string;
@@ -135,45 +143,80 @@ export function TrackActionsSheet({
       variant="sheet"
       onRequestClose={onClose}
       onBackdropPress={onClose}
-      backdropStyle={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
       contentStyle={{
         backgroundColor: COLORS.surface,
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        paddingBottom: 34,
+        borderTopLeftRadius: GLASS.radius.sheet,
+        borderTopRightRadius: GLASS.radius.sheet,
+        paddingHorizontal: SPACING.sm,
+        paddingBottom: SPACING.lg,
       }}
     >
-      <View
-        style={{
-          alignItems: 'center',
-          paddingVertical: 12,
-        }}
-      >
+      <View style={{ alignItems: 'center', paddingVertical: SPACING.md }}>
         <View
           style={{
-            width: 40,
+            width: 36,
             height: 4,
             borderRadius: 2,
-            backgroundColor: COLORS.border,
+            backgroundColor: GLASS.rimStrong,
           }}
         />
       </View>
 
-      <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-        <AppText variant="body" weight="bold" numberOfLines={1}>
-          {activeTrack.title}
-        </AppText>
-        <AppText
-          variant="caption"
-          style={{ color: COLORS.textMuted }}
-          numberOfLines={1}
+      {/* What the sheet acts on, like the head of the desktop menu. */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 14,
+          paddingHorizontal: 10,
+          paddingBottom: SPACING.md,
+        }}
+      >
+        <View
+          style={{
+            width: COVER,
+            height: COVER,
+            borderRadius: 12,
+            overflow: 'hidden',
+            backgroundColor: COLORS.fill2,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          {activeTrack.artist.name}
-        </AppText>
+          {activeTrack.coverUrl ? (
+            <Image
+              source={{ uri: activeTrack.coverUrl }}
+              style={{ width: COVER, height: COVER }}
+              contentFit="cover"
+            />
+          ) : (
+            <AppIcon name="music" size={22} color={COLORS.textMuted} />
+          )}
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <AppText variant="body" weight="bold" numberOfLines={1}>
+            {activeTrack.title}
+          </AppText>
+          <AppText
+            variant="caption"
+            style={{ color: COLORS.textMuted, fontSize: 13 }}
+            numberOfLines={1}
+          >
+            {activeTrack.artist.name}
+          </AppText>
+        </View>
       </View>
+      <View
+        style={{
+          height: StyleSheet.hairlineWidth,
+          backgroundColor: COLORS.divider,
+          marginHorizontal: 10,
+          marginBottom: SPACING.sm,
+        }}
+      />
 
       {showDeleteConfirm ? (
-        <View style={{ padding: 20, gap: 18 }}>
+        <View style={{ padding: 10, gap: SPACING.xl }}>
           <View style={{ gap: 8 }}>
             <AppText variant="title" weight="bold">
               {t('trackActions.deleteDownloadTitle')}
@@ -189,209 +232,78 @@ export function TrackActionsSheet({
           </View>
 
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Pressable
+            <PillButton
+              label={t('common.cancel')}
+              tone="quiet"
               disabled={deleting}
               onPress={() => setShowDeleteConfirm(false)}
-              style={{
-                flex: 1,
-                paddingVertical: 13,
-                borderRadius: 10,
-                alignItems: 'center',
-                backgroundColor: COLORS.surfaceMuted,
-                opacity: deleting ? 0.6 : 1,
-              }}
-            >
-              <AppText variant="body" weight="medium">
-                {t('common.cancel')}
-              </AppText>
-            </Pressable>
-            <Pressable
+            />
+            <PillButton
+              label={deleting ? t('common.deleting') : t('common.delete')}
+              tone="danger"
               disabled={deleting}
               onPress={confirmDelete}
-              style={{
-                flex: 1,
-                paddingVertical: 13,
-                borderRadius: 10,
-                alignItems: 'center',
-                backgroundColor: 'rgba(248, 113, 113, 0.16)',
-                borderWidth: 0.5,
-                borderColor: 'rgba(248, 113, 113, 0.35)',
-                opacity: deleting ? 0.6 : 1,
-              }}
-            >
-              <AppText
-                variant="body"
-                weight="medium"
-                style={{ color: COLORS.danger }}
-              >
-                {deleting ? t('common.deleting') : t('common.delete')}
-              </AppText>
-            </Pressable>
+            />
           </View>
         </View>
       ) : showCreate ? (
-        <View style={{ padding: 20, gap: 12 }}>
-          <TextInput
-            maxFontSizeMultiplier={LAYOUT.maxFontScale}
+        <View style={{ padding: 10, gap: SPACING.md }}>
+          <AuthTextField
+            icon="playlist"
             placeholder={t('library.playlistName')}
-            placeholderTextColor={COLORS.textMuted}
             value={newName}
             onChangeText={setNewName}
+            autoCapitalize="sentences"
+            returnKeyType="done"
+            onSubmitEditing={handleCreatePlaylist}
             autoFocus
-            style={{
-              borderWidth: 1,
-              borderColor: COLORS.border,
-              borderRadius: 8,
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              color: COLORS.textPrimary,
-              fontFamily: FONT_FAMILY.regular,
-              fontSize: 14,
-            }}
           />
-          <Pressable
+          <PrimaryButton
+            label={t('library.createAndAdd')}
             onPress={handleCreatePlaylist}
-            style={{
-              backgroundColor: COLORS.accent,
-              paddingVertical: 12,
-              borderRadius: 8,
-              alignItems: 'center',
-            }}
-          >
-            <AppText variant="body" weight="medium" style={{ color: '#fff' }}>
-              {t('library.createAndAdd')}
-            </AppText>
-          </Pressable>
+            disabled={!newName.trim()}
+          />
         </View>
       ) : showPlaylists ? (
-        <View style={{ paddingHorizontal: 20, gap: 4 }}>
-          <Pressable
+        <View style={{ gap: 2 }}>
+          <SheetItem
+            icon="plus"
+            tone="accent"
+            label={t('library.newPlaylist')}
             onPress={() => setShowCreate(true)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 14,
-              paddingVertical: 14,
-              borderBottomWidth: 0.5,
-              borderBottomColor: COLORS.divider,
-            }}
-          >
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 8,
-                backgroundColor: COLORS.accent,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <AppText variant="body" weight="bold" style={{ color: '#fff' }}>
-                +
-              </AppText>
-            </View>
-            <AppText variant="body" weight="medium">
-              {t('library.newPlaylist')}
-            </AppText>
-          </Pressable>
+          />
           {playlists.map((pl) => (
-            <Pressable
+            <SheetItem
               key={pl.id}
+              icon="playlist"
+              label={pl.name}
+              detail={tn('tracks', pl.track_count)}
               onPress={() => handleAddToPlaylist(pl.id)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 14,
-                paddingVertical: 14,
-                borderBottomWidth: 0.5,
-                borderBottomColor: COLORS.divider,
-              }}
-            >
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 8,
-                  backgroundColor: COLORS.surfaceMuted,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <AppIcon name="playlist" size={18} color={COLORS.textMuted} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <AppText variant="body" weight="medium" numberOfLines={1}>
-                  {pl.name}
-                </AppText>
-                <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-                  {tn('tracks', pl.track_count)}
-                </AppText>
-              </View>
-            </Pressable>
+            />
           ))}
         </View>
       ) : (
-        <View style={{ paddingHorizontal: 20 }}>
-          <Pressable
+        <View style={{ gap: 2 }}>
+          <SheetItem
+            icon="playlist"
+            label={t('library.addToPlaylist')}
+            next
             onPress={() => setShowPlaylists(true)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 14,
-              paddingVertical: 16,
-              borderBottomWidth: 0.5,
-              borderBottomColor: COLORS.divider,
-            }}
-          >
-            <AppIcon name="playlist" size={22} color={COLORS.textPrimary} />
-            <AppText variant="body" weight="medium">
-              {t('library.addToPlaylist')}
-            </AppText>
-          </Pressable>
+          />
           {extraAction ? (
-            <Pressable
+            <SheetItem
+              icon={extraAction.icon}
+              label={extraAction.label}
+              color={extraAction.color}
               onPress={extraAction.onPress}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 14,
-                paddingVertical: 16,
-                borderBottomWidth: 0.5,
-                borderBottomColor: COLORS.divider,
-              }}
-            >
-              <AppIcon
-                name={extraAction.icon}
-                size={22}
-                color={extraAction.color ?? COLORS.textPrimary}
-              />
-              <AppText
-                variant="body"
-                weight="medium"
-                style={{ color: extraAction.color ?? COLORS.textPrimary }}
-              >
-                {extraAction.label}
-              </AppText>
-            </Pressable>
+            />
           ) : null}
-          <Pressable
+          <SheetItem
+            icon="trash"
+            tone="danger"
+            label={t('trackActions.deleteFromDownloads')}
             onPress={handleDelete}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 14,
-              paddingVertical: 16,
-            }}
-          >
-            <AppIcon name="trash" size={22} color={COLORS.danger} />
-            <AppText
-              variant="body"
-              weight="medium"
-              style={{ color: COLORS.danger }}
-            >
-              {t('trackActions.deleteFromDownloads')}
-            </AppText>
-          </Pressable>
+          />
         </View>
       )}
     </AnimatedModal>

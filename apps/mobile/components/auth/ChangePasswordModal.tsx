@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { AuthTextField } from '@/components/auth/AuthTextField';
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { GLASS } from '@/constants/glass';
 import { SPACING } from '@/constants/spacing';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
@@ -77,7 +78,9 @@ export function ChangePasswordModal({
           style={{
             // In Glass mode AnimatedModal supplies the frosted surface.
             backgroundColor: glassMode ? 'transparent' : COLORS.surface,
-            borderRadius: 16,
+            borderRadius: GLASS.radius.dialog,
+            borderWidth: glassMode ? 0 : StyleSheet.hairlineWidth,
+            borderColor: GLASS.rim,
             padding: SPACING.xxl,
           }}
         >
@@ -92,6 +95,7 @@ export function ChangePasswordModal({
               label={t('profile.currentPassword')}
               value={currentPassword}
               onChangeText={setCurrentPassword}
+              icon="lock"
               secureTextEntry
               autoComplete="password"
               textContentType="password"
@@ -100,6 +104,7 @@ export function ChangePasswordModal({
               label={t('profile.newPassword')}
               value={newPassword}
               onChangeText={setNewPassword}
+              icon="lock"
               secureTextEntry
               autoComplete="new-password"
               textContentType="password"
@@ -108,6 +113,7 @@ export function ChangePasswordModal({
               label={t('profile.confirmPassword')}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
+              icon="lock"
               secureTextEntry
               autoComplete="new-password"
               textContentType="password"

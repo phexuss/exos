@@ -1,15 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, type TextInput as RNTextInput, View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import type { TextInput as RNTextInput } from 'react-native';
 
+import { AuthLink, AuthNote, AuthScreen } from '@/components/auth/AuthScreen';
 import { AuthTextField } from '@/components/auth/AuthTextField';
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { AppText } from '@/components/ui/AppText';
-import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
 import { COLORS } from '@/constants/colors';
-import { SPACING } from '@/constants/spacing';
 import { useI18n } from '@/hooks/useI18n';
 import { ApiError } from '@/services/api/client';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -60,97 +57,49 @@ export default function ResetCodeScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: COLORS.background }}
-      edges={['top', 'bottom']}
-    >
-      <KeyboardAwareScrollView
-        bottomOffset={SPACING.xxl}
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingHorizontal: SPACING.xxl,
-          paddingTop: SPACING.lg,
-          paddingBottom: SPACING.xxl,
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <HeaderIconButton
-          icon="chevron-left"
-          onPress={() => router.back()}
-          accessibilityLabel={t('common.back')}
-        />
-
-        <View style={{ marginTop: SPACING.xxl, gap: 6 }}>
-          <AppText variant="display" weight="bold">
-            {t('auth.resetCodeTitle')}
-          </AppText>
+    <AuthScreen
+      title={t('auth.resetCodeTitle')}
+      subtitle={
+        <>
+          {t('auth.resetCodeSubtitle')}{' '}
           <AppText
             variant="body"
-            style={{ color: COLORS.textSecondary, fontSize: 14 }}
+            weight="bold"
+            style={{ color: COLORS.textPrimary, fontSize: 14 }}
           >
-            {t('auth.resetCodeSubtitle')}{' '}
-            <AppText
-              variant="body"
-              weight="bold"
-              style={{ color: COLORS.textPrimary, fontSize: 14 }}
-            >
-              {email}
-            </AppText>
+            {email}
           </AppText>
-        </View>
-
-        <View style={{ marginTop: SPACING.xxxl, gap: SPACING.lg }}>
-          <AuthTextField
-            label={t('auth.email')}
-            value={email}
-            onChangeText={() => undefined}
-            editable={false}
-          />
-          <AuthTextField
-            ref={codeRef}
-            label={t('auth.resetCode')}
-            value={code}
-            onChangeText={(value) =>
-              setCode(value.replace(/\D/g, '').slice(0, CODE_LENGTH))
-            }
-            placeholder={t('auth.resetCodePlaceholder')}
-            keyboardType="numeric"
-            textContentType="none"
-            returnKeyType="go"
-            onSubmitEditing={handleSubmit}
-            maxLength={CODE_LENGTH}
-          />
-          {error ? (
-            <AppText
-              variant="caption"
-              style={{ color: COLORS.danger, fontSize: 12 }}
-            >
-              {error}
-            </AppText>
-          ) : null}
-        </View>
-
-        <View style={{ marginTop: SPACING.xxxl, gap: SPACING.lg }}>
-          <PrimaryButton
-            label={t('auth.verifyResetCode')}
-            onPress={handleSubmit}
-            loading={isLoading}
-          />
-          <Pressable
-            onPress={() => router.replace('/(auth)/login' as never)}
-            hitSlop={8}
-            style={{ alignItems: 'center', paddingVertical: 8 }}
-          >
-            <AppText
-              variant="caption"
-              weight="medium"
-              style={{ color: COLORS.accent, fontSize: 13 }}
-            >
-              {t('auth.backToSignIn')}
-            </AppText>
-          </Pressable>
-        </View>
-      </KeyboardAwareScrollView>
-    </SafeAreaView>
+        </>
+      }
+      onBack={() => router.back()}
+    >
+      <AuthTextField
+        ref={codeRef}
+        label={t('auth.resetCode')}
+        icon="key"
+        value={code}
+        onChangeText={(value) =>
+          setCode(value.replace(/\D/g, '').slice(0, CODE_LENGTH))
+        }
+        placeholder={t('auth.resetCodePlaceholder')}
+        keyboardType="numeric"
+        textContentType="none"
+        returnKeyType="go"
+        onSubmitEditing={handleSubmit}
+        maxLength={CODE_LENGTH}
+        code
+      />
+      {error ? <AuthNote tone="error">{error}</AuthNote> : null}
+      <PrimaryButton
+        label={t('auth.verifyResetCode')}
+        onPress={handleSubmit}
+        loading={isLoading}
+        arrow
+      />
+      <AuthLink
+        label={t('auth.backToSignIn')}
+        onPress={() => router.replace('/(auth)/login' as never)}
+      />
+    </AuthScreen>
   );
 }

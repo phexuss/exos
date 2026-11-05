@@ -1,13 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { BackHandler, View } from 'react-native';
-import Animated, { SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
-import {
-  glassPushEntering,
-  glassPushExiting,
-} from '@/components/glass/transitions';
 import { MiniPlayer } from '@/components/MiniPlayer';
+import { Presence, useHeld } from '@/components/motion/Presence';
 import { AlbumScreen } from '@/components/screens/AlbumScreen';
 import { ArtistScreen } from '@/components/screens/ArtistScreen';
 import { COLORS } from '@/constants/colors';
@@ -39,12 +35,18 @@ export function ArtistOverlay() {
     return () => sub.remove();
   }, [artistId, albumId, closeArtist, closeAlbum]);
 
-  if (!artistId && !albumId) return null;
+  const open = !!artistId || !!albumId;
+  // The store is already empty while a layer slides away; keep drawing
+  // what it showed. The artist is snapshotted while open, so an album opened
+  // on its own never brings back an artist from an earlier visit.
+  const artist = useRef(artistId);
+  if (open) artist.current = artistId;
+  const album = useHeld(albumId);
 
   return (
-    <Animated.View
-      entering={glassMode ? glassPushEntering() : SlideInRight.duration(280)}
-      exiting={glassMode ? glassPushExiting() : SlideOutRight.duration(240)}
+    <Presence
+      visible={open}
+      from="right"
       style={{
         position: 'absolute',
         top: 0,
@@ -56,33 +58,27 @@ export function ArtistOverlay() {
       }}
     >
       {glassMode ? <GlassAmbientBackground /> : null}
-      {artistId ? <ArtistScreen id={artistId} /> : null}
+      {artist.current ? <ArtistScreen id={artist.current} /> : null}
 
-      {}
-      {albumId && (
-        <Animated.View
-          entering={
-            glassMode
-              ? glassPushEntering()
-              : artistId
-                ? SlideInRight.duration(260)
-                : SlideInRight.duration(280)
-          }
-          exiting={glassMode ? glassPushExiting() : SlideOutRight.duration(220)}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: COLORS.background,
-          }}
-        >
-          {/* Opaque glow of its own so the artist page doesn't show through. */}
-          {glassMode ? <GlassAmbientBackground /> : null}
-          <AlbumScreen id={albumId} titleHint={albumTitle ?? undefined} />
-        </Animated.View>
-      )}
+      <Presence
+        visible={!!albumId}
+        from="right"
+        appear={false}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: COLORS.background,
+        }}
+      >
+        {/* Opaque glow of its own so the artist page doesn't show through. */}
+        {glassMode ? <GlassAmbientBackground /> : null}
+        {album ? (
+          <AlbumScreen id={album} titleHint={albumTitle ?? undefined} />
+        ) : null}
+      </Presence>
 
       <View
         style={{
@@ -98,6 +94,6 @@ export function ArtistOverlay() {
             each frame. The opaque glow behind needs only the tint. */}
         <MiniPlayer blur={SECONDARY_BLUR} />
       </View>
-    </Animated.View>
+    </Presence>
   );
 }

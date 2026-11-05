@@ -6,6 +6,7 @@ import { AnimatedModal } from '@/components/AnimatedModal';
 import { SeekBar } from '@/components/SeekBar';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { GLASS } from '@/constants/glass';
 import { useI18n } from '@/hooks/useI18n';
 import {
   FX_PRESETS,
@@ -51,11 +52,10 @@ export function FxSheet({ visible, onClose, accentColor }: FxSheetProps) {
       variant="sheet"
       onRequestClose={onClose}
       onBackdropPress={onClose}
-      backdropStyle={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
       contentStyle={{
         backgroundColor: COLORS.surface,
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
+        borderTopLeftRadius: GLASS.radius.sheet,
+        borderTopRightRadius: GLASS.radius.sheet,
         paddingBottom: 34,
       }}
     >
@@ -64,10 +64,10 @@ export function FxSheet({ visible, onClose, accentColor }: FxSheetProps) {
         <View style={{ alignItems: 'center', paddingVertical: 12 }}>
           <View
             style={{
-              width: 40,
+              width: 36,
               height: 4,
               borderRadius: 2,
-              backgroundColor: COLORS.border,
+              backgroundColor: GLASS.rimStrong,
             }}
           />
         </View>
@@ -104,8 +104,8 @@ export function FxSheet({ visible, onClose, accentColor }: FxSheetProps) {
             style={{
               flexDirection: 'row',
               padding: 4,
-              borderRadius: 14,
-              backgroundColor: COLORS.surfaceMuted,
+              borderRadius: GLASS.radius.capsule,
+              backgroundColor: COLORS.fill2,
             }}
             accessibilityRole="tablist"
           >
@@ -120,7 +120,7 @@ export function FxSheet({ visible, onClose, accentColor }: FxSheetProps) {
                   style={{
                     flex: 1,
                     paddingVertical: 10,
-                    borderRadius: 10,
+                    borderRadius: GLASS.radius.capsule,
                     alignItems: 'center',
                     backgroundColor: on ? COLORS.accentSubtle : 'transparent',
                   }}

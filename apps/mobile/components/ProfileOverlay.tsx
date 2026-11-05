@@ -1,15 +1,11 @@
 import { router } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { BackHandler, View } from 'react-native';
-import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
-import {
-  glassPresentEntering,
-  glassPresentExiting,
-} from '@/components/glass/transitions';
+import { Presence } from '@/components/motion/Presence';
 import { ProfileScreen } from '@/components/screens/ProfileScreen';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
@@ -109,7 +105,11 @@ function OfflineProfilePrompt() {
         </View>
 
         <View style={{ width: '100%', gap: 10, marginTop: 8 }}>
-          <PrimaryButton label={t('auth.signIn')} onPress={handleSignIn} />
+          <PrimaryButton
+            label={t('auth.signIn')}
+            onPress={handleSignIn}
+            arrow
+          />
           <PrimaryButton
             label={t('auth.signUp')}
             onPress={handleSignUp}
@@ -139,16 +139,15 @@ export function ProfileOverlay() {
     return () => sub.remove();
   }, [isProfileOpen, isSettingsOpen, closeProfile]);
 
-  if (!isProfileOpen) return null;
+  // Decided while open: signing out closes the profile first, and the sheet
+  // shouldn't flip to the signed-out prompt while it slides away.
+  const signedIn = useRef(!!user);
+  if (isProfileOpen) signedIn.current = !!user;
 
   return (
-    <Animated.View
-      entering={
-        glassMode
-          ? glassPresentEntering()
-          : SlideInDown.duration(350).damping(28)
-      }
-      exiting={glassMode ? glassPresentExiting() : SlideOutDown.duration(300)}
+    <Presence
+      visible={isProfileOpen}
+      from="bottom"
       style={{
         position: 'absolute',
         top: 0,
@@ -160,7 +159,7 @@ export function ProfileOverlay() {
       }}
     >
       {glassMode ? <GlassAmbientBackground /> : null}
-      {user ? <ProfileScreen /> : <OfflineProfilePrompt />}
-    </Animated.View>
+      {signedIn.current ? <ProfileScreen /> : <OfflineProfilePrompt />}
+    </Presence>
   );
 }

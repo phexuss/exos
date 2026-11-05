@@ -1,10 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutChangeEvent, Pressable, ScrollView, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import {
+  Animated,
+  type LayoutChangeEvent,
+  Pressable,
+  ScrollView,
+  View,
+} from 'react-native';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { AppText } from '@/components/ui/AppText';
@@ -118,21 +119,32 @@ function SyncedLineComponent({
     onSeek?.(time);
   }, [onSeek, time]);
 
-  const scale = useSharedValue(isActive ? 1.04 : 1);
-  const opacity = useSharedValue(isActive ? 1 : 0.35);
+  // React Native Animated on the native driver: a Reanimated value per line
+  // would leave every line's props for Reanimated to re-apply on each commit.
+  const [scale] = useState(() => new Animated.Value(isActive ? 1.04 : 1));
+  const [opacity] = useState(() => new Animated.Value(isActive ? 1 : 0.35));
 
   useEffect(() => {
-    scale.value = withSpring(isActive ? 1.04 : 1, SPRING);
-    opacity.value = withSpring(
-      isActive ? 1 : Math.max(0.2, 0.4 - distance * 0.04),
-      SPRING,
-    );
-  }, [isActive, distance]);
+    const run = Animated.parallel([
+      Animated.spring(scale, {
+        toValue: isActive ? 1.04 : 1,
+        ...SPRING,
+        useNativeDriver: true,
+      }),
+      Animated.spring(opacity, {
+        toValue: isActive ? 1 : Math.max(0.2, 0.4 - distance * 0.04),
+        ...SPRING,
+        useNativeDriver: true,
+      }),
+    ]);
+    run.start();
+    return () => run.stop();
+  }, [isActive, distance, scale, opacity]);
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
+  const animStyle = useMemo(
+    () => ({ transform: [{ scale }], opacity }),
+    [scale, opacity],
+  );
 
   return (
     <Pressable

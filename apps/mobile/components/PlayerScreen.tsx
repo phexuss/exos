@@ -8,7 +8,6 @@ import {
   View,
 } from 'react-native';
 import { GestureDetector, type PanGesture } from 'react-native-gesture-handler';
-import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -18,13 +17,10 @@ import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { DownloadButton } from '@/components/DownloadButton';
 import { FxSheet } from '@/components/FxSheet';
 import { GlassSurface } from '@/components/glass/GlassSurface';
-import {
-  glassPresentEntering,
-  glassPresentExiting,
-} from '@/components/glass/transitions';
 import { LyricsView } from '@/components/LyricsView';
 import { PlayRing } from '@/components/motion/PlayRing';
 import { Pop } from '@/components/motion/Pop';
+import { Presence } from '@/components/motion/Presence';
 import { Rise } from '@/components/motion/Rise';
 import { useSwipeToSkip } from '@/components/motion/useSwipeToSkip';
 import { SeekBar } from '@/components/SeekBar';
@@ -50,6 +46,7 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import type { Track } from '@/types/domain';
 
 type QueueOverlayProps = {
+  visible: boolean;
   glassMode: boolean;
   currentTrack: Track;
   queue: Track[];
@@ -153,6 +150,7 @@ function SwipeArtwork({ coverUrl, radius }: SwipeArtworkProps) {
 }
 
 function QueueOverlay({
+  visible,
   glassMode,
   currentTrack,
   queue,
@@ -172,9 +170,9 @@ function QueueOverlay({
     : COLORS.background;
 
   return (
-    <Animated.View
-      entering={glassMode ? glassPresentEntering() : SlideInDown.duration(350)}
-      exiting={glassMode ? glassPresentExiting() : SlideOutDown.duration(300)}
+    <Presence
+      visible={visible}
+      from="bottom"
       style={{
         position: 'absolute',
         top: 0,
@@ -275,7 +273,7 @@ function QueueOverlay({
           )}
         />
       </View>
-    </Animated.View>
+    </Presence>
   );
 }
 
@@ -668,18 +666,17 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
         body
       )}
 
-      {showQueue ? (
-        <QueueOverlay
-          glassMode={glassMode}
-          currentTrack={currentTrack}
-          queue={queue}
-          onClose={() => setShowQueue(false)}
-          onPlay={(track) => {
-            play(track);
-            setShowQueue(false);
-          }}
-        />
-      ) : null}
+      <QueueOverlay
+        visible={showQueue}
+        glassMode={glassMode}
+        currentTrack={currentTrack}
+        queue={queue}
+        onClose={() => setShowQueue(false)}
+        onPlay={(track) => {
+          play(track);
+          setShowQueue(false);
+        }}
+      />
 
       <FxSheet
         visible={showFx}

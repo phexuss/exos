@@ -1,14 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  cancelAnimation,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
 
 import { COLORS } from '@/constants/colors';
 import { GLASS_SPRING } from '@/constants/glass';
@@ -44,23 +36,27 @@ export function SeekBar({
   accentColor,
   glass = false,
 }: SeekBarProps) {
-  const restHeight = glass ? GLASS_TRACK_HEIGHT : TRACK_HEIGHT;
-  const width = useSharedValue(0);
-  const position = useSharedValue(0);
-  const isScrubbing = useSharedValue(false);
-  const thumbScale = useSharedValue(1);
-  const trackHeight = useSharedValue(restHeight);
+  // The track is laid out at its tallest and squashed to rest with scaleY,
+  // so the swell runs on the native driver (height can't).
+  const tallHeight = glass ? GLASS_TRACK_ACTIVE_HEIGHT : TRACK_HEIGHT;
+  const restScale = glass ? GLASS_TRACK_HEIGHT / GLASS_TRACK_ACTIVE_HEIGHT : 1;
 
-  // JS-side copies of what the progress effect needs. Reading a shared
-  // value's `.value` from React blocks the JS thread until the UI thread
-  // answers, and this effect runs on every 250 ms progress tick.
+  // React Native Animated, not Reanimated: the bar animates on every 250 ms
+  // progress tick for as long as the player is open, and on Android every
+  // Reanimated frame re-commits the shadow tree.
+  const [width, setWidth] = useState(0);
+  const [position] = useState(() => new Animated.Value(0));
+  const [thumbScale] = useState(() => new Animated.Value(1));
+  const [trackScale] = useState(() => new Animated.Value(restScale));
+
   const layoutWidth = useRef(0);
   const scrubbing = useRef(false);
   const lastTarget = useRef(0);
+  const lastX = useRef(0);
 
   useEffect(() => {
-    trackHeight.set(restHeight);
-  }, [restHeight, trackHeight]);
+    trackScale.setValue(restScale);
+  }, [restScale, trackScale]);
 
   useEffect(() => {
     const w = layoutWidth.current;
@@ -70,15 +66,19 @@ export function SeekBar({
     lastTarget.current = target;
 
     if (!isPlaying || jump) {
-      cancelAnimation(position);
-      position.set(target);
+      position.setValue(target);
       return;
     }
 
-    position.set(withTiming(target, { duration: 220 }));
+    Animated.timing(position, {
+      toValue: target,
+      duration: 220,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    }).start();
   }, [isPlaying, position, progress]);
 
-  const jsScrub = useCallback(
+  const scrub = useCallback(
     (ratio: number | null) => {
       scrubbing.current = ratio !== null;
       onScrub?.(ratio);
@@ -86,102 +86,125 @@ export function SeekBar({
     [onScrub],
   );
 
+  const settle = useCallback(() => {
+    Animated.timing(thumbScale, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+    Animated.spring(trackScale, {
+      toValue: restScale,
+      ...GLASS_SPRING.smooth,
+      useNativeDriver: true,
+    }).start();
+  }, [thumbScale, trackScale, restScale]);
+
   // Built once per set of callbacks: progress re-renders this every 250 ms and
   // a fresh gesture object makes the detector reconfigure natively each time.
   const gesture = useMemo(() => {
+    const clampX = (x: number) => Math.max(0, Math.min(x, layoutWidth.current));
+
     const pan = Gesture.Pan()
+      .runOnJS(true)
       .hitSlop({ top: HIT_SLOP, bottom: HIT_SLOP })
       .onStart((e) => {
-        'worklet';
-        const w = width.value;
-        const x = Math.max(0, Math.min(e.x, w));
-        isScrubbing.value = true;
-        cancelAnimation(position);
-        position.value = x;
-        thumbScale.value = withTiming(1.6, { duration: 120 });
+        const w = layoutWidth.current;
+        const x = clampX(e.x);
+        lastX.current = x;
+        position.stopAnimation();
+        position.setValue(x);
+        Animated.timing(thumbScale, {
+          toValue: 1.6,
+          duration: 120,
+          useNativeDriver: true,
+        }).start();
         if (glass) {
-          trackHeight.value = withSpring(
-            GLASS_TRACK_ACTIVE_HEIGHT,
-            GLASS_SPRING.snappy,
-          );
+          Animated.spring(trackScale, {
+            toValue: 1,
+            ...GLASS_SPRING.snappy,
+            useNativeDriver: true,
+          }).start();
         }
-        if (onSeekStart) runOnJS(onSeekStart)();
-        if (w > 0) runOnJS(jsScrub)(x / w);
+        onSeekStart?.();
+        if (w > 0) scrub(x / w);
       })
       .onUpdate((e) => {
-        'worklet';
-        const w = width.value;
-        const x = Math.max(0, Math.min(e.x, w));
-        position.value = x;
-        if (w > 0) runOnJS(jsScrub)(x / w);
+        const w = layoutWidth.current;
+        const x = clampX(e.x);
+        lastX.current = x;
+        position.setValue(x);
+        if (w > 0) scrub(x / w);
       })
       .onEnd(() => {
-        'worklet';
-        thumbScale.value = withTiming(1, { duration: 200 });
-        trackHeight.value = withSpring(restHeight, GLASS_SPRING.smooth);
-        const w = width.value;
-        if (w > 0) runOnJS(onSeek)(position.value / w);
-        runOnJS(jsScrub)(null);
-        if (onSeekEnd) runOnJS(onSeekEnd)();
-        isScrubbing.value = false;
+        settle();
+        const w = layoutWidth.current;
+        if (w > 0) onSeek(lastX.current / w);
+        scrub(null);
+        onSeekEnd?.();
       })
       .onFinalize((_e, success) => {
-        'worklet';
         if (success) return;
-
-        thumbScale.value = withTiming(1, { duration: 200 });
-        trackHeight.value = withSpring(restHeight, GLASS_SPRING.smooth);
-        isScrubbing.value = false;
-        runOnJS(jsScrub)(null);
-        if (onSeekEnd) runOnJS(onSeekEnd)();
+        settle();
+        scrub(null);
+        onSeekEnd?.();
       });
 
     const tap = Gesture.Tap()
+      .runOnJS(true)
       .hitSlop({ top: HIT_SLOP, bottom: HIT_SLOP })
       .onEnd((e) => {
-        'worklet';
-        const w = width.value;
-        const x = Math.max(0, Math.min(e.x, w));
-        cancelAnimation(position);
-        position.value = x;
-        if (w > 0) runOnJS(onSeek)(x / w);
+        const w = layoutWidth.current;
+        const x = clampX(e.x);
+        position.stopAnimation();
+        position.setValue(x);
+        lastTarget.current = x;
+        if (w > 0) onSeek(x / w);
       });
 
     return Gesture.Race(pan, tap);
   }, [
     glass,
-    restHeight,
     onSeek,
     onSeekStart,
     onSeekEnd,
-    jsScrub,
-    width,
+    scrub,
+    settle,
     position,
-    isScrubbing,
     thumbScale,
-    trackHeight,
+    trackScale,
   ]);
 
-  const fillStyle = useAnimatedStyle(() => {
-    const w = width.value;
-    const ratio = w > 0 ? Math.max(0, Math.min(1, position.value / w)) : 0;
-
+  // Built once per width: fresh interpolations each render would rewire the
+  // native animation graph on every progress tick.
+  const styles = useMemo(() => {
+    const w = Math.max(width, 1);
     return {
-      transform: [{ translateX: (-w * (1 - ratio)) / 2 }, { scaleX: ratio }],
+      fill: {
+        transform: [
+          {
+            translateX: position.interpolate({
+              inputRange: [0, w],
+              outputRange: [-w / 2, 0],
+              extrapolate: 'clamp' as const,
+            }),
+          },
+          {
+            scaleX: position.interpolate({
+              inputRange: [0, w],
+              outputRange: [0, 1],
+              extrapolate: 'clamp' as const,
+            }),
+          },
+        ],
+      },
+      thumb: {
+        transform: [
+          { translateX: Animated.add(position, -THUMB_SIZE / 2) },
+          { scale: thumbScale },
+        ],
+      },
     };
-  });
-
-  const trackStyle = useAnimatedStyle(() => ({
-    height: trackHeight.value,
-    borderRadius: trackHeight.value / 2,
-  }));
-
-  const thumbStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: position.value - THUMB_SIZE / 2 },
-      { scale: thumbScale.value },
-    ],
-  }));
+  }, [width, position, thumbScale]);
 
   return (
     <GestureDetector gesture={gesture}>
@@ -193,23 +216,21 @@ export function SeekBar({
         onLayout={(e) => {
           const w = e.nativeEvent.layout.width;
           layoutWidth.current = w;
-          width.set(w);
+          setWidth(w);
           if (!scrubbing.current) {
             lastTarget.current = progress * w;
-            position.set(lastTarget.current);
+            position.setValue(lastTarget.current);
           }
         }}
       >
         <Animated.View
-          style={[
-            {
-              backgroundColor: glass
-                ? 'rgba(255,255,255,0.22)'
-                : COLORS.divider,
-              overflow: 'hidden',
-            },
-            trackStyle,
-          ]}
+          style={{
+            height: tallHeight,
+            borderRadius: tallHeight / 2,
+            backgroundColor: glass ? 'rgba(255,255,255,0.22)' : COLORS.divider,
+            overflow: 'hidden',
+            transform: [{ scaleY: trackScale }],
+          }}
         >
           <Animated.View
             style={[
@@ -223,7 +244,7 @@ export function SeekBar({
                   ? COLORS.textPrimary
                   : (accentColor ?? COLORS.accent),
               },
-              fillStyle,
+              styles.fill,
             ]}
           />
         </Animated.View>
@@ -237,7 +258,7 @@ export function SeekBar({
                 borderRadius: THUMB_SIZE / 2,
                 backgroundColor: COLORS.textPrimary,
               },
-              thumbStyle,
+              styles.thumb,
             ]}
           />
         )}

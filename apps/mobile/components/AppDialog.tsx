@@ -1,8 +1,11 @@
-import { Pressable, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { AppText } from '@/components/ui/AppText';
+import { PillButton } from '@/components/ui/PillButton';
 import { COLORS } from '@/constants/colors';
+import { GLASS } from '@/constants/glass';
+import { SPACING } from '@/constants/spacing';
 
 type DialogTone = 'default' | 'danger';
 
@@ -47,17 +50,14 @@ export function AppDialog({
       onRequestClose={handleClose}
       onBackdropPress={handleClose}
       disableBackdropPress={busy}
-      backdropStyle={{
-        backgroundColor: 'rgba(0,0,0,0.62)',
-        paddingHorizontal: 24,
-      }}
+      backdropStyle={{ paddingHorizontal: SPACING.xxl }}
       contentStyle={{
         backgroundColor: COLORS.surface,
-        borderRadius: 18,
-        borderWidth: 0.5,
-        borderColor: COLORS.border,
-        padding: 20,
-        gap: 18,
+        borderRadius: GLASS.radius.dialog,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: GLASS.rim,
+        padding: SPACING.xxl,
+        gap: SPACING.xl,
       }}
     >
       <View style={{ gap: 8 }}>
@@ -81,47 +81,19 @@ export function AppDialog({
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
         {showCancel ? (
-          <Pressable
+          <PillButton
+            label={cancelLabel ?? ''}
+            tone="quiet"
             disabled={busy}
             onPress={handleClose}
-            style={{
-              flex: 1,
-              paddingVertical: 13,
-              borderRadius: 10,
-              alignItems: 'center',
-              backgroundColor: COLORS.surfaceMuted,
-              opacity: busy ? 0.6 : 1,
-            }}
-          >
-            <AppText variant="body" weight="medium">
-              {cancelLabel}
-            </AppText>
-          </Pressable>
+          />
         ) : null}
-        <Pressable
+        <PillButton
+          label={busy && busyLabel ? busyLabel : confirmLabel}
+          tone={isDanger ? 'danger' : 'accent'}
           disabled={busy}
           onPress={onConfirm}
-          style={{
-            flex: 1,
-            paddingVertical: 13,
-            borderRadius: 10,
-            alignItems: 'center',
-            backgroundColor: isDanger
-              ? 'rgba(248, 113, 113, 0.16)'
-              : COLORS.textPrimary,
-            borderWidth: isDanger ? 0.5 : 0,
-            borderColor: 'rgba(248, 113, 113, 0.35)',
-            opacity: busy ? 0.6 : 1,
-          }}
-        >
-          <AppText
-            variant="body"
-            weight="medium"
-            style={{ color: isDanger ? COLORS.danger : COLORS.background }}
-          >
-            {busy && busyLabel ? busyLabel : confirmLabel}
-          </AppText>
-        </Pressable>
+        />
       </View>
     </AnimatedModal>
   );

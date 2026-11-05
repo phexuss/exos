@@ -1,30 +1,26 @@
 import { BlurView } from 'expo-blur';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import {
+  Animated,
   Modal,
   Pressable,
   type StyleProp,
   StyleSheet,
+  useWindowDimensions,
   type ViewStyle,
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import Animated, {
-  FadeIn,
-  FadeOut,
-  SlideInDown,
-  SlideOutDown,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassSurface } from '@/components/glass/GlassSurface';
-import {
-  glassPresentEntering,
-  glassPresentExiting,
-} from '@/components/glass/transitions';
-import { GLASS, GLASS_SPRING, SECONDARY_BLUR } from '@/constants/glass';
+import { GLASS, SECONDARY_BLUR } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
+import {
+  DESKTOP_SPRING,
+  EASE_OUT,
+  MOTION,
+  prefersReducedMotion,
+} from '@/constants/motion';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
@@ -43,33 +39,11 @@ type AnimatedModalProps = {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const ENTER_MS = 180;
-const CENTER_EXIT_MS = 160;
+const CENTER_EXIT_MS = MOTION.dur.quick;
 const SHEET_EXIT_MS = 220;
 const GLASS_SHEET_GAP = 8;
-
-/** Dialog "lands" onto the screen: fades in while settling from 112% scale. */
-function glassDialogEntering() {
-  'worklet';
-  return {
-    initialValues: { opacity: 0, transform: [{ scale: 1.12 }] },
-    animations: {
-      opacity: withTiming(1, { duration: ENTER_MS }),
-      transform: [{ scale: withSpring(1, GLASS_SPRING.snappy) }],
-    },
-  };
-}
-
-function glassDialogExiting() {
-  'worklet';
-  return {
-    initialValues: { opacity: 1, transform: [{ scale: 1 }] },
-    animations: {
-      opacity: withTiming(0, { duration: CENTER_EXIT_MS }),
-      transform: [{ scale: withTiming(0.94, { duration: CENTER_EXIT_MS }) }],
-    },
-  };
-}
+/** A dialog grows into place from this size (desktop `menu-in`). */
+const DIALOG_FROM_SCALE = 0.97;
 
 const SURFACE_KEYS = new Set([
   'backgroundColor',
@@ -129,40 +103,97 @@ export function AnimatedModal({
   const glassMode = useGlassMode();
   const liveBlur = useSettingsStore((s) => s.glassBlur);
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const [mounted, setMounted] = useState(visible);
-  const exitDuration = variant === 'sheet' ? SHEET_EXIT_MS : CENTER_EXIT_MS;
+  const [progress] = useState(() => new Animated.Value(0));
+  const isSheet = variant === 'sheet';
+  const exitDuration = isSheet ? SHEET_EXIT_MS : CENTER_EXIT_MS;
 
+  // Enter: spring the one progress value up once the modal is on screen.
   useEffect(() => {
-    if (visible) {
+    if (!visible) return;
+    if (!mounted) {
       setMounted(true);
       return;
     }
+    if (prefersReducedMotion()) {
+      progress.setValue(1);
+      return;
+    }
+    const run = Animated.spring(progress, {
+      toValue: 1,
+      ...DESKTOP_SPRING,
+      useNativeDriver: true,
+    });
+    run.start();
+    return () => run.stop();
+  }, [visible, mounted, progress]);
 
-    if (!mounted) return;
+  // Exit: play it back down, then take the modal off screen. Reopening
+  // mid-exit stops this and springs up from wherever it got to.
+  useEffect(() => {
+    if (visible || !mounted) return;
+    const run = Animated.timing(progress, {
+      toValue: 0,
+      duration: prefersReducedMotion() ? 0 : exitDuration,
+      easing: EASE_OUT,
+      useNativeDriver: true,
+    });
+    run.start(({ finished }) => {
+      if (finished) setMounted(false);
+    });
+    return () => run.stop();
+  }, [visible, mounted, exitDuration, progress]);
 
-    const timeout = setTimeout(() => setMounted(false), exitDuration);
-    return () => clearTimeout(timeout);
-  }, [visible, mounted, exitDuration]);
+  // Built once per size: fresh interpolations each render would rewire the
+  // native animation graph.
+  const motion = useMemo(() => {
+    const fade = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 1],
+      extrapolate: 'clamp',
+    });
+    return {
+      backdrop: { opacity: fade },
+      content: isSheet
+        ? {
+            transform: [
+              {
+                // Clamped so the spring's overshoot never lifts the sheet
+                // off the bottom edge.
+                translateY: progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [height, 0],
+                  extrapolate: 'clamp',
+                }),
+              },
+            ],
+          }
+        : {
+            opacity: fade,
+            transform: [
+              {
+                scale: progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [DIALOG_FROM_SCALE, 1],
+                }),
+              },
+            ],
+          },
+    };
+  }, [progress, isSheet, height]);
 
   if (!mounted) return null;
 
-  const isSheet = variant === 'sheet';
-  const backdropAlign = StyleSheet.flatten(backdropStyle)?.alignItems;
-
-  const contentEntering = glassMode
-    ? isSheet
-      ? glassPresentEntering()
-      : glassDialogEntering
-    : isSheet
-      ? SlideInDown.duration(240)
-      : FadeIn.duration(ENTER_MS);
-  const contentExiting = glassMode
-    ? isSheet
-      ? glassPresentExiting()
-      : glassDialogExiting
-    : isSheet
-      ? SlideOutDown.duration(exitDuration)
-      : FadeOut.duration(exitDuration);
+  // The caller's backdrop colour goes on the fading scrim; the rest (padding)
+  // stays on the layout layer.
+  const { backgroundColor: callerScrim, ...layout } =
+    StyleSheet.flatten(backdropStyle) ?? {};
+  const scrim = glassMode
+    ? liveBlur
+      ? GLASS.scrim
+      : GLASS.scrimDense
+    : (callerScrim ?? GLASS.scrimDense);
 
   let content: ReactNode = children;
   let animatedContentStyle: StyleProp<ViewStyle> = contentStyle;
@@ -243,20 +274,24 @@ export function AnimatedModal({
       navigationBarTranslucent
       onRequestClose={onRequestClose}
     >
-      {visible ? (
+      <Animated.View
+        pointerEvents={visible ? 'auto' : 'none'}
+        style={[
+          {
+            flex: 1,
+            justifyContent: isSheet ? 'flex-end' : 'center',
+          },
+          layout,
+        ]}
+      >
+        {/* The scrim fades on its own layer so the content's opacity isn't
+            multiplied by it. */}
         <Animated.View
-          entering={FadeIn.duration(ENTER_MS)}
-          exiting={FadeOut.duration(exitDuration)}
+          pointerEvents="none"
           style={[
-            {
-              flex: 1,
-              backgroundColor: 'rgba(0,0,0,0.6)',
-              justifyContent: isSheet ? 'flex-end' : 'center',
-            },
-            backdropStyle,
-            glassMode
-              ? { backgroundColor: liveBlur ? GLASS.scrim : GLASS.scrimDense }
-              : undefined,
+            StyleSheet.absoluteFill,
+            { backgroundColor: scrim },
+            motion.backdrop,
           ]}
         >
           {glassMode && liveBlur ? (
@@ -268,37 +303,27 @@ export function AnimatedModal({
               style={StyleSheet.absoluteFill}
             />
           ) : null}
-          <Pressable
-            disabled={disableBackdropPress}
-            onPress={onBackdropPress}
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              left: 0,
-            }}
-          />
-          {/* Lifts sheets and dialogs with inputs above the keyboard. */}
-          <KeyboardAvoidingView
-            behavior="padding"
-            pointerEvents="box-none"
-            style={{
-              flex: 1,
-              justifyContent: isSheet ? 'flex-end' : 'center',
-              alignItems: backdropAlign,
-            }}
-          >
-            <AnimatedPressable
-              entering={contentEntering}
-              exiting={contentExiting}
-              style={animatedContentStyle}
-            >
-              {content}
-            </AnimatedPressable>
-          </KeyboardAvoidingView>
         </Animated.View>
-      ) : null}
+        <Pressable
+          disabled={disableBackdropPress}
+          onPress={onBackdropPress}
+          style={StyleSheet.absoluteFill}
+        />
+        {/* Lifts sheets and dialogs with inputs above the keyboard. */}
+        <KeyboardAvoidingView
+          behavior="padding"
+          pointerEvents="box-none"
+          style={{
+            flex: 1,
+            justifyContent: isSheet ? 'flex-end' : 'center',
+            alignItems: layout.alignItems,
+          }}
+        >
+          <AnimatedPressable style={[animatedContentStyle, motion.content]}>
+            {content}
+          </AnimatedPressable>
+        </KeyboardAvoidingView>
+      </Animated.View>
     </Modal>
   );
 }
