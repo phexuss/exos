@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Builds Markdown release notes for the mobile app from the commits since the
-# previous tag. Usage: release-notes.sh <new-tag> [apk-path]
+# Markdown release notes for the Android app from the commits that touched
+# apps/mobile since the previous Android tag, in the same layout as the
+# desktop notes. Usage: release-notes.sh <new-tag> [apk-path]
 set -euo pipefail
 
 tag="$1"
 apk="${2:-}"
 repo="${GITHUB_REPOSITORY:-phexuss/exos}"
 
-# Android tags only: android-v1.2.3, or v1.2.3 for releases up to 0.4.0. The
+# Android tags only: android-v1.2.3, or v1.2.3 for releases up to 0.4.1. The
 # desktop app has its own desktop-v* tags.
 match=(--match 'android-v[0-9]*' --match 'v[0-9]*')
 prev=$(git describe --tags --abbrev=0 "${match[@]}" HEAD 2>/dev/null || true)
@@ -16,48 +17,33 @@ if [[ "$prev" == "$tag" ]]; then
 fi
 range="${prev:+$prev..}HEAD"
 
-declare -A sections=(
-  [feat]="✨ Новое"
-  [fix]="🐛 Исправления"
-  [perf]="⚡ Производительность"
-  [other]="🔧 Прочее"
-)
-declare -A lines=()
-
-while IFS=$'\t' read -r hash subject; do
-  [[ -z "$hash" ]] && continue
-  type="other"
-  text="$subject"
-  if [[ "$subject" =~ ^(feat|fix|perf)(\([^\)]*\))?!?:[[:space:]]*(.*)$ ]]; then
-    type="${BASH_REMATCH[1]}"
-    text="${BASH_REMATCH[3]}"
-  fi
-  lines[$type]+="- ${text} (${hash})"$'\n'
-done < <(git log --no-merges --format=$'%h\t%s' "$range" -- apps/mobile patches)
-
-echo "## EXØS Android ${tag#android-v}"
+version="${tag#android-}"
+echo "## EXØS Android ${version#v}"
 echo
-if [[ ${#lines[@]} -eq 0 ]]; then
-  echo "Изменений в мобильном приложении нет."
-  echo
-fi
-for type in feat fix perf other; do
-  if [[ -n "${lines[$type]:-}" ]]; then
-    echo "### ${sections[$type]}"
-    echo
-    printf '%s\n' "${lines[$type]}"
-  fi
-done
+echo "### What's changed"
+echo
+changes=$(git log --no-merges --format='- %s (%h)' "$range" -- apps/mobile patches | head -60)
+echo "${changes:-- No changes in apps/mobile}"
+echo
 
 if [[ -n "$apk" ]]; then
-  echo "### 📦 APK"
+  name=$(basename "$apk")
+  echo "### 📦 Install"
   echo
-  echo "\`$(basename "$apk")\` · $(du -h "$apk" | cut -f1)"
+  echo "| System | File |"
+  echo "| --- | --- |"
+  echo "| Android 7+ (arm64, armv7) | \`$name\` · $(du -h "$apk" | cut -f1) |"
   echo
-  echo "SHA-256: \`$(sha256sum "$apk" | cut -d' ' -f1)\`"
+  echo "Installs over earlier releases. Test builds from pull requests are signed with a throwaway key: uninstall them first."
   echo
+  echo "SHA-256:"
+  echo
+  echo '```'
+  echo "$(sha256sum "$apk" | cut -d' ' -f1)  $name"
+  echo '```'
 fi
 
 if [[ -n "$prev" ]]; then
-  echo "**Все изменения**: https://github.com/${repo}/compare/${prev}...${tag}"
+  echo
+  echo "**Full changelog**: https://github.com/${repo}/compare/${prev}...${tag}"
 fi
