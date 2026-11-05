@@ -58,6 +58,11 @@ export function GlassSurface({
   const tint = blur && !liveBlur ? GLASS.tintDense : GLASS.tint;
   const flat = StyleSheet.flatten(style) ?? {};
   const radius = flat.borderRadius ?? GLASS.radius.card;
+  const fillsWrapper =
+    flat.height !== undefined ||
+    flat.maxHeight !== undefined ||
+    flat.flex !== undefined ||
+    flat.flexGrow !== undefined;
 
   const surface = (
     <View
@@ -70,7 +75,10 @@ export function GlassSurface({
           borderColor: GLASS.rim,
         },
         floating ? undefined : style,
-        floating ? { flexGrow: 1 } : undefined,
+        // Fill the wrapper only when it has a size of its own. Yoga grows a
+        // flexGrow child up to the parent's max size, so an auto-sized
+        // wrapper (a centered dialog) would otherwise stretch to full screen.
+        floating && fillsWrapper ? { flexGrow: 1 } : undefined,
       ]}
     >
       {nativeBlur ? (

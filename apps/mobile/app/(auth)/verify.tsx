@@ -1,13 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
   Pressable,
   type TextInput as RNTextInput,
-  ScrollView,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
@@ -146,135 +145,134 @@ export default function VerifyScreen() {
       style={{ flex: 1, backgroundColor: COLORS.background }}
       edges={['top', 'bottom']}
     >
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingHorizontal: SPACING.xxl,
-            paddingTop: SPACING.lg,
-            paddingBottom: SPACING.xxl,
-          }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <HeaderIconButton
-            icon="chevron-left"
-            onPress={() => router.back()}
-            accessibilityLabel={t('common.back')}
-          />
+      <KeyboardAwareScrollView
+        bottomOffset={SPACING.xxl}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingHorizontal: SPACING.xxl,
+          paddingTop: SPACING.lg,
+          paddingBottom: SPACING.xxl,
+        }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <HeaderIconButton
+          icon="chevron-left"
+          onPress={() => router.back()}
+          accessibilityLabel={t('common.back')}
+        />
 
-          <View style={{ marginTop: SPACING.xxl, gap: 6 }}>
-            <AppText variant="display" weight="bold">
-              {t('auth.verifyTitle')}
-            </AppText>
+        <View style={{ marginTop: SPACING.xxl, gap: 6 }}>
+          <AppText variant="display" weight="bold">
+            {t('auth.verifyTitle')}
+          </AppText>
+          <AppText
+            variant="body"
+            style={{ color: COLORS.textSecondary, fontSize: 14 }}
+          >
+            {t('auth.verifySubtitle')}{' '}
             <AppText
               variant="body"
-              style={{ color: COLORS.textSecondary, fontSize: 14 }}
+              weight="bold"
+              style={{ color: COLORS.textPrimary, fontSize: 14 }}
             >
-              {t('auth.verifySubtitle')}{' '}
-              <AppText
-                variant="body"
-                weight="bold"
-                style={{ color: COLORS.textPrimary, fontSize: 14 }}
-              >
-                {email}
-              </AppText>
+              {email}
             </AppText>
-          </View>
+          </AppText>
+        </View>
 
-          <View
+        <View
+          style={{
+            marginTop: SPACING.xxxl,
+            flexDirection: 'row',
+            gap: 8,
+            justifyContent: 'space-between',
+          }}
+        >
+          {Array.from({ length: CODE_LENGTH }).map((_, i) => (
+            <TextInput
+              maxFontSizeMultiplier={LAYOUT.maxFontScale}
+              // biome-ignore lint/suspicious/noArrayIndexKey: digit position is stable
+              key={i}
+              ref={(el) => {
+                inputs.current[i] = el;
+              }}
+              value={digits[i]}
+              onChangeText={(v) => handleDigitChange(i, v)}
+              onKeyPress={({ nativeEvent }) =>
+                handleKeyPress(i, nativeEvent.key)
+              }
+              keyboardType="number-pad"
+              maxLength={CODE_LENGTH}
+              textAlign="center"
+              style={{
+                flex: 1,
+                height: 56,
+                backgroundColor: COLORS.surface,
+                borderWidth: 1,
+                borderColor: error ? COLORS.danger : COLORS.border,
+                borderRadius: 12,
+                fontFamily: FONT_FAMILY.bold,
+                fontSize: 22,
+                color: COLORS.textPrimary,
+              }}
+            />
+          ))}
+        </View>
+
+        {error ? (
+          <AppText
+            variant="caption"
             style={{
-              marginTop: SPACING.xxxl,
-              flexDirection: 'row',
-              gap: 8,
-              justifyContent: 'space-between',
+              color: COLORS.danger,
+              fontSize: 12,
+              marginTop: SPACING.md,
             }}
           >
-            {Array.from({ length: CODE_LENGTH }).map((_, i) => (
-              <TextInput
-                maxFontSizeMultiplier={LAYOUT.maxFontScale}
-                // biome-ignore lint/suspicious/noArrayIndexKey: digit position is stable
-                key={i}
-                ref={(el) => {
-                  inputs.current[i] = el;
-                }}
-                value={digits[i]}
-                onChangeText={(v) => handleDigitChange(i, v)}
-                onKeyPress={({ nativeEvent }) =>
-                  handleKeyPress(i, nativeEvent.key)
-                }
-                keyboardType="number-pad"
-                maxLength={CODE_LENGTH}
-                textAlign="center"
-                style={{
-                  flex: 1,
-                  height: 56,
-                  backgroundColor: COLORS.surface,
-                  borderWidth: 1,
-                  borderColor: error ? COLORS.danger : COLORS.border,
-                  borderRadius: 12,
-                  fontFamily: FONT_FAMILY.bold,
-                  fontSize: 22,
-                  color: COLORS.textPrimary,
-                }}
-              />
-            ))}
-          </View>
+            {error}
+          </AppText>
+        ) : null}
+        {info ? (
+          <AppText
+            variant="caption"
+            style={{
+              color: COLORS.accent,
+              fontSize: 12,
+              marginTop: SPACING.md,
+            }}
+          >
+            {info}
+          </AppText>
+        ) : null}
 
-          {error ? (
+        <View style={{ marginTop: SPACING.xxl, gap: SPACING.md }}>
+          <PrimaryButton
+            label={t('auth.verify')}
+            onPress={() => handleSubmit()}
+            loading={isLoading}
+          />
+          <Pressable
+            onPress={handleResend}
+            disabled={secondsLeft > 0}
+            hitSlop={8}
+            style={{
+              alignItems: 'center',
+              paddingVertical: 8,
+              opacity: secondsLeft > 0 ? 0.5 : 1,
+            }}
+          >
             <AppText
               variant="caption"
+              weight="medium"
               style={{
-                color: COLORS.danger,
-                fontSize: 12,
-                marginTop: SPACING.md,
+                color: secondsLeft > 0 ? COLORS.textMuted : COLORS.accent,
+                fontSize: 13,
               }}
             >
-              {error}
+              {resendLabel}
             </AppText>
-          ) : null}
-          {info ? (
-            <AppText
-              variant="caption"
-              style={{
-                color: COLORS.accent,
-                fontSize: 12,
-                marginTop: SPACING.md,
-              }}
-            >
-              {info}
-            </AppText>
-          ) : null}
-
-          <View style={{ marginTop: SPACING.xxl, gap: SPACING.md }}>
-            <PrimaryButton
-              label={t('auth.verify')}
-              onPress={() => handleSubmit()}
-              loading={isLoading}
-            />
-            <Pressable
-              onPress={handleResend}
-              disabled={secondsLeft > 0}
-              hitSlop={8}
-              style={{
-                alignItems: 'center',
-                paddingVertical: 8,
-                opacity: secondsLeft > 0 ? 0.5 : 1,
-              }}
-            >
-              <AppText
-                variant="caption"
-                weight="medium"
-                style={{
-                  color: secondsLeft > 0 ? COLORS.textMuted : COLORS.accent,
-                  fontSize: 13,
-                }}
-              >
-                {resendLabel}
-              </AppText>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </Pressable>
+        </View>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

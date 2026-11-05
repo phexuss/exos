@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import 'react-native-reanimated';
 import '../global.css';
 
@@ -140,18 +141,22 @@ export default function RootLayout() {
     <GestureHandlerRootView
       style={{ flex: 1, backgroundColor: COLORS.background }}
     >
-      <LanguageProvider>
-        <ThemeProvider value={EXOS_THEME}>
-          <RootNavigator />
-          <StatusBar style="light" />
-          <PlaylistOverlay />
-          <ArtistOverlay />
-          <PlayerOverlay />
-          <ProfileOverlay />
-          <SettingsOverlay />
-          <FaqOverlay />
-        </ThemeProvider>
-      </LanguageProvider>
+      {/* Edge-to-edge Android doesn't resize the window for the keyboard, so
+          inputs need this to stay above it (screens and modals alike). */}
+      <KeyboardProvider>
+        <LanguageProvider>
+          <ThemeProvider value={EXOS_THEME}>
+            <RootNavigator />
+            <StatusBar style="light" />
+            <PlaylistOverlay />
+            <ArtistOverlay />
+            <PlayerOverlay />
+            <ProfileOverlay />
+            <SettingsOverlay />
+            <FaqOverlay />
+          </ThemeProvider>
+        </LanguageProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

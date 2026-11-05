@@ -9,7 +9,10 @@ import {
 } from 'react-native';
 import { GestureDetector, type PanGesture } from 'react-native-gesture-handler';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { DownloadButton } from '@/components/DownloadButton';
@@ -157,6 +160,16 @@ function QueueOverlay({
   onPlay,
 }: QueueOverlayProps) {
   const { t } = useI18n();
+  // The overlay is absolutely positioned, so it ignores the SafeAreaView
+  // padding of the player and has to clear the system bars itself.
+  const insets = useSafeAreaInsets();
+  // Without a native blur (Android) the regular glass tint lets the player
+  // show through; the queue needs the dense one to stay readable.
+  const background = glassMode
+    ? SECONDARY_BLUR
+      ? 'transparent'
+      : GLASS.tintDense.thick
+    : COLORS.background;
 
   return (
     <Animated.View
@@ -169,14 +182,13 @@ function QueueOverlay({
         right: 0,
         bottom: 0,
         zIndex: 10,
-        backgroundColor: glassMode ? 'transparent' : COLORS.background,
+        backgroundColor: background,
       }}
     >
-      {glassMode ? (
+      {glassMode && SECONDARY_BLUR ? (
         <GlassSurface
           variant="thick"
           highlight={false}
-          blur={SECONDARY_BLUR}
           style={{
             position: 'absolute',
             top: 0,
@@ -190,7 +202,7 @@ function QueueOverlay({
       <View
         style={{
           flex: 1,
-          backgroundColor: glassMode ? 'transparent' : COLORS.background,
+          paddingTop: insets.top,
           paddingHorizontal: 24,
         }}
       >
@@ -217,33 +229,22 @@ function QueueOverlay({
           <View style={{ width: LAYOUT.iconButton }} />
         </View>
 
-        <AppText
-          variant="caption"
-          weight="medium"
-          style={{
-            color: COLORS.textSecondary,
-            letterSpacing: 1,
-            fontSize: 10,
-            marginBottom: 8,
-            marginTop: 8,
-          }}
-        >
-          {t('player.title').toUpperCase()}
-        </AppText>
         <View
           style={{
             paddingVertical: 8,
             paddingHorizontal: 12,
             borderRadius: glassMode ? 16 : 10,
             backgroundColor: COLORS.accentSubtle,
+            marginTop: 8,
             marginBottom: 16,
           }}
         >
-          <AppText variant="label" weight="medium">
+          <AppText variant="label" weight="medium" numberOfLines={1}>
             {currentTrack.title}
           </AppText>
           <AppText
             variant="caption"
+            numberOfLines={1}
             style={{ color: COLORS.textSecondary, fontSize: 11 }}
           >
             {currentTrack.artist.name}
@@ -266,6 +267,7 @@ function QueueOverlay({
           data={queue}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
           renderItem={({ item, index }) => (
             <Rise index={index} after={2} animate={index <= MOTION.staggerCap}>
               <TrackItem track={item} onPress={onPlay} />
