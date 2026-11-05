@@ -33,7 +33,8 @@ export const en = {
     afternoon: 'Good afternoon',
     evening: 'Good evening',
     mix: 'Mix for you',
-    mixHint: 'Last.fm picks from what you played, mixed with your artists’ top tracks.',
+    mixHint:
+      'Last.fm picks from what you played, mixed with your artists’ top tracks.',
     mixEmpty: 'Nothing to mix yet',
     mixEmptyHint: 'Play a few tracks and the mix shows up here.',
     yourArtists: 'Your artists',
@@ -200,13 +201,13 @@ export const en = {
     label: 'Now playing',
   },
   lyricsFaq: {
-    noLyrics: 'No lyrics yet',
+    noLyrics: 'No lyrics for this track',
+    loading: 'Looking for lyrics…',
     why: 'Why?',
     title: 'About lyrics',
     body1:
-      "Lyrics are fetched when you download a track. If you're only streaming a preview, lyrics won't be loaded.",
-    body2:
-      'Even after downloading, lyrics may not be available for every track — it depends on whether the song exists in the lyrics database.',
+      'Lyrics are looked up on LRCLIB as soon as a track starts playing, and saved with the track when you download it.',
+    body2: 'If there are none, LRCLIB does not have this song yet.',
     dismiss: 'Got it',
   },
   previewFaq: {

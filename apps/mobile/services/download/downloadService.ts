@@ -2,19 +2,18 @@ import { Directory, File, Paths } from 'expo-file-system';
 import { createDownloadResumable } from 'expo-file-system/legacy';
 
 import { onYtdlpProgress } from '@/modules/exos-ytdlp';
-import { API_BASE_URL, ApiError, apiGet, apiPost } from '@/services/api/client';
+import { API_BASE_URL, ApiError, apiPost } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
 import {
   deleteDownloadedTrack as deleteFromDb,
   getDownloadedTrack,
   insertDownloadedTrack,
-  type LyricsData,
 } from '@/services/db/database';
 import {
   downloadLocal,
-  fetchLyricsDirect,
   isLocalEngineAvailable,
 } from '@/services/engine/localEngine';
+import { fetchLyrics } from '@/services/lyrics/lyricsService';
 import { syncDownloadedTrack } from '@/services/sync/librarySyncService';
 import { useDownloadStore } from '@/store/useDownloadStore';
 import type { Track } from '@/types/domain';
@@ -99,46 +98,8 @@ export async function clearDownloadedTrackFiles(): Promise<void> {
   TRACKS_DIR.create({ idempotent: true });
 }
 
-function primaryArtist(artist: string): string {
-  return artist.split(/\s*[&,]\s*|\s+feat\.?\s+|\s+ft\.?\s+/i)[0].trim();
-}
-
 function getDownloadFormat(track: Track): DownloadFormat {
   return track.source === 'soundcloud' ? 'mp3' : DEFAULT_DOWNLOAD_FORMAT;
-}
-
-async function fetchLyrics(
-  artist: string,
-  title: string,
-  duration: number,
-): Promise<LyricsData | null> {
-  const direct = await fetchLyricsDirect(
-    primaryArtist(artist),
-    title,
-    duration,
-  );
-  if (direct?.syncedLyrics || direct?.plainLyrics) {
-    return {
-      syncedLyrics: direct.syncedLyrics ?? null,
-      plainLyrics: direct.plainLyrics ?? null,
-    };
-  }
-  try {
-    const data = await apiGet<{ syncedLyrics?: string; plainLyrics?: string }>(
-      API_ENDPOINTS.lyrics,
-      {
-        artist: primaryArtist(artist),
-        track: title,
-        duration: String(duration),
-      },
-    );
-    return {
-      syncedLyrics: data.syncedLyrics ?? null,
-      plainLyrics: data.plainLyrics ?? null,
-    };
-  } catch {
-    return null;
-  }
 }
 
 function buildDownloadPayload(
@@ -211,6 +172,17 @@ async function downloadStream(
   return result.uri;
 }
 
+/** Last meaningful line of a yt-dlp failure, for an error toast. */
+function shortError(message: string): string {
+  const lines = message
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const line =
+    lines.reverse().find((l) => l.startsWith('ERROR:')) ?? lines[0] ?? message;
+  return line.replace(/^ERROR:\s*/, '').slice(0, 200);
+}
+
 /** `file:///a/b` -> `/a/b`, which is what yt-dlp's `-o` wants. */
 function toFsPath(uri: string): string {
   return decodeURIComponent(uri.replace(/^file:\/\//, ''));
@@ -226,6 +198,7 @@ async function downloadAudio(
   destination: File,
   onProgress: (progress: number) => void,
 ): Promise<{ filePath: string; format: string }> {
+  let localError: unknown = null;
   if (isLocalEngineAvailable) {
     const jobId = `download-${track.id}-${Date.now()}`;
     const sub = onYtdlpProgress((event) => {
@@ -239,6 +212,7 @@ async function downloadAudio(
       onProgress(1);
       return { filePath: `file://${path}`, format: ext };
     } catch (e) {
+      localError = e;
       console.warn(
         `[Download] On-device yt-dlp failed for ${track.id}, using server:`,
         e,
@@ -248,12 +222,25 @@ async function downloadAudio(
     }
   }
 
-  const streamUrl = await createStreamTicketUrl(
-    buildDownloadPayload(track, serverFormat),
-  );
-  if (__DEV__) console.log('[Download] Streaming from:', streamUrl);
-  const filePath = await downloadStream(streamUrl, destination.uri, onProgress);
-  return { filePath, format: serverFormat };
+  try {
+    const streamUrl = await createStreamTicketUrl(
+      buildDownloadPayload(track, serverFormat),
+    );
+    if (__DEV__) console.log('[Download] Streaming from:', streamUrl);
+    const filePath = await downloadStream(
+      streamUrl,
+      destination.uri,
+      onProgress,
+    );
+    return { filePath, format: serverFormat };
+  } catch (serverError) {
+    // The on-device error says what actually went wrong; the server is
+    // only a fallback, so its failure would hide it.
+    if (localError instanceof Error) {
+      throw new Error(`yt-dlp: ${shortError(localError.message)}`);
+    }
+    throw serverError;
+  }
 }
 
 export async function downloadTrack(track: Track): Promise<DownloadResult> {

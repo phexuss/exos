@@ -72,6 +72,9 @@ export type YtdlpInfo = YtdlpFormat & {
   filesize?: number;
   filesize_approx?: number;
   requested_formats?: YtdlpFormat[];
+  /** `ytsearch1:` and other playlist inputs wrap the video in `entries`. */
+  _type?: string;
+  entries?: (YtdlpInfo | null)[];
 };
 
 export function initYtdlp() {

@@ -157,6 +157,8 @@ const SyncedLine = memo(SyncedLineComponent);
 type LyricsViewProps = {
   syncedLyrics?: string;
   plainLyrics?: string;
+  /** Still looking the lyrics up. */
+  loading?: boolean;
   /** Fallback when the player hasn't reported a duration yet. */
   duration: number;
   onSeekToTime?: (seconds: number) => void;
@@ -166,6 +168,7 @@ type LyricsViewProps = {
 export function LyricsView({
   syncedLyrics,
   plainLyrics,
+  loading,
   duration,
   onSeekToTime,
   accentColor,
@@ -233,6 +236,19 @@ export function LyricsView({
 
   const { t } = useI18n();
   const [showLyricsFaq, setShowLyricsFaq] = useState(false);
+
+  if (!syncedLyrics && !plainLyrics && loading) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <AppText
+          variant="body"
+          style={{ color: COLORS.textMuted, textAlign: 'center' }}
+        >
+          {t('lyricsFaq.loading')}
+        </AppText>
+      </View>
+    );
+  }
 
   if (!syncedLyrics && !plainLyrics) {
     return (

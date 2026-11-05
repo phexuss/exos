@@ -80,11 +80,24 @@ async function withFallback<T>(
   }
 }
 
+/**
+ * `-J` on `ytsearch1:` prints a playlist with the video in `entries`; a
+ * direct link prints the video itself. The lab only used links, so search
+ * results never had a URL at the top level.
+ */
+function unwrapEntry(info: YtdlpInfo): YtdlpInfo {
+  if (info._type !== 'playlist' && !info.entries) return info;
+  const entry = info.entries?.find((e): e is YtdlpInfo => !!e);
+  if (!entry) throw new Error('yt-dlp found nothing for this track');
+  return entry;
+}
+
 function pickFormat(info: YtdlpInfo): YtdlpFormat {
   return info.requested_formats?.[0] ?? info;
 }
 
-function toStream(info: YtdlpInfo): LocalStream {
+function toStream(result: YtdlpInfo): LocalStream {
+  const info = unwrapEntry(result);
   const fmt = pickFormat(info);
   if (!fmt.url) throw new Error('yt-dlp returned no audio URL');
   const protocol = fmt.protocol ?? '';
@@ -142,6 +155,42 @@ export function prefetchLocalStream(track: Track): void {
  * adds it) and returns the final path. `jobId` matches progress events.
  */
 export async function downloadLocal(
+  track: Track,
+  jobId: string,
+  basePath: string,
+): Promise<{ path: string; ext: string }> {
+  await acquireDownloadSlot();
+  try {
+    return await runDownload(track, jobId, basePath);
+  } finally {
+    releaseDownloadSlot();
+  }
+}
+
+/**
+ * Each yt-dlp run is a separate Python process on the phone. Twenty of them
+ * at once (a whole playlist queued) run out of memory and get throttled by
+ * YouTube, so downloads take turns. Playback resolves skip this queue.
+ */
+const MAX_PARALLEL_DOWNLOADS = 2;
+let runningDownloads = 0;
+const waitingDownloads: (() => void)[] = [];
+
+function acquireDownloadSlot(): Promise<void> {
+  if (runningDownloads < MAX_PARALLEL_DOWNLOADS) {
+    runningDownloads++;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => waitingDownloads.push(resolve));
+}
+
+function releaseDownloadSlot(): void {
+  const next = waitingDownloads.shift();
+  if (next) next();
+  else runningDownloads--;
+}
+
+async function runDownload(
   track: Track,
   jobId: string,
   basePath: string,
