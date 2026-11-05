@@ -2,6 +2,7 @@ import { mapDeezerTrackToTrack } from '@/services/adapters/search.adapter';
 import { mapSoundCloudTrackToTrack } from '@/services/adapters/soundcloud.adapter';
 import { apiGet } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
+import { searchSoundCloudDirect } from '@/services/engine/soundcloudDirect';
 import type { DeezerChartResponse, DeezerSearchResponse } from '@/types/deezer';
 import type { Track } from '@/types/domain';
 import type { SoundCloudSearchResponse } from '@/types/soundcloud';
@@ -18,6 +19,12 @@ export async function getChart(): Promise<DeezerChartResponse> {
 }
 
 export async function searchSoundCloud(query: string): Promise<Track[]> {
+  try {
+    const tracks = await searchSoundCloudDirect(query);
+    return tracks.map(mapSoundCloudTrackToTrack);
+  } catch (error) {
+    console.warn('[Search] SoundCloud direct failed, using server:', error);
+  }
   const data = await apiGet<SoundCloudSearchResponse>(
     API_ENDPOINTS.searchSoundCloud,
     { q: query },
