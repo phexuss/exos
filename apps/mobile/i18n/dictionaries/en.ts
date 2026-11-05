@@ -239,6 +239,8 @@ export const en = {
     spotify: 'Spotify',
   },
   auth: {
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     tagline: 'Your music, your way',
     getStarted: 'Get Started',
     signIn: 'Sign In',

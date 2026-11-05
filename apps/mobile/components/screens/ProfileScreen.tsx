@@ -1,15 +1,23 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { AppDialog } from '@/components/AppDialog';
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 import { EditFieldModal } from '@/components/auth/EditFieldModal';
+import { Rise } from '@/components/motion/Rise';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import { PillButton } from '@/components/ui/PillButton';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SectionLabel, SettingsGroup } from '@/components/ui/SettingsGroup';
+import { SheetItem } from '@/components/ui/SheetItem';
 import { COLORS } from '@/constants/colors';
+import { GLASS } from '@/constants/glass';
+import { SPACING } from '@/constants/spacing';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import { ApiError } from '@/services/api/client';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -17,34 +25,40 @@ import { useOverlayStore } from '@/store/useOverlayStore';
 
 type EditableField = 'name' | 'username' | 'email';
 
+/** Avatar diameter in the profile head. */
+const AVATAR = 72;
+
 function ProfileRow({
   label,
   value,
   onPress,
-  trailing,
+  last,
 }: {
   label: string;
   value?: string;
-  onPress?: () => void;
-  trailing?: React.ReactNode;
+  onPress: () => void;
+  /** No divider under the last row of a group. */
+  last?: boolean;
 }) {
-  const Container = onPress ? Pressable : View;
   return (
-    <Container
+    <AnimatedPressable
       onPress={onPress}
+      scaleValue={0.985}
+      highlightRadius={12}
+      accessibilityRole="button"
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        gap: 12,
         paddingVertical: 14,
-        borderBottomWidth: 0.5,
+        borderBottomWidth: last ? 0 : StyleSheet.hairlineWidth,
         borderBottomColor: COLORS.divider,
       }}
     >
       <View style={{ flex: 1, gap: 2 }}>
         <AppText
           variant="caption"
-          style={{ color: COLORS.textMuted, fontSize: 11 }}
+          style={{ color: COLORS.textMuted, fontSize: 12 }}
         >
           {label}
         </AppText>
@@ -54,16 +68,14 @@ function ProfileRow({
           </AppText>
         ) : null}
       </View>
-      {trailing ??
-        (onPress ? (
-          <AppIcon name="chevron-right" size={14} color={COLORS.textMuted} />
-        ) : null)}
-    </Container>
+      <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
+    </AnimatedPressable>
   );
 }
 
 export function ProfileScreen() {
   const { t } = useI18n();
+  const glassMode = useGlassMode();
   const user = useAuthStore((s) => s.user);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const changePassword = useAuthStore((s) => s.changePassword);
@@ -170,191 +182,142 @@ export function ProfileScreen() {
           }}
         />
 
-        {}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 14,
-            paddingVertical: 16,
-            borderBottomWidth: 0.5,
-            borderBottomColor: COLORS.divider,
-          }}
-        >
+        <Rise index={0}>
           <View
             style={{
-              width: 64,
-              height: 64,
-              borderRadius: 32,
-              backgroundColor: COLORS.accentSubtle,
               alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 0.5,
-              borderColor: COLORS.border,
+              gap: SPACING.md,
+              paddingVertical: SPACING.xl,
             }}
           >
-            <AppText
-              weight="bold"
-              style={{ fontSize: 24, color: COLORS.accent }}
+            <View
+              style={{
+                width: AVATAR,
+                height: AVATAR,
+                borderRadius: AVATAR / 2,
+                backgroundColor: COLORS.accentSubtle,
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: GLASS.rimStrong,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              {initial}
-            </AppText>
-          </View>
-          <View style={{ flex: 1, gap: 2 }}>
-            <AppText variant="body" weight="bold" numberOfLines={1}>
-              {user.name}
-            </AppText>
-            <AppText
-              variant="caption"
-              style={{ color: COLORS.textMuted }}
-              numberOfLines={1}
-            >
-              @{user.username}
-            </AppText>
+              <AppText
+                weight="black"
+                style={{ fontSize: 30, color: COLORS.accent }}
+              >
+                {initial}
+              </AppText>
+            </View>
+            <View style={{ alignItems: 'center', gap: 2 }}>
+              <AppText variant="title" weight="bold" numberOfLines={1}>
+                {user.name}
+              </AppText>
+              <AppText
+                variant="label"
+                style={{ color: COLORS.textMuted }}
+                numberOfLines={1}
+              >
+                @{user.username}
+              </AppText>
+            </View>
             {user.isVerified ? (
               <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                  marginTop: 4,
-                }}
+                style={[styles.chip, { backgroundColor: COLORS.accentSubtle }]}
               >
-                <AppIcon name="check" size={12} color={COLORS.accent} />
+                <AppIcon name="check" size={14} color={COLORS.accent} />
                 <AppText
                   variant="caption"
-                  style={{ color: COLORS.accent, fontSize: 11 }}
+                  weight="medium"
+                  style={{ color: COLORS.accent }}
                 >
                   {t('profile.verified')}
                 </AppText>
               </View>
             ) : (
-              <Pressable
+              <AnimatedPressable
                 onPress={handleVerify}
+                scaleValue={0.95}
                 hitSlop={6}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                  marginTop: 4,
-                }}
+                accessibilityRole="button"
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: COLORS.fill2,
+                    borderColor: GLASS.rim,
+                    borderWidth: StyleSheet.hairlineWidth,
+                  },
+                ]}
               >
                 <AppText
                   variant="caption"
-                  style={{ color: COLORS.warning, fontSize: 11 }}
+                  weight="medium"
+                  style={{ color: COLORS.warning }}
                 >
                   {t('profile.notVerified')}
                 </AppText>
                 <AppText
                   variant="caption"
                   weight="bold"
-                  style={{ color: COLORS.accent, fontSize: 11 }}
+                  style={{ color: COLORS.accent }}
                 >
-                  · {t('profile.verifyNow')}
+                  {t('profile.verifyNow')}
                 </AppText>
-              </Pressable>
+              </AnimatedPressable>
             )}
           </View>
-        </View>
+        </Rise>
 
-        {}
-        <View style={{ gap: 4 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-              marginBottom: 4,
-            }}
-          >
-            <AppIcon name="profile" size={14} color={COLORS.textMuted} />
-            <AppText
-              variant="caption"
-              weight="medium"
-              style={{
-                color: COLORS.textSecondary,
-                letterSpacing: 1,
-                fontSize: 11,
-              }}
-            >
-              {t('profile.accountSection').toUpperCase()}
-            </AppText>
-          </View>
+        <Rise index={1} style={{ gap: 12 }}>
+          <SectionLabel icon="profile" label={t('profile.accountSection')} />
+          <SettingsGroup glass={glassMode}>
+            <ProfileRow
+              label={t('profile.editName')}
+              value={user.name}
+              onPress={() => setEditing('name')}
+            />
+            <ProfileRow
+              label={t('profile.editUsername')}
+              value={`@${user.username}`}
+              onPress={() => setEditing('username')}
+            />
+            <ProfileRow
+              label={t('profile.editEmail')}
+              value={user.email}
+              onPress={() => setEditing('email')}
+            />
+            <ProfileRow
+              label={t('profile.changePassword')}
+              onPress={() => setShowChangePassword(true)}
+              last
+            />
+          </SettingsGroup>
+        </Rise>
 
-          <ProfileRow
-            label={t('profile.editName')}
-            value={user.name}
-            onPress={() => setEditing('name')}
-          />
-          <ProfileRow
-            label={t('profile.editUsername')}
-            value={`@${user.username}`}
-            onPress={() => setEditing('username')}
-          />
-          <ProfileRow
-            label={t('profile.editEmail')}
-            value={user.email}
-            onPress={() => setEditing('email')}
-          />
-          <ProfileRow
-            label={t('profile.changePassword')}
-            onPress={() => setShowChangePassword(true)}
-          />
-        </View>
-
-        {}
-        <Pressable
-          onPress={handleOpenLibrary}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingVertical: 14,
-            borderTopWidth: 0.5,
-            borderTopColor: COLORS.divider,
-            borderBottomWidth: 0.5,
-            borderBottomColor: COLORS.divider,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <AppIcon name="library" size={18} color={COLORS.textMuted} />
-            <View style={{ gap: 2 }}>
-              <AppText variant="label" weight="medium">
-                {t('profile.openLibrary')}
-              </AppText>
-              <AppText
-                variant="caption"
-                style={{ color: COLORS.textMuted, fontSize: 11 }}
-              >
-                {t('profile.viewPlaylists')}
-              </AppText>
+        <Rise index={2} style={{ marginTop: SPACING.xl }}>
+          <SettingsGroup glass={glassMode}>
+            <View style={{ marginHorizontal: -10, paddingVertical: 6 }}>
+              <SheetItem
+                icon="library"
+                label={t('profile.openLibrary')}
+                detail={t('profile.viewPlaylists')}
+                next
+                onPress={handleOpenLibrary}
+              />
             </View>
-          </View>
-          <AppIcon name="chevron-right" size={14} color={COLORS.textMuted} />
-        </Pressable>
+          </SettingsGroup>
+        </Rise>
 
-        {}
-        <Pressable
-          onPress={handleLogout}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingVertical: 16,
-            marginTop: 8,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: COLORS.border,
-          }}
+        <Rise
+          index={3}
+          style={{ flexDirection: 'row', marginTop: SPACING.xxl }}
         >
-          <AppText
-            variant="label"
-            weight="bold"
-            style={{ color: COLORS.danger }}
-          >
-            {t('profile.logout')}
-          </AppText>
-        </Pressable>
+          <PillButton
+            label={t('profile.logout')}
+            tone="danger"
+            onPress={handleLogout}
+          />
+        </Rise>
       </ScreenContainer>
 
       <EditFieldModal
@@ -416,3 +379,14 @@ export function ProfileScreen() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 28,
+    paddingHorizontal: 12,
+    borderRadius: GLASS.radius.capsule,
+  },
+});

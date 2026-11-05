@@ -1,11 +1,7 @@
 import { useEffect } from 'react';
 import { BackHandler, Animated as RNAnimated, StyleSheet } from 'react-native';
-import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { GlassArtworkBackdrop } from '@/components/glass/GlassArtworkBackdrop';
-import {
-  glassPresentEntering,
-  glassPresentExiting,
-} from '@/components/glass/transitions';
+import { Presence } from '@/components/motion/Presence';
 import { useDragToDismiss } from '@/components/motion/useDragToDismiss';
 import PlayerScreen from '@/components/PlayerScreen';
 import { COLORS } from '@/constants/colors';
@@ -16,8 +12,8 @@ import { usePlayerStore } from '@/store/usePlayerStore';
 const closePlayer = () => usePlayerStore.getState().closePlayer();
 
 /**
- * The open player. Mounted only while open, so the drag starts from rest
- * every time it is presented.
+ * The open player. Mounted only while open (and while it slides away), so
+ * the drag starts from rest every time it is presented.
  */
 function PlayerSheet({ glassMode }: { glassMode: boolean }) {
   const coverUrl = usePlayerStore((s) => s.currentTrack?.coverUrl);
@@ -61,19 +57,13 @@ export function PlayerOverlay() {
     return () => sub.remove();
   }, [isPlayerOpen]);
 
-  if (!hasTrack || !isPlayerOpen) return null;
-
   return (
-    <Animated.View
-      entering={
-        glassMode
-          ? glassPresentEntering()
-          : SlideInDown.duration(350).damping(28)
-      }
-      exiting={glassMode ? glassPresentExiting() : SlideOutDown.duration(300)}
+    <Presence
+      visible={hasTrack && isPlayerOpen}
+      from="bottom"
       style={[StyleSheet.absoluteFill, { zIndex: 999 }]}
     >
       <PlayerSheet glassMode={glassMode} />
-    </Animated.View>
+    </Presence>
   );
 }

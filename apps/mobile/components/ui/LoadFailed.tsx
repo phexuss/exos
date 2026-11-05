@@ -1,7 +1,8 @@
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
+import { PillButton } from '@/components/ui/PillButton';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
@@ -46,15 +47,12 @@ export function LoadFailed({ message, onRetry, onClose, background }: Props) {
           {onRetry ? t('common.loadFailed') : message}
         </AppText>
         {onRetry ? (
-          <Pressable onPress={onRetry} hitSlop={8} accessibilityRole="button">
-            <AppText
-              variant="label"
-              weight="medium"
-              style={{ color: COLORS.accent }}
-            >
-              {t('common.retry')}
-            </AppText>
-          </Pressable>
+          <PillButton
+            label={t('common.retry')}
+            tone="quiet"
+            fill={false}
+            onPress={onRetry}
+          />
         ) : null}
       </View>
     </SafeAreaView>

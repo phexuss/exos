@@ -1,21 +1,29 @@
 import { AltArrowDown as AltArrowDownLinear } from '@solar-icons/react-native/category/arrows/Linear/AltArrowDown';
 import { AltArrowLeft as AltArrowLeftLinear } from '@solar-icons/react-native/category/arrows/Linear/AltArrowLeft';
 import { AltArrowRight as AltArrowRightLinear } from '@solar-icons/react-native/category/arrows/Linear/AltArrowRight';
+import { ArrowRight as ArrowRightLinear } from '@solar-icons/react-native/category/arrows/Linear/ArrowRight';
 import { DownloadMinimalistic as DownloadLinear } from '@solar-icons/react-native/category/arrows-action/Linear/DownloadMinimalistic';
 import { Heart as HeartLinear } from '@solar-icons/react-native/category/like/Linear/Heart';
 import { List as ListLinear } from '@solar-icons/react-native/category/list/Linear/List';
 import { Playlist as PlaylistLinear } from '@solar-icons/react-native/category/list/Linear/Playlist';
 import { Global as GlobeLinear } from '@solar-icons/react-native/category/map/Linear/Global';
+import { Letter as LetterLinear } from '@solar-icons/react-native/category/messages/Linear/Letter';
 import { DocumentText as DocumentTextLinear } from '@solar-icons/react-native/category/notes/Linear/DocumentText';
 import { Magnifier as MagnifierLinear } from '@solar-icons/react-native/category/search/Linear/Magnifier';
+import { Eye as EyeLinear } from '@solar-icons/react-native/category/security/Linear/Eye';
+import { EyeClosed as EyeClosedLinear } from '@solar-icons/react-native/category/security/Linear/EyeClosed';
+import { Key as KeyLinear } from '@solar-icons/react-native/category/security/Linear/Key';
+import { Lock as LockLinear } from '@solar-icons/react-native/category/security/Linear/Lock';
 import { Settings as SettingsLinear } from '@solar-icons/react-native/category/settings/Linear/Settings';
 import { Palette as PaletteLinear } from '@solar-icons/react-native/category/tools/Linear/Palette';
 import { InfoCircle as InfoCircleBroken } from '@solar-icons/react-native/category/ui/Broken/InfoCircle';
+import { AddCircle as AddCircleLinear } from '@solar-icons/react-native/category/ui/Linear/AddCircle';
 import { CheckCircle as CheckCircleLinear } from '@solar-icons/react-native/category/ui/Linear/CheckCircle';
 import { CloseCircle as CloseCircleLinear } from '@solar-icons/react-native/category/ui/Linear/CloseCircle';
 import { Home as HomeLinear } from '@solar-icons/react-native/category/ui/Linear/Home';
 import { TrashBinTrash as TrashLinear } from '@solar-icons/react-native/category/ui/Linear/TrashBinTrash';
 import { User as UserLinear } from '@solar-icons/react-native/category/users/Linear/User';
+import { UserId as UserIdLinear } from '@solar-icons/react-native/category/users/Linear/UserId';
 import { Pause as PauseBroken } from '@solar-icons/react-native/category/video/Broken/Pause';
 import { Play as PlayBroken } from '@solar-icons/react-native/category/video/Broken/Play';
 import { MusicNote as MusicNoteLinear } from '@solar-icons/react-native/category/video/Linear/MusicNote';
@@ -58,7 +66,15 @@ export type IconName =
   | 'palette'
   | 'info'
   | 'queue'
-  | 'fx';
+  | 'fx'
+  | 'arrow-right'
+  | 'mail'
+  | 'lock'
+  | 'key'
+  | 'eye'
+  | 'eye-closed'
+  | 'id'
+  | 'plus';
 
 const ICON_MAP: Record<IconName, ComponentType<IconProps>> = {
   home: HomeLinear,
@@ -90,6 +106,14 @@ const ICON_MAP: Record<IconName, ComponentType<IconProps>> = {
   info: InfoCircleBroken,
   queue: PlaylistLinear,
   fx: SoundwaveLinear,
+  'arrow-right': ArrowRightLinear,
+  mail: LetterLinear,
+  lock: LockLinear,
+  key: KeyLinear,
+  eye: EyeLinear,
+  'eye-closed': EyeClosedLinear,
+  id: UserIdLinear,
+  plus: AddCircleLinear,
 };
 
 type AppIconProps = {

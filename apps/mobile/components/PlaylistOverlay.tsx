@@ -1,13 +1,9 @@
 import { useEffect } from 'react';
 import { BackHandler, View } from 'react-native';
-import Animated, { SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
-import {
-  glassPushEntering,
-  glassPushExiting,
-} from '@/components/glass/transitions';
 import { MiniPlayer } from '@/components/MiniPlayer';
+import { Presence, useHeld } from '@/components/motion/Presence';
 import { PlaylistScreen } from '@/components/screens/PlaylistScreen';
 import { COLORS } from '@/constants/colors';
 import { SECONDARY_BLUR } from '@/constants/glass';
@@ -18,6 +14,7 @@ export function PlaylistOverlay() {
   const glassMode = useGlassMode();
   const playlistId = useOverlayStore((s) => s.playlistId);
   const closePlaylist = useOverlayStore((s) => s.closePlaylist);
+  const shownId = useHeld(playlistId);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -31,12 +28,10 @@ export function PlaylistOverlay() {
     return () => sub.remove();
   }, [playlistId, closePlaylist]);
 
-  if (!playlistId) return null;
-
   return (
-    <Animated.View
-      entering={glassMode ? glassPushEntering() : SlideInRight.duration(280)}
-      exiting={glassMode ? glassPushExiting() : SlideOutRight.duration(240)}
+    <Presence
+      visible={!!playlistId}
+      from="right"
       style={{
         position: 'absolute',
         top: 0,
@@ -48,7 +43,7 @@ export function PlaylistOverlay() {
       }}
     >
       {glassMode ? <GlassAmbientBackground /> : null}
-      <PlaylistScreen id={playlistId} />
+      {shownId ? <PlaylistScreen id={shownId} /> : null}
       <View
         style={{
           position: 'absolute',
@@ -63,6 +58,6 @@ export function PlaylistOverlay() {
             each frame. The opaque glow behind needs only the tint. */}
         <MiniPlayer blur={SECONDARY_BLUR} />
       </View>
-    </Animated.View>
+    </Presence>
   );
 }

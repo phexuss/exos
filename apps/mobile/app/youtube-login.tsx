@@ -1,13 +1,21 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, type WebViewNavigation } from 'react-native-webview';
 
+import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
+import { Rise } from '@/components/motion/Rise';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import { PillButton } from '@/components/ui/PillButton';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SettingsGroup } from '@/components/ui/SettingsGroup';
+import { SHEET_TILE } from '@/components/ui/SheetItem';
 import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
+import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import {
   clearYoutubeCookies,
@@ -35,6 +43,7 @@ export default function YoutubeLoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useI18n();
+  const glassMode = useGlassMode();
   const [signedIn, setSignedIn] = useState(() => hasYoutubeCookies());
   const [signingIn, setSigningIn] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -107,7 +116,6 @@ export default function YoutubeLoginScreen() {
               <Pill
                 label={t('youtubeLogin.done')}
                 onPress={() => void saveCookies(true)}
-                primary
               />
             }
           />
@@ -150,32 +158,67 @@ export default function YoutubeLoginScreen() {
         gap: SPACING.lg,
       }}
     >
+      {glassMode ? <GlassAmbientBackground /> : null}
       <ScreenHeader
         title={t('youtubeLogin.title')}
         leading="back"
         withTopInset={false}
         onLeadingPress={goBack}
       />
-      <AppText variant="body" style={{ color: COLORS.textSecondary }}>
-        {t('youtubeLogin.intro')}
-      </AppText>
+      <Rise index={0}>
+        <AppText variant="body" style={{ color: COLORS.textSecondary }}>
+          {t('youtubeLogin.intro')}
+        </AppText>
+      </Rise>
       {!isYtdlpAvailable ? (
         <AppText variant="body" style={{ color: COLORS.warning }}>
           {t('ytdlpLab.unavailable')}
         </AppText>
       ) : (
-        <>
-          <AppText
-            variant="label"
-            weight="medium"
-            style={{ color: signedIn ? COLORS.accent : COLORS.textPrimary }}
-          >
-            {signedIn
-              ? t('youtubeLogin.statusSignedIn')
-              : t('youtubeLogin.statusSignedOut')}
-          </AppText>
+        <Rise index={1} style={{ gap: SPACING.md }}>
+          <SettingsGroup glass={glassMode}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: SPACING.md,
+                paddingVertical: SPACING.lg,
+              }}
+            >
+              <View
+                style={{
+                  width: SHEET_TILE,
+                  height: SHEET_TILE,
+                  borderRadius: 12,
+                  backgroundColor: signedIn
+                    ? COLORS.accentSubtle
+                    : COLORS.fill2,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <AppIcon
+                  name={signedIn ? 'check' : 'profile'}
+                  size={20}
+                  color={signedIn ? COLORS.accent : COLORS.textSecondary}
+                />
+              </View>
+              <AppText
+                variant="label"
+                weight="medium"
+                style={{
+                  flex: 1,
+                  color: signedIn ? COLORS.accent : COLORS.textPrimary,
+                }}
+              >
+                {signedIn
+                  ? t('youtubeLogin.statusSignedIn')
+                  : t('youtubeLogin.statusSignedOut')}
+              </AppText>
+            </View>
+          </SettingsGroup>
           <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
-            <Pill
+            <PillButton
               label={
                 signedIn ? t('youtubeLogin.switch') : t('youtubeLogin.signIn')
               }
@@ -183,13 +226,14 @@ export default function YoutubeLoginScreen() {
                 setError(null);
                 setSigningIn(true);
               }}
-              primary={!signedIn}
+              tone={signedIn ? 'quiet' : 'accent'}
               disabled={busy}
             />
             {signedIn ? (
-              <Pill
+              <PillButton
                 label={t('youtubeLogin.signOut')}
                 onPress={() => void signOut()}
+                tone="danger"
                 disabled={busy}
               />
             ) : null}
@@ -198,43 +242,31 @@ export default function YoutubeLoginScreen() {
             {t('youtubeLogin.note')}
           </AppText>
           {error ? <ErrorText message={error} /> : null}
-        </>
+        </Rise>
       )}
     </View>
   );
 }
 
-function Pill({
-  label,
-  onPress,
-  disabled,
-  primary,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  primary?: boolean;
-}) {
+/** Compact accent pill for the header while the sign-in page is open. */
+function Pill({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => ({
-        paddingVertical: 10,
+      scaleValue={0.94}
+      accessibilityRole="button"
+      style={{
+        height: 34,
+        justifyContent: 'center',
         paddingHorizontal: 16,
         borderRadius: 999,
-        backgroundColor: primary ? COLORS.accent : COLORS.surfaceElevated,
-        opacity: disabled ? 0.4 : pressed ? 0.7 : 1,
-      })}
+        backgroundColor: COLORS.accent,
+      }}
     >
-      <AppText
-        variant="label"
-        weight="medium"
-        style={{ color: primary ? COLORS.background : COLORS.textPrimary }}
-      >
+      <AppText variant="label" weight="bold" style={{ color: COLORS.onAccent }}>
         {label}
       </AppText>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

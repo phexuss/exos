@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { AuthTextField } from '@/components/auth/AuthTextField';
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { GLASS } from '@/constants/glass';
 import { SPACING } from '@/constants/spacing';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
@@ -88,7 +89,9 @@ export function EditFieldModal({
           style={{
             // In Glass mode AnimatedModal supplies the frosted surface.
             backgroundColor: glassMode ? 'transparent' : COLORS.surface,
-            borderRadius: 16,
+            borderRadius: GLASS.radius.dialog,
+            borderWidth: glassMode ? 0 : StyleSheet.hairlineWidth,
+            borderColor: GLASS.rim,
             padding: SPACING.xxl,
             gap: SPACING.lg,
           }}
@@ -111,6 +114,7 @@ export function EditFieldModal({
               label={t('profile.currentPassword')}
               value={password}
               onChangeText={setPassword}
+              icon="lock"
               secureTextEntry
               autoComplete="password"
               error={error}

@@ -1,15 +1,10 @@
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, type TextInput as RNTextInput, View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import type { TextInput as RNTextInput } from 'react-native';
 
+import { AuthLink, AuthNote, AuthScreen } from '@/components/auth/AuthScreen';
 import { AuthTextField } from '@/components/auth/AuthTextField';
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
-import { AppText } from '@/components/ui/AppText';
-import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
-import { COLORS } from '@/constants/colors';
-import { SPACING } from '@/constants/spacing';
 import { useI18n } from '@/hooks/useI18n';
 import { ApiError } from '@/services/api/client';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -75,124 +70,75 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: COLORS.background }}
-      edges={['top', 'bottom']}
+    <AuthScreen
+      title={t('auth.registerTitle')}
+      subtitle={t('auth.registerSubtitle')}
+      onBack={() => router.back()}
     >
-      <KeyboardAwareScrollView
-        bottomOffset={SPACING.xxl}
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingHorizontal: SPACING.xxl,
-          paddingTop: SPACING.lg,
-          paddingBottom: SPACING.xxl,
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <HeaderIconButton
-          icon="chevron-left"
-          onPress={() => router.back()}
-          accessibilityLabel={t('common.back')}
-        />
-
-        <View style={{ marginTop: SPACING.xxl, gap: 6 }}>
-          <AppText variant="display" weight="bold">
-            {t('auth.registerTitle')}
-          </AppText>
-          <AppText
-            variant="body"
-            style={{ color: COLORS.textSecondary, fontSize: 14 }}
-          >
-            {t('auth.registerSubtitle')}
-          </AppText>
-        </View>
-
-        <View style={{ marginTop: SPACING.xxl, gap: SPACING.lg }}>
-          <AuthTextField
-            label={t('auth.name')}
-            value={name}
-            onChangeText={setName}
-            placeholder={t('auth.namePlaceholder')}
-            autoCapitalize="words"
-            autoComplete="name"
-            textContentType="name"
-            returnKeyType="next"
-            onSubmitEditing={() => usernameRef.current?.focus()}
-            maxLength={16}
-          />
-          <AuthTextField
-            ref={usernameRef}
-            label={t('auth.username')}
-            value={username}
-            onChangeText={setUsername}
-            placeholder={t('auth.usernamePlaceholder')}
-            autoComplete="username"
-            textContentType="username"
-            returnKeyType="next"
-            onSubmitEditing={() => emailRef.current?.focus()}
-            maxLength={36}
-          />
-          <AuthTextField
-            ref={emailRef}
-            label={t('auth.email')}
-            value={email}
-            onChangeText={setEmail}
-            placeholder={t('auth.emailPlaceholder')}
-            keyboardType="email-address"
-            autoComplete="email"
-            textContentType="emailAddress"
-            returnKeyType="next"
-            onSubmitEditing={() => passwordRef.current?.focus()}
-          />
-          <AuthTextField
-            ref={passwordRef}
-            label={t('auth.password')}
-            value={password}
-            onChangeText={setPassword}
-            placeholder={t('auth.passwordPlaceholder')}
-            secureTextEntry
-            autoComplete="new-password"
-            textContentType="password"
-            returnKeyType="go"
-            onSubmitEditing={handleSubmit}
-          />
-          {error ? (
-            <AppText
-              variant="caption"
-              style={{ color: COLORS.danger, fontSize: 12 }}
-            >
-              {error}
-            </AppText>
-          ) : null}
-        </View>
-
-        <View style={{ marginTop: SPACING.xxl, gap: SPACING.lg }}>
-          <PrimaryButton
-            label={t('auth.createAccount')}
-            onPress={handleSubmit}
-            loading={isLoading}
-          />
-          <Pressable
-            onPress={() => router.replace('/(auth)/login' as never)}
-            hitSlop={8}
-            style={{ alignItems: 'center', paddingVertical: 8 }}
-          >
-            <AppText
-              variant="caption"
-              style={{ color: COLORS.textSecondary, fontSize: 13 }}
-            >
-              {t('auth.alreadyHaveAccount')}{' '}
-              <AppText
-                variant="caption"
-                weight="bold"
-                style={{ color: COLORS.accent, fontSize: 13 }}
-              >
-                {t('auth.signIn')}
-              </AppText>
-            </AppText>
-          </Pressable>
-        </View>
-      </KeyboardAwareScrollView>
-    </SafeAreaView>
+      <AuthTextField
+        label={t('auth.name')}
+        icon="id"
+        value={name}
+        onChangeText={setName}
+        placeholder={t('auth.namePlaceholder')}
+        autoCapitalize="words"
+        autoComplete="name"
+        textContentType="name"
+        returnKeyType="next"
+        onSubmitEditing={() => usernameRef.current?.focus()}
+        maxLength={16}
+      />
+      <AuthTextField
+        ref={usernameRef}
+        label={t('auth.username')}
+        icon="profile"
+        value={username}
+        onChangeText={setUsername}
+        placeholder={t('auth.usernamePlaceholder')}
+        autoComplete="username"
+        textContentType="username"
+        returnKeyType="next"
+        onSubmitEditing={() => emailRef.current?.focus()}
+        maxLength={36}
+      />
+      <AuthTextField
+        ref={emailRef}
+        label={t('auth.email')}
+        icon="mail"
+        value={email}
+        onChangeText={setEmail}
+        placeholder={t('auth.emailPlaceholder')}
+        keyboardType="email-address"
+        autoComplete="email"
+        textContentType="emailAddress"
+        returnKeyType="next"
+        onSubmitEditing={() => passwordRef.current?.focus()}
+      />
+      <AuthTextField
+        ref={passwordRef}
+        label={t('auth.password')}
+        icon="lock"
+        value={password}
+        onChangeText={setPassword}
+        placeholder={t('auth.passwordPlaceholder')}
+        secureTextEntry
+        autoComplete="new-password"
+        textContentType="password"
+        returnKeyType="go"
+        onSubmitEditing={handleSubmit}
+      />
+      {error ? <AuthNote tone="error">{error}</AuthNote> : null}
+      <PrimaryButton
+        label={t('auth.createAccount')}
+        onPress={handleSubmit}
+        loading={isLoading}
+        arrow
+      />
+      <AuthLink
+        prefix={t('auth.alreadyHaveAccount')}
+        label={t('auth.signIn')}
+        onPress={() => router.replace('/(auth)/login' as never)}
+      />
+    </AuthScreen>
   );
 }

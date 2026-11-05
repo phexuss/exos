@@ -4,16 +4,19 @@ import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
+  StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { GlassIconButton } from '@/components/glass/GlassIconButton';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
+import { GLASS } from '@/constants/glass';
 import { SOURCES } from '@/constants/sources';
 import { SPACING } from '@/constants/spacing';
 import { useI18n } from '@/hooks/useI18n';
@@ -58,33 +61,37 @@ function ActionButton({
   disabled?: boolean;
   tone?: 'primary' | 'spotify' | 'ghost';
 }) {
-  const background =
+  const surface =
     tone === 'spotify'
-      ? SOURCES.spotify.color
+      ? { backgroundColor: SOURCES.spotify.color, borderColor: 'transparent' }
       : tone === 'ghost'
-        ? 'transparent'
-        : COLORS.textPrimary;
-  const color = tone === 'ghost' ? COLORS.textSecondary : COLORS.background;
+        ? { backgroundColor: COLORS.fill2, borderColor: GLASS.rim }
+        : { backgroundColor: COLORS.accent, borderColor: 'transparent' };
+  const color = tone === 'ghost' ? COLORS.textPrimary : COLORS.onAccent;
 
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       disabled={disabled}
-      style={{
-        paddingHorizontal: 14,
-        paddingVertical: 9,
-        borderRadius: 10,
-        backgroundColor: background,
-        borderWidth: tone === 'ghost' ? 0.5 : 0,
-        borderColor: COLORS.border,
-        opacity: disabled ? 0.4 : 1,
-        alignItems: 'center',
-      }}
+      scaleValue={0.95}
+      accessibilityRole="button"
+      style={[
+        {
+          height: 34,
+          paddingHorizontal: 16,
+          borderRadius: GLASS.radius.capsule,
+          borderWidth: StyleSheet.hairlineWidth,
+          opacity: disabled ? 0.4 : 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        surface,
+      ]}
     >
-      <AppText variant="body" weight="medium" style={{ color, fontSize: 13 }}>
+      <AppText variant="body" weight="bold" style={{ color, fontSize: 13 }}>
         {label}
       </AppText>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -107,10 +114,10 @@ function JobCard({ job }: { job: SpotifyImportJob }) {
   return (
     <View
       style={{
-        backgroundColor: COLORS.background,
-        borderRadius: 14,
-        borderWidth: 0.5,
-        borderColor: COLORS.border,
+        backgroundColor: COLORS.fill1,
+        borderRadius: 16,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: GLASS.rim,
         padding: SPACING.md,
         gap: 8,
       }}
@@ -139,7 +146,7 @@ function JobCard({ job }: { job: SpotifyImportJob }) {
         style={{
           height: 4,
           borderRadius: 2,
-          backgroundColor: COLORS.border,
+          backgroundColor: COLORS.fill2,
           overflow: 'hidden',
         }}
       >
@@ -345,15 +352,15 @@ export function SpotifyImportModal({
             {playlist.coverUrl ? (
               <Image
                 source={{ uri: playlist.coverUrl }}
-                style={{ width: 44, height: 44, borderRadius: 6 }}
+                style={{ width: 44, height: 44, borderRadius: 10 }}
               />
             ) : (
               <View
                 style={{
                   width: 44,
                   height: 44,
-                  borderRadius: 6,
-                  backgroundColor: COLORS.background,
+                  borderRadius: 10,
+                  backgroundColor: COLORS.fill2,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
@@ -402,10 +409,10 @@ export function SpotifyImportModal({
         width: '100%',
         maxHeight: '86%',
         backgroundColor: COLORS.surface,
-        borderRadius: 18,
-        borderWidth: 0.5,
-        borderColor: COLORS.border,
-        padding: SPACING.lg,
+        borderRadius: GLASS.radius.dialog,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: GLASS.rim,
+        padding: SPACING.xl,
         gap: SPACING.md,
       }}
     >
@@ -430,18 +437,13 @@ export function SpotifyImportModal({
               : t('spotify.subtitle')}
           </AppText>
         </View>
-        <Pressable
+        <GlassIconButton
+          icon="close"
           onPress={onClose}
-          hitSlop={10}
-          style={{
-            width: 36,
-            height: 36,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <AppIcon name="close" size={20} color={COLORS.textMuted} />
-        </Pressable>
+          size={36}
+          iconColor={COLORS.textSecondary}
+          accessibilityLabel={t('common.close')}
+        />
       </View>
 
       {job ? <JobCard job={job} /> : null}
