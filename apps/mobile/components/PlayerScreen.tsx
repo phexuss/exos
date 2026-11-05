@@ -35,6 +35,7 @@ import { LAYOUT } from '@/constants/layout';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
+import { useTrackLyrics } from '@/hooks/useTrackLyrics';
 import * as audio from '@/services/audio/audioService';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -259,6 +260,7 @@ export default function PlayerScreen() {
   const trackDurationSec =
     currentTrack?.durationSec ||
     (currentTrack ? parseDuration(currentTrack.duration) : 0);
+  const lyrics = useTrackLyrics(currentTrack, trackDurationSec);
 
   useEffect(() => {
     // Apple Music-style: the artwork recedes while paused.
@@ -372,8 +374,9 @@ export default function PlayerScreen() {
               {showLyrics ? (
                 <LyricsView
                   key={currentTrack.id}
-                  syncedLyrics={currentTrack.syncedLyrics}
-                  plainLyrics={currentTrack.plainLyrics}
+                  syncedLyrics={lyrics.syncedLyrics}
+                  plainLyrics={lyrics.plainLyrics}
+                  loading={lyrics.loading}
                   duration={trackDurationSec}
                   onSeekToTime={handleLyricSeek}
                   accentColor={accentColor}
