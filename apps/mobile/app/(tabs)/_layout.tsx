@@ -1,7 +1,4 @@
-import type {
-  BottomTabBarProps,
-  BottomTabNavigationOptions,
-} from '@react-navigation/bottom-tabs';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
 import { Tabs } from 'expo-router';
 import { Platform, View } from 'react-native';
@@ -10,10 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { GlassTabBar } from '@/components/glass/GlassTabBar';
 import { MiniPlayer } from '@/components/MiniPlayer';
+import { RouteIn } from '@/components/motion/RouteIn';
 import type { IconName } from '@/components/ui/AppIcon';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { COLORS } from '@/constants/colors';
-import { DESKTOP_SPRING, MOTION } from '@/constants/motion';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 
@@ -27,36 +24,8 @@ const TAB_ICONS: Record<string, IconName> = {
   library: 'library',
 };
 
-/**
- * Desktop `route-in`: the next screen slides in from the side you travel
- * towards while the old one leaves the other way, both fading. Progress is
- * -1/0/1 for tabs left of/at/right of the active one, so the direction
- * comes for free.
- */
-const routeSlide: NonNullable<
-  BottomTabNavigationOptions['sceneStyleInterpolator']
-> = ({ current }) => ({
-  sceneStyle: {
-    opacity: current.progress.interpolate({
-      inputRange: [-1, 0, 1],
-      outputRange: [0, 1, 0],
-      extrapolate: 'clamp',
-    }),
-    transform: [
-      {
-        translateX: current.progress.interpolate({
-          inputRange: [-1, 0, 1],
-          outputRange: [-MOTION.routeShift, 0, MOTION.routeShift],
-        }),
-      },
-    ],
-  },
-});
-
-const routeSpring: NonNullable<BottomTabNavigationOptions['transitionSpec']> = {
-  animation: 'spring',
-  config: { ...DESKTOP_SPRING, overshootClamping: false },
-};
+/** Bar order, for the side a tab screen slides in from. */
+const TAB_ORDER = Object.keys(TAB_ICONS);
 
 function CustomTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -141,11 +110,20 @@ export default function TabLayout() {
             <CustomTabBar {...props} />
           )
         }
+        // The slide-in lives inside each screen (RouteIn). The navigator's own
+        // scene animation stays off: it animates react-native-screens'
+        // activityState, which re-attaches whole screens mid-transition and
+        // stops hidden tabs from freezing.
+        screenLayout={({ route, children }) => (
+          <RouteIn index={Math.max(TAB_ORDER.indexOf(route.name), 0)}>
+            {children}
+          </RouteIn>
+        )}
         screenOptions={{
           headerShown: false,
-          animation: 'shift',
-          sceneStyleInterpolator: routeSlide,
-          transitionSpec: routeSpring,
+          animation: 'none',
+          // Hidden tabs stop re-rendering on player/store updates.
+          freezeOnBlur: true,
           sceneStyle: glassMode
             ? { backgroundColor: 'transparent' }
             : undefined,
