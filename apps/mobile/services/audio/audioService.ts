@@ -53,6 +53,25 @@ export function getDuration(): number {
   );
 }
 
+/** Seconds into the current track, from the last progress poll. */
+export function getPositionSeconds(): number {
+  const state = _getStore?.()?.getState();
+  return state ? state.progress * getDuration() : 0;
+}
+
+let playbackErrorHandler: (() => void) | null = null;
+
+export function setPlaybackErrorHandler(handler: () => void): void {
+  playbackErrorHandler = handler;
+}
+
+/** Links carry signed tokens; logs keep only scheme, host and path. */
+function redactUri(uri: string | null): string {
+  if (!uri) return 'unknown';
+  const q = uri.indexOf('?');
+  return q < 0 ? uri : `${uri.slice(0, q)}?…`;
+}
+
 function store() {
   if (!_getStore) throw new Error('audioService: store not bound');
   return _getStore();
@@ -248,7 +267,7 @@ function bindTrackPlayerEvents() {
         );
       return;
     }
-    s.getState().skipNext();
+    s.getState().advanceAfterEnd();
   });
 
   trackPlayer.addEventListener(Event.PlaybackError, (error) => {
@@ -257,13 +276,16 @@ function bindTrackPlayerEvents() {
     // RNTP/ExoPlayer/AVPlayer errors with the resolved stream URL on the
     // server side (see DownloadService.resolveDirectUrl logs).
     warnAudioError(
-      `[Audio] playback error (label=${lastPlaybackLabel ?? 'unknown'} uri=${
-        lastPlaybackUri ?? 'unknown'
-      }):`,
+      `[Audio] playback error (label=${lastPlaybackLabel ?? 'unknown'} uri=${redactUri(
+        lastPlaybackUri,
+      )}):`,
       error,
     );
     store().setState({ isPlaying: false });
     stopPositionTracking();
+    // Play must load the track again, not resume the URL that just failed.
+    loadedPlaybackTrackId = null;
+    playbackErrorHandler?.();
   });
 }
 
@@ -422,7 +444,7 @@ async function playSource(
 ): Promise<void> {
   // Log unconditionally so failed playback attempts on production builds are
   // visible in adb logcat alongside the corresponding PlaybackError event.
-  console.warn(`[Audio] Playing ${label}:`, uri);
+  console.warn(`[Audio] Playing ${label}:`, redactUri(uri));
   lastPlaybackUri = uri;
   lastPlaybackLabel = label;
   beginReplace();
@@ -478,7 +500,8 @@ export function hasLoadedTrack(trackId: string): boolean {
 
 export function pauseAudio(): void {
   const trackPlayer = getTrackPlayer();
-  if (!trackPlayer) return;
+  // Nothing was ever loaded: pausing an unset player only logs an error.
+  if (!trackPlayer || !setupPromise) return;
 
   void trackPlayer
     .pause()
@@ -490,7 +513,22 @@ export function resumeAudio(): void {
   void ensurePlayer()
     .then((trackPlayer) => trackPlayer.play())
     .then(startPositionTracking)
-    .catch((error: unknown) => warnAudioError('[Audio] resume failed:', error));
+    .catch((error: unknown) => {
+      warnAudioError('[Audio] resume failed:', error);
+      try {
+        store().setState({ isPlaying: false });
+      } catch {}
+    });
+}
+
+/**
+ * Stops what is playing now while the next track resolves, so the old
+ * audio does not keep going under the new track's UI.
+ */
+export function silenceCurrent(): void {
+  if (!loadedPlaybackTrackId) return;
+  loadedPlaybackTrackId = null;
+  pauseAudio();
 }
 
 export function seekTo(ratio: number): void {

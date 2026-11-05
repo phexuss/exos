@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from '@/services/api/endpoints';
 import * as audio from '@/services/audio/audioService';
 import { addRecentlyPlayed, getDownloadedTrack } from '@/services/db/database';
 import {
+  invalidateLocalStream,
   isLocalEngineAvailable,
   prefetchLocalStream,
   resolveLocalStream,
@@ -36,6 +37,7 @@ type PlayerState = {
   setProgress: (value: number) => void;
   skipNext: () => void;
   skipPrevious: () => void;
+  advanceAfterEnd: () => void;
   setQueue: (tracks: Track[]) => void;
   markTrackDownloaded: (trackId: string, download: TrackDownloadUpdate) => void;
   toggleShuffle: () => void;
@@ -150,8 +152,43 @@ function smartPlay(
   playDownloadedOrResolveStream(track, set, get, requestId);
 }
 
+const RESTART_THRESHOLD_SEC = 3;
+/** The track already restarted once after a playback error. */
+let retriedTrackId: string | null = null;
+
+/**
+ * Next track for the queue. `auto` is the end of a track: with repeat off
+ * playback stops after the last one. A tap on "next" at the end wraps.
+ * Shuffle never picks the current track. A track played from outside the
+ * queue continues with the queue's first track.
+ */
+function pickNext(
+  state: Pick<PlayerState, 'queue' | 'currentTrack' | 'shuffle' | 'repeat'>,
+  auto: boolean,
+): Track | undefined {
+  const { queue, currentTrack, shuffle, repeat } = state;
+  if (!currentTrack || queue.length === 0) return undefined;
+  const idx = queue.findIndex((t) => t.id === currentTrack.id);
+  const others = queue.filter((t) => t.id !== currentTrack.id);
+  if (shuffle) {
+    if (others.length === 0)
+      return auto && repeat === 'off' ? undefined : currentTrack;
+    return others[Math.floor(Math.random() * others.length)];
+  }
+  if (idx < 0) return queue[0];
+  if (idx + 1 < queue.length) return queue[idx + 1];
+  if (auto && repeat === 'off') return undefined;
+  return queue[0];
+}
+
 function startTrack(track: Track, set: PlayerSet, get: PlayerGet): void {
   const requestId = ++playbackRequestId;
+  // The previous track kept playing for the seconds yt-dlp takes to resolve
+  // the new one (and for good if that failed), under the new track's UI.
+  if (get().currentTrack?.id !== track.id) {
+    audio.silenceCurrent();
+    retriedTrackId = null;
+  }
   set({ currentTrack: track, isPlaying: true, progress: 0 });
   audio.prepareTrackPlayback(track.id);
   smartPlay(track, set, get, requestId);
@@ -167,9 +204,7 @@ function prefetchNextTrack(get: PlayerGet): void {
   const { queue, currentTrack, shuffle, repeat } = get();
   if (!currentTrack || shuffle || repeat === 'one' || queue.length < 2) return;
 
-  const idx = queue.findIndex((t) => t.id === currentTrack.id);
-  if (idx < 0) return;
-  const next = queue[(idx + 1) % queue.length];
+  const next = pickNext(get(), true);
   if (!next || next.id === currentTrack.id || next.filePath) return;
 
   if (isLocalEngineAvailable) {
@@ -276,7 +311,7 @@ async function resolveServerStream(
     );
     const params = new URLSearchParams({ token });
     const streamUrl = `${API_BASE_URL}${API_ENDPOINTS.download}/stream-ticket?${params.toString()}`;
-    console.warn(`[Stream] Ticket ready for trackId=${track.id}:`, streamUrl);
+    console.warn(`[Stream] Ticket ready for trackId=${track.id}`);
     if (!isCurrentPlaybackRequest(requestId, track.id, get)) return;
     if (!get().isPlaying) {
       audio.clearPendingTrackPlayback(track.id);
@@ -354,28 +389,37 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   skipNext: () => {
-    const { queue, currentTrack, shuffle } = get();
-    if (!currentTrack || queue.length === 0) return;
-    let next: Track | undefined;
-    if (shuffle) {
-      next = queue[Math.floor(Math.random() * queue.length)];
-    } else {
-      const idx = queue.findIndex((t) => t.id === currentTrack.id);
-      next = queue[(idx + 1) % queue.length];
-    }
-    if (next) {
-      startTrack(next, set, get);
-    }
+    const next = pickNext(get(), false);
+    if (next) startTrack(next, set, get);
   },
 
   skipPrevious: () => {
     const { queue, currentTrack } = get();
-    if (!currentTrack || queue.length === 0) return;
+    if (!currentTrack) return;
+    // Like every player: a few seconds in, "previous" restarts the track.
     const idx = queue.findIndex((t) => t.id === currentTrack.id);
-    const prev = queue[(idx - 1 + queue.length) % queue.length];
-    if (prev) {
-      startTrack(prev, set, get);
+    if (audio.getPositionSeconds() > RESTART_THRESHOLD_SEC || idx <= 0) {
+      if (audio.hasLoadedTrack(currentTrack.id)) {
+        set({ progress: 0 });
+        audio.seekTo(0);
+      } else {
+        startTrack(currentTrack, set, get);
+      }
+      return;
     }
+    startTrack(queue[idx - 1], set, get);
+  },
+
+  /** End of a track: follows repeat, and stops at the end of the queue. */
+  advanceAfterEnd: () => {
+    const next = pickNext(get(), true);
+    if (next) {
+      startTrack(next, set, get);
+      return;
+    }
+    // Rewind so a later tap on play starts the track again.
+    set({ isPlaying: false, progress: 0 });
+    audio.seekTo(0);
   },
 
   setQueue: (tracks) => set({ queue: tracks }),
@@ -397,3 +441,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 }));
 
 audio.bindStore(() => usePlayerStore);
+
+/**
+ * A stream that fails mid-way (expired googlevideo link, 403, network
+ * switch) was resumed on the same dead URL forever. Drop the cached link
+ * and start the track once more; a second failure stops for real.
+ */
+audio.setPlaybackErrorHandler(() => {
+  const state = usePlayerStore.getState();
+  const track = state.currentTrack;
+  if (!track) return;
+  if (!track.filePath) invalidateLocalStream(track);
+  if (retriedTrackId === track.id) return;
+  retriedTrackId = track.id;
+  startTrack(track, usePlayerStore.setState, usePlayerStore.getState);
+});

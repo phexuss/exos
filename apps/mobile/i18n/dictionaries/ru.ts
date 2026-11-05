@@ -1,5 +1,7 @@
 export const ru = {
   common: {
+    saveFailed: 'Не удалось сохранить.',
+    loadFailed: 'Не получилось загрузить. Проверь интернет.',
     home: 'Главная',
     search: 'Поиск',
     library: 'Библиотека',
@@ -58,6 +60,7 @@ export const ru = {
     filters: 'Фильтры',
     results: 'Результаты',
     noResults: 'Ничего не найдено',
+    failed: 'Не получилось найти. Проверь интернет.',
   },
   library: {
     title: 'Библиотека',
@@ -285,6 +288,9 @@ export const ru = {
       'Создайте аккаунт или войдите, чтобы синхронизировать библиотеку между устройствами и получить доступ к профилю.',
   },
   count: {
+    albums_one: '{count} альбом',
+    albums_few: '{count} альбома',
+    albums_many: '{count} альбомов',
     tracks_one: '{count} трек',
     tracks_few: '{count} трека',
     tracks_many: '{count} треков',
@@ -296,6 +302,7 @@ export const ru = {
     selectedTracks_many: '{count} выбранных треков',
   },
   playlist: {
+    notFound: 'Плейлист не найден',
     empty: 'В плейлисте пока нет треков',
     addCover: 'Добавить обложку',
     deletePlaylist: 'Удалить плейлист',

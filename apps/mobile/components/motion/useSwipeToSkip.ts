@@ -41,6 +41,17 @@ export function useSwipeToSkip(
         .onUpdate((e) => {
           shift.setValue(e.translationX);
         })
+        .onFinalize((_e, success) => {
+          // Cancelled (system back, a call, another gesture won): onEnd
+          // never runs, so put the view back here.
+          if (!success) {
+            Animated.spring(shift, {
+              toValue: 0,
+              ...DESKTOP_SPRING,
+              useNativeDriver: true,
+            }).start();
+          }
+        })
         .onEnd((e) => {
           const far = Math.abs(e.translationX) > width * SKIP_DISTANCE;
           const fast =

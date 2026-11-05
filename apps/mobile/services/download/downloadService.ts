@@ -138,6 +138,7 @@ async function downloadStream(
   destinationUri: string,
   onProgress: (progress: number) => void,
 ): Promise<string> {
+  let expectedBytes = 0;
   const resumable = createDownloadResumable(
     streamUrl,
     destinationUri,
@@ -145,6 +146,7 @@ async function downloadStream(
     (progress) => {
       const total = progress.totalBytesExpectedToWrite;
       const written = progress.totalBytesWritten;
+      if (total > 0) expectedBytes = total;
       let ratio: number;
       if (total > 0) {
         ratio = written / total;
@@ -167,9 +169,31 @@ async function downloadStream(
   if (!downloadedFile.exists || downloadedFile.size < MIN_AUDIO_BYTES) {
     throw new Error('Download failed: empty audio file');
   }
+  // The connection closed early: keeping it would mark half a track as
+  // downloaded. (Chunked replies carry no length and can't be checked.)
+  if (expectedBytes > 0 && downloadedFile.size < expectedBytes) {
+    downloadedFile.delete();
+    throw new Error('Download failed: file cut short');
+  }
 
   onProgress(1);
   return result.uri;
+}
+
+/**
+ * A failed or killed yt-dlp run leaves `{id}.{ext}.part` and friends in
+ * the tracks folder, which nothing ever cleaned up.
+ */
+function removeLeftovers(trackId: string, keep: File): void {
+  try {
+    for (const entry of TRACKS_DIR.list()) {
+      if (!(entry instanceof File)) continue;
+      if (entry.uri === keep.uri) continue;
+      if (entry.name.startsWith(`${trackId}.`)) entry.delete();
+    }
+  } catch (error) {
+    console.warn('[Download] Cleanup failed:', error);
+  }
 }
 
 /** Last meaningful line of a yt-dlp failure, for an error toast. */
@@ -209,10 +233,15 @@ async function downloadAudio(
     try {
       const base = toFsPath(new File(TRACKS_DIR, track.id).uri);
       const { path, ext } = await downloadLocal(track, jobId, base);
+      const saved = new File(`file://${path}`);
+      if (!saved.exists || saved.size < MIN_AUDIO_BYTES) {
+        throw new Error('yt-dlp left no audio file');
+      }
       onProgress(1);
       return { filePath: `file://${path}`, format: ext };
     } catch (e) {
       localError = e;
+      removeLeftovers(track.id, destination);
       console.warn(
         `[Download] On-device yt-dlp failed for ${track.id}, using server:`,
         e,

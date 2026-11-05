@@ -12,6 +12,7 @@ import { TrackActionsSheet } from '@/components/TrackActionsSheet';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import { LoadFailed } from '@/components/ui/LoadFailed';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
@@ -62,16 +63,32 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
   const [removingTrack, setRemovingTrack] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
 
+  const [loadState, setLoadState] = useState<
+    'loading' | 'ready' | 'missing' | 'failed'
+  >('loading');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     if (!id) return;
-    const pls = await getPlaylists();
-    setPlaylist(pls.find((p) => p.id === id) ?? null);
-    const t = await getPlaylistTracks(id);
-    setTracks(t);
+    try {
+      const pls = await getPlaylists();
+      const found = pls.find((p) => p.id === id) ?? null;
+      setPlaylist(found);
+      if (!found) {
+        setLoadState('missing');
+        return;
+      }
+      setTracks(await getPlaylistTracks(id));
+      setLoadState('ready');
+    } catch (error) {
+      console.warn('[Playlist] Load failed:', error);
+      setLoadState('failed');
+    }
   }, [id]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const handlePlay = useCallback(
@@ -136,17 +153,26 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
   }, [playlist]);
 
   const handleSaveEdit = useCallback(async () => {
-    if (!id || !playlist) return;
-    const trimmed = editName.trim();
-    if (trimmed && trimmed !== playlist.name) {
-      await renamePlaylist(id, trimmed);
+    if (!id || !playlist || saving) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const trimmed = editName.trim();
+      if (trimmed && trimmed !== playlist.name) {
+        await renamePlaylist(id, trimmed);
+      }
+      if (editCover !== playlist.cover_url) {
+        await updatePlaylistCover(id, editCover);
+      }
+      setShowEdit(false);
+      void load();
+    } catch (error) {
+      console.warn('[Playlist] Save failed:', error);
+      setSaveError(t('common.saveFailed'));
+    } finally {
+      setSaving(false);
     }
-    if (editCover !== playlist.cover_url) {
-      await updatePlaylistCover(id, editCover);
-    }
-    setShowEdit(false);
-    load();
-  }, [id, playlist, editName, editCover, load]);
+  }, [id, playlist, editName, editCover, load, saving, t]);
 
   const handleDeletePlaylist = useCallback(() => {
     setDeleteError(null);
@@ -172,16 +198,32 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
   }, [id, playlist, deletingPlaylist, closePlaylist, t]);
 
   const pickCoverFromGallery = useCallback(async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setEditCover(result.assets[0].uri);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setEditCover(result.assets[0].uri);
+      }
+    } catch (error) {
+      // Gallery permission denied or picker unavailable.
+      console.warn('[Playlist] Cover pick failed:', error);
     }
   }, []);
+
+  if (loadState === 'missing' || loadState === 'failed') {
+    return (
+      <LoadFailed
+        message={t('playlist.notFound')}
+        onRetry={loadState === 'failed' ? () => void load() : undefined}
+        onClose={closePlaylist}
+        background={background}
+      />
+    );
+  }
 
   if (!playlist) {
     return (
@@ -394,7 +436,9 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
           </Pressable>
           <Pressable
             onPress={handleSaveEdit}
+            disabled={saving}
             style={{
+              opacity: saving ? 0.5 : 1,
               flex: 1,
               paddingVertical: 12,
               borderRadius: 10,
@@ -407,6 +451,14 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
             </AppText>
           </Pressable>
         </View>
+        {saveError ? (
+          <AppText
+            variant="caption"
+            style={{ color: COLORS.danger, marginTop: 8, textAlign: 'center' }}
+          >
+            {saveError}
+          </AppText>
+        ) : null}
       </AnimatedModal>
 
       <AppDialog

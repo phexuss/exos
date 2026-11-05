@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   cloudTrackToTrack,
   getCloudRecentlyPlayed,
@@ -16,6 +17,25 @@ import {
 import type { Track } from '@/types/domain';
 
 let initialSyncInFlight: Promise<void> | null = null;
+let signedInUserId: string | null = null;
+
+/**
+ * The local library (SQLite + files) has no owner column, so it belongs to
+ * whoever first synced it on this phone. Bulk-pushing it under another
+ * account would copy one person's downloads and history into someone
+ * else's cloud backup; that account only gets what it plays or downloads
+ * itself (per-track sync below).
+ */
+const LIBRARY_OWNER_KEY = 'library:ownerId';
+
+async function ownsLocalLibrary(userId: string | null): Promise<boolean> {
+  if (!userId) return false;
+  const owner = await AsyncStorage.getItem(LIBRARY_OWNER_KEY);
+  if (owner === userId) return true;
+  if (owner) return false;
+  await AsyncStorage.setItem(LIBRARY_OWNER_KEY, userId);
+  return true;
+}
 
 async function hasAuthToken(): Promise<boolean> {
   return !!(await getAccessToken());
@@ -73,6 +93,7 @@ async function pushLocalLibrary(): Promise<void> {
 export async function syncLocalLibraryNow(): Promise<void> {
   try {
     if (!(await hasAuthToken())) return;
+    if (!(await ownsLocalLibrary(signedInUserId))) return;
     await pushLocalLibrary();
   } catch (error) {
     logSyncError('local push skipped', error);
@@ -93,11 +114,15 @@ async function pullRecentlyPlayed(): Promise<void> {
 
 async function syncInitialLibrary(): Promise<void> {
   if (!(await hasAuthToken())) return;
+  // Pulling another account's history into this library would leak it the
+  // other way, on the owner's next push.
+  if (!(await ownsLocalLibrary(signedInUserId))) return;
   await pullRecentlyPlayed();
   await pushLocalLibrary();
 }
 
-export function runInitialLibrarySync(): void {
+export function runInitialLibrarySync(userId: string): void {
+  signedInUserId = userId;
   if (initialSyncInFlight) return;
 
   initialSyncInFlight = syncInitialLibrary()
