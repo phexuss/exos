@@ -1,6 +1,8 @@
 import { NativeModules } from 'react-native';
 import type { Track as PlayerTrack } from 'react-native-track-player';
 
+import { useSettingsStore } from '@/store/useSettingsStore';
+
 type TrackPlayerModule = typeof import('react-native-track-player');
 type TrackPlayerApi = TrackPlayerModule['default'];
 
@@ -290,6 +292,53 @@ function bindTrackPlayerEvents() {
   });
 }
 
+/* ---------- sped up / slowed + reverb ---------- */
+
+type FxNative = {
+  setFx?: (speed: number, reverb: number) => Promise<void>;
+};
+
+let playerReady = false;
+let fxBound = false;
+let fxMissingWarned = false;
+
+/**
+ * Sends the current speed and reverb to the native player. The method comes
+ * from the react-native-track-player patch; a build without it falls back to
+ * plain rate (tempo only, no pitch shift, no reverb).
+ */
+function applyFx(): void {
+  if (!playerReady) return;
+  const { speed, reverb } = useSettingsStore.getState();
+  const native = NativeModules.TrackPlayerModule as FxNative | undefined;
+  if (native?.setFx) {
+    native
+      .setFx(speed, reverb)
+      .catch((error: unknown) =>
+        warnAudioError('[Audio] setFx failed:', error),
+      );
+    return;
+  }
+  if (!fxMissingWarned) {
+    fxMissingWarned = true;
+    console.warn('[Audio] setFx is not in this build; using plain rate');
+  }
+  getTrackPlayer()
+    ?.setRate(speed)
+    .catch((error: unknown) =>
+      warnAudioError('[Audio] setRate failed:', error),
+    );
+}
+
+function bindFx(): void {
+  applyFx();
+  if (fxBound) return;
+  fxBound = true;
+  useSettingsStore.subscribe((s, prev) => {
+    if (s.speed !== prev.speed || s.reverb !== prev.reverb) applyFx();
+  });
+}
+
 async function ensurePlayer(): Promise<TrackPlayerApi> {
   const trackPlayer = getTrackPlayer();
   const trackPlayerModule = loadTrackPlayerModule();
@@ -345,6 +394,8 @@ async function ensurePlayer(): Promise<TrackPlayerApi> {
       )
       .then(() => {
         bindTrackPlayerEvents();
+        playerReady = true;
+        bindFx();
         return trackPlayer;
       })
       .catch((error: unknown) => {

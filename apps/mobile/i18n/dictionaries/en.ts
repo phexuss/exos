@@ -200,6 +200,17 @@ export const en = {
     quality: 'Quality',
     noTrack: 'No track selected',
   },
+  fx: {
+    title: 'Sound',
+    button: 'Speed and reverb',
+    off: 'Normal',
+    sped: 'Sped up',
+    slowed: 'Slowed + reverb',
+    speed: 'Speed',
+    reverb: 'Reverb',
+    hint: 'Pitch moves with the speed, like sped up and slowed edits. Works live on any track.',
+    reset: 'Reset',
+  },
   nowPlayingBar: {
     label: 'Now playing',
   },

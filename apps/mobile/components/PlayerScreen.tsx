@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { DownloadButton } from '@/components/DownloadButton';
+import { FxSheet } from '@/components/FxSheet';
 import { GlassSurface } from '@/components/glass/GlassSurface';
 import {
   glassPresentEntering,
@@ -42,6 +43,7 @@ import { useTrackLyrics } from '@/hooks/useTrackLyrics';
 import * as audio from '@/services/audio/audioService';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 import type { Track } from '@/types/domain';
 
 type QueueOverlayProps = {
@@ -283,6 +285,8 @@ type PlayerScreenProps = {
 export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
   const { t } = useI18n();
   const [showLyrics, setShowLyrics] = useState(false);
+  const [showFx, setShowFx] = useState(false);
+  const fxActive = useSettingsStore((s) => s.speed !== 1 || s.reverb > 0);
   const currentTrack = usePlayerStore((s) => s.currentTrack);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const shuffle = usePlayerStore((s) => s.shuffle);
@@ -505,6 +509,20 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
             <AnimatedPressable
               scaleValue={0.85}
               hitSlop={10}
+              onPress={() => setShowFx(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t('fx.button')}
+              accessibilityState={{ selected: fxActive }}
+            >
+              <AppIcon
+                name="fx"
+                size={20}
+                color={fxActive ? accentColor : COLORS.textSecondary}
+              />
+            </AnimatedPressable>
+            <AnimatedPressable
+              scaleValue={0.85}
+              hitSlop={10}
               onPress={() => setShowLyrics((v) => !v)}
               accessibilityRole="button"
               accessibilityState={{ selected: showLyrics }}
@@ -660,6 +678,12 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
           }}
         />
       ) : null}
+
+      <FxSheet
+        visible={showFx}
+        onClose={() => setShowFx(false)}
+        accentColor={accentColor}
+      />
     </SafeAreaView>
   );
 }

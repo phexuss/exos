@@ -25,6 +25,7 @@ import { RepeatOne as RepeatOneLinear } from '@solar-icons/react-native/category
 import { Shuffle as ShuffleLinear } from '@solar-icons/react-native/category/video/Linear/Shuffle';
 import { SkipNext as SkipNextLinear } from '@solar-icons/react-native/category/video/Linear/SkipNext';
 import { SkipPrevious as SkipPreviousLinear } from '@solar-icons/react-native/category/video/Linear/SkipPrevious';
+import { Soundwave as SoundwaveLinear } from '@solar-icons/react-native/category/video/Linear/Soundwave';
 import type { IconProps } from '@solar-icons/react-native/lib/index';
 import type { ComponentType } from 'react';
 
@@ -56,7 +57,8 @@ export type IconName =
   | 'lyrics'
   | 'palette'
   | 'info'
-  | 'queue';
+  | 'queue'
+  | 'fx';
 
 const ICON_MAP: Record<IconName, ComponentType<IconProps>> = {
   home: HomeLinear,
@@ -87,6 +89,7 @@ const ICON_MAP: Record<IconName, ComponentType<IconProps>> = {
   palette: PaletteLinear,
   info: InfoCircleBroken,
   queue: PlaylistLinear,
+  fx: SoundwaveLinear,
 };
 
 type AppIconProps = {
