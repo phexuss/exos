@@ -1,15 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
-import Animated, {
-  cancelAnimation,
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
+import { useEffect, useMemo, useState } from 'react';
+import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 
 import { AccentGlow } from '@/components/motion/AccentGlow';
 import { COLORS } from '@/constants/colors';
@@ -34,36 +26,69 @@ function useDriftEnabled(): boolean {
 
 /**
  * Full-bleed, heavily blurred album art that slowly drifts and breathes —
- * the living backdrop the player's glass sits on. Static on Android.
+ * the living backdrop the player's glass sits on.
  */
 export function GlassArtworkBackdrop({
   coverUrl,
   accentColor,
 }: GlassArtworkBackdropProps) {
-  const drift = useSharedValue(0);
+  // React Native Animated on the native driver: a Reanimated loop here ran a
+  // UI-thread animation, and on Android a shadow-tree commit, every frame
+  // the player was open.
+  const [drift] = useState(() => new Animated.Value(0));
   const driftEnabled = useDriftEnabled();
 
   useEffect(() => {
     if (!driftEnabled || prefersReducedMotion()) {
-      cancelAnimation(drift);
-      drift.set(0);
+      drift.stopAnimation();
+      drift.setValue(0);
       return;
     }
-    drift.value = withRepeat(
-      withTiming(1, { duration: DRIFT_MS, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(drift, {
+          toValue: 1,
+          duration: DRIFT_MS,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(drift, {
+          toValue: 0,
+          duration: DRIFT_MS,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
     );
-    return () => cancelAnimation(drift);
+    loop.start();
+    return () => loop.stop();
   }, [drift, driftEnabled]);
 
-  const driftStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: 1.5 + drift.value * 0.25 },
-      { rotate: `${-6 + drift.value * 12}deg` },
-      { translateY: -20 + drift.value * 40 },
-    ],
-  }));
+  const driftStyle = useMemo(
+    () => ({
+      transform: [
+        {
+          scale: drift.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1.5, 1.75],
+          }),
+        },
+        {
+          rotate: drift.interpolate({
+            inputRange: [0, 1],
+            outputRange: ['-6deg', '6deg'],
+          }),
+        },
+        {
+          translateY: drift.interpolate({
+            inputRange: [0, 1],
+            outputRange: [-20, 20],
+          }),
+        },
+      ],
+    }),
+    [drift],
+  );
 
   return (
     <View

@@ -1,13 +1,8 @@
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassSurface } from '@/components/glass/GlassSurface';
@@ -36,28 +31,44 @@ type GlassTabProps = {
   onLongPress: () => void;
 };
 
+function spring(
+  value: Animated.Value,
+  toValue: number,
+  preset: keyof typeof GLASS_SPRING,
+) {
+  Animated.spring(value, {
+    toValue,
+    ...GLASS_SPRING[preset],
+    useNativeDriver: true,
+  }).start();
+}
+
+// React Native Animated on the native driver throughout: on Android every
+// Reanimated frame commits the whole shadow tree, kept-alive tab screens
+// included, so each tab switch got slower the more those screens held.
 function GlassTab({ icon, focused, onPress, onLongPress }: GlassTabProps) {
-  const scale = useSharedValue(focused ? 1 : 0.92);
-  const pressScale = useSharedValue(1);
+  const [scale] = useState(() => new Animated.Value(focused ? 1 : 0.92));
+  const [pressScale] = useState(() => new Animated.Value(1));
 
   useEffect(() => {
-    scale.set(withSpring(focused ? 1 : 0.92, GLASS_SPRING.snappy));
+    spring(scale, focused ? 1 : 0.92, 'snappy');
   }, [focused, scale]);
 
-  const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.get() * pressScale.get() }],
-  }));
+  const iconStyle = useMemo(
+    () => ({ transform: [{ scale: Animated.multiply(scale, pressScale) }] }),
+    [scale, pressScale],
+  );
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={focused ? { selected: true } : {}}
       onPressIn={() => {
-        pressScale.set(withSpring(0.8, GLASS_SPRING.press));
+        spring(pressScale, 0.8, 'press');
         Haptics.selectionAsync().catch(() => {});
       }}
       onPressOut={() => {
-        pressScale.set(withSpring(1, GLASS_SPRING.snappy));
+        spring(pressScale, 1, 'snappy');
       }}
       onPress={onPress}
       onLongPress={onLongPress}
@@ -87,8 +98,8 @@ export function GlassTabBar({ state, navigation, icons }: GlassTabBarProps) {
   // re-runs layout on a frame.
   const [rowWidth, setRowWidth] = useState(0);
   const tabWidth = rowWidth / tabCount;
-  const position = useSharedValue(state.index);
-  const target = useSharedValue(state.index);
+  const [position] = useState(() => new Animated.Value(state.index));
+  const [target] = useState(() => new Animated.Value(state.index));
   const lastTarget = useRef(state.index);
 
   // Started from the press itself, so the droplet is already moving while
@@ -97,8 +108,8 @@ export function GlassTabBar({ state, navigation, icons }: GlassTabBarProps) {
     (index: number) => {
       if (lastTarget.current === index) return;
       lastTarget.current = index;
-      target.set(index);
-      position.set(withSpring(index, GLASS_SPRING.snappy));
+      target.setValue(index);
+      spring(position, index, 'snappy');
     },
     [position, target],
   );
@@ -111,16 +122,36 @@ export function GlassTabBar({ state, navigation, icons }: GlassTabBarProps) {
   // One spring drives everything: the droplet stretches with the distance it
   // still has to travel and relaxes as it lands, instead of a separate
   // stretch animation racing the movement.
-  const bubbleStyle = useAnimatedStyle(() => {
-    const away = Math.min(Math.abs(position.get() - target.get()), 1);
+  const bubbleStyle = useMemo(() => {
+    const last = Math.max(tabCount - 1, 1);
+    const away = Animated.subtract(position, target).interpolate({
+      inputRange: [-1, 0, 1],
+      outputRange: [1, 0, 1],
+      extrapolate: 'clamp',
+    });
     return {
       transform: [
-        { translateX: position.get() * tabWidth + BUBBLE_INSET },
-        { scaleX: 1 + away * BUBBLE_STRETCH_X },
-        { scaleY: 1 - away * BUBBLE_SQUASH_Y },
+        {
+          translateX: position.interpolate({
+            inputRange: [0, last],
+            outputRange: [BUBBLE_INSET, last * tabWidth + BUBBLE_INSET],
+          }),
+        },
+        {
+          scaleX: away.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 1 + BUBBLE_STRETCH_X],
+          }),
+        },
+        {
+          scaleY: away.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 1 - BUBBLE_SQUASH_Y],
+          }),
+        },
       ],
     };
-  });
+  }, [position, target, tabCount, tabWidth]);
 
   return (
     <View

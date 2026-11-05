@@ -1,12 +1,5 @@
-import { useEffect } from 'react';
-import type { ViewStyle } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import { useEffect, useState } from 'react';
+import { Animated, type ViewStyle } from 'react-native';
 
 import { COLORS } from '@/constants/colors';
 
@@ -18,23 +11,38 @@ type SkeletonProps = {
   style?: ViewStyle;
 };
 
-export function Skeleton({ width, height, radius = 12, circle, style }: SkeletonProps) {
-  const opacity = useSharedValue(0.35);
+export function Skeleton({
+  width,
+  height,
+  radius = 12,
+  circle,
+  style,
+}: SkeletonProps) {
+  // Native-driver loop: skeletons can sit on a kept-alive tab for as long
+  // as a request hangs, and a Reanimated loop there cost a shadow-tree
+  // commit per frame on Android.
+  const [opacity] = useState(() => new Animated.Value(0.35));
 
   useEffect(() => {
-    opacity.value = withRepeat(
-      withSequence(
-        withTiming(0.7, { duration: 800 }),
-        withTiming(0.35, { duration: 800 }),
-      ),
-      -1,
-      false,
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 0.7,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.35,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
     );
+    loop.start();
+    return () => loop.stop();
   }, [opacity]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
+  const animatedStyle = { opacity };
 
   const resolvedRadius = circle
     ? typeof width === 'number'
