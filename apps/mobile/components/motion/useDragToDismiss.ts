@@ -12,7 +12,7 @@ import {
 } from 'react-native-reanimated';
 
 import { GLASS } from '@/constants/glass';
-import { DESKTOP_SPRING, EASE_OUT, MOTION } from '@/constants/motion';
+import { DESKTOP_SPRING, EASE_OUT_UI, MOTION } from '@/constants/motion';
 
 /** Share of the screen height a drag must cover to close on release. */
 const CLOSE_DISTANCE = 0.22;
@@ -55,7 +55,7 @@ export function useDragToDismiss(onDismiss: () => void) {
             drag.set(
               withTiming(
                 height,
-                { duration: MOTION.dur.quick + 60, easing: EASE_OUT },
+                { duration: MOTION.dur.quick + 60, easing: EASE_OUT_UI },
                 (done) => {
                   if (done) runOnJS(onDismiss)();
                 },

@@ -1,4 +1,5 @@
 import { AccessibilityInfo, Easing } from 'react-native';
+import { Easing as UIEasing } from 'react-native-reanimated';
 
 /**
  * Motion tokens shared with the desktop app (desktop/src/styles/app.css,
@@ -40,8 +41,15 @@ export const MOTION = {
  */
 export const DESKTOP_SPRING = { damping: 28, stiffness: 450, mass: 1 } as const;
 
-/** Desktop `--ease-out`. */
+/** Desktop `--ease-out`, for React Native `Animated` (JS/native driver). */
 export const EASE_OUT = Easing.bezier(0.22, 1, 0.36, 1);
+
+/**
+ * The same curve for Reanimated (`withTiming`, layout animations). Those run
+ * on the UI thread, where the plain function above doesn't exist: passing it
+ * there crashes the app.
+ */
+export const EASE_OUT_UI = UIEasing.bezier(0.22, 1, 0.36, 1);
 
 /* ---------- reduced motion ---------- */
 
