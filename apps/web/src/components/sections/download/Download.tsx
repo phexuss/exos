@@ -11,10 +11,12 @@ import {
 import { usePlatform } from '@/components/providers/PlatformProvider';
 import { primaryButton } from '@/components/shared/buttons';
 import {
-  APK_URL,
+  type AndroidRelease,
+  apkHref,
   type DesktopFile,
   type DesktopRelease,
   RELEASES_URL,
+  type Releases,
 } from '@/lib/releases';
 import { useOs } from '@/lib/useOs';
 import { cn } from '@/lib/utils';
@@ -28,12 +30,12 @@ const FILES: { key: DesktopFile; os: 'win' | 'mac' | 'linux' }[] = [
 
 const mb = (bytes: number) => Math.round(bytes / 1024 / 1024);
 
-export function Download({ release }: { release: DesktopRelease | null }) {
+export function Download({ releases }: { releases: Releases }) {
   const { platform } = usePlatform();
   return platform === 'desktop' ? (
-    <DesktopDownload release={release} />
+    <DesktopDownload release={releases.desktop} />
   ) : (
-    <AndroidDownload />
+    <AndroidDownload android={releases.android} />
   );
 }
 
@@ -122,7 +124,7 @@ function DesktopDownload({ release }: { release: DesktopRelease | null }) {
   );
 }
 
-function AndroidDownload() {
+function AndroidDownload({ android }: { android: AndroidRelease | null }) {
   const t = useTranslations('Android.download');
   return (
     <motion.section
@@ -139,11 +141,21 @@ function AndroidDownload() {
       >
         <div className="flex max-w-[56ch] flex-col gap-2">
           <h2 className="font-bold text-3xl">{t('title')}</h2>
-          <p className="leading-7 text-text-2">{t('lead')}</p>
+          <p className="leading-7 text-text-2">
+            {android
+              ? t('lead', { version: android.version })
+              : t('leadFallback')}
+          </p>
         </div>
-        <a href={APK_URL} className={primaryButton}>
+        <a
+          href={apkHref(android)}
+          className={primaryButton}
+          {...(android?.apk ? {} : { target: '_blank', rel: 'noreferrer' })}
+        >
           <DownloadIcon size={18} />
-          {t('button')}
+          {android?.apk
+            ? t('buttonSize', { size: mb(android.apk.bytes) })
+            : t('button')}
         </a>
       </motion.div>
     </motion.section>

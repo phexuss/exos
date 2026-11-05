@@ -90,7 +90,7 @@
     },
     "mobile": {
       "question": "What about the phone app?",
-      "answer": "It is on hold and only partly works. The account is shared, so what you downloaded on the phone shows up in the desktop app's cloud."
+      "answer": "It is back in development and in beta, with new builds shipping often. The account is shared, so what you downloaded on the phone shows up in the desktop app's cloud."
     }
   },
   "Footer": {
@@ -309,14 +309,17 @@
   },
   "Android": {
     "hero": {
-      "badge": "On hold",
-      "description": "The phone app is on hold: development is paused with no date to pick it back up. It installs and parts of it work, but playback and downloads are unreliable. Everything new ships in the desktop app.",
-      "toDesktop": "The desktop app"
+      "badge": "Beta",
+      "description": "The phone app is back in development. Playback and downloads now run on the phone itself, and new builds ship often. It is a beta, so some things may still act up.",
+      "toDesktop": "The desktop app",
+      "badgeVersion": "Beta · {version}"
     },
     "download": {
       "title": "Download",
-      "lead": "The last Android build, 0.2.1 beta. No new ones while the app is on hold.",
-      "button": "Download APK"
+      "lead": "The latest Android build, version {version}.",
+      "button": "Download APK",
+      "leadFallback": "The latest Android build is on the releases page.",
+      "buttonSize": "Download APK · {size} MB"
     }
   }
 }

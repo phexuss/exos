@@ -13,10 +13,10 @@ import Faq from '@/components/sections/faq/Faq';
 import Features from '@/components/sections/features/Features';
 import { AndroidHero } from '@/components/sections/mobile/AndroidHero';
 import Sources from '@/components/sections/sources/Sources';
-import type { DesktopRelease } from '@/lib/releases';
+import type { Releases } from '@/lib/releases';
 
 /** The page for the app picked in the header: the desktop one by default. */
-export function Landing({ release }: { release: DesktopRelease | null }) {
+export function Landing({ releases }: { releases: Releases }) {
   const { platform } = usePlatform();
   return (
     <AnimatePresence mode="wait" initial={false}>
@@ -29,7 +29,7 @@ export function Landing({ release }: { release: DesktopRelease | null }) {
       >
         {platform === 'desktop' ? (
           <>
-            <DesktopHero release={release} />
+            <DesktopHero release={releases.desktop} />
             <DesktopFeatures />
             <Showcase />
             <LyricsEditing />
@@ -38,12 +38,12 @@ export function Landing({ release }: { release: DesktopRelease | null }) {
           </>
         ) : (
           <>
-            <AndroidHero />
+            <AndroidHero android={releases.android} />
             <Features />
           </>
         )}
         <Sources />
-        <Download release={release} />
+        <Download releases={releases} />
         <Faq />
       </motion.div>
     </AnimatePresence>

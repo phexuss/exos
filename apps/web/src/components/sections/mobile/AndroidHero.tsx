@@ -1,13 +1,13 @@
 'use client';
 
-import { Download, Monitor, PauseCircle } from 'lucide-react';
+import { Download, FlaskConical, Monitor } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { usePlatform } from '@/components/providers/PlatformProvider';
 import { HeroScreens } from '@/components/sections/hero/HeroScreens';
 import { primaryButton, quietButton } from '@/components/shared/buttons';
 import { Wordmark } from '@/components/shared/Wordmark';
-import { APK_URL } from '@/lib/releases';
+import { type AndroidRelease, apkHref } from '@/lib/releases';
 
 const rise = (delay: number) => ({
   initial: { opacity: 0, y: 24, filter: 'blur(8px)' },
@@ -15,8 +15,8 @@ const rise = (delay: number) => ({
   transition: { duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] as const },
 });
 
-/** The phone app as it was, with its status said up front. */
-export function AndroidHero() {
+/** The phone app, with its beta status and current version said up front. */
+export function AndroidHero({ android }: { android: AndroidRelease | null }) {
   const t = useTranslations('Android.hero');
   const hero = useTranslations('Hero');
   const { setPlatform } = usePlatform();
@@ -36,10 +36,12 @@ export function AndroidHero() {
           </motion.h1>
           <motion.span
             {...rise(0.1)}
-            className="inline-flex w-fit items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--warning)_14%,transparent)] px-3 py-1 font-medium text-sm text-warning"
+            className="inline-flex w-fit items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary)_14%,transparent)] px-3 py-1 font-medium text-sm text-primary"
           >
-            <PauseCircle size={15} />
-            {t('badge')}
+            <FlaskConical size={15} />
+            {android
+              ? t('badgeVersion', { version: android.version })
+              : t('badge')}
           </motion.span>
           <motion.p
             {...rise(0.15)}
@@ -57,7 +59,11 @@ export function AndroidHero() {
             {...rise(0.45)}
             className="mt-2 flex flex-col items-start gap-3 sm:flex-row sm:items-center"
           >
-            <a href={APK_URL} className={primaryButton}>
+            <a
+              href={apkHref(android)}
+              className={primaryButton}
+              {...(android?.apk ? {} : { target: '_blank', rel: 'noreferrer' })}
+            >
               <Download size={18} />
               {hero('download')}
             </a>
