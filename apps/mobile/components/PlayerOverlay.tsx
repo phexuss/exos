@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BackHandler, StyleSheet } from 'react-native';
+import { BackHandler, Animated as RNAnimated, StyleSheet } from 'react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { GlassArtworkBackdrop } from '@/components/glass/GlassArtworkBackdrop';
 import {
@@ -25,7 +25,7 @@ function PlayerSheet({ glassMode }: { glassMode: boolean }) {
   const dismiss = useDragToDismiss(closePlayer);
 
   return (
-    <Animated.View
+    <RNAnimated.View
       style={[
         StyleSheet.absoluteFill,
         { overflow: 'hidden', backgroundColor: COLORS.background },
@@ -41,7 +41,7 @@ function PlayerSheet({ glassMode }: { glassMode: boolean }) {
           handle: dismiss.handleGesture,
         }}
       />
-    </Animated.View>
+    </RNAnimated.View>
   );
 }
 

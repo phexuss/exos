@@ -1,21 +1,11 @@
 import { Image } from 'expo-image';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Animated, Easing, Platform, Pressable, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  Easing,
-  FadeInDown,
-  FadeOutDown,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-  ZoomIn,
-} from 'react-native-reanimated';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { GlassSurface } from '@/components/glass/GlassSurface';
+import { Pop } from '@/components/motion/Pop';
 import { Rise } from '@/components/motion/Rise';
 import { useSwipeToSkip } from '@/components/motion/useSwipeToSkip';
 import { SourceBadge } from '@/components/SourceBadge';
@@ -66,33 +56,34 @@ type MiniPlayerGesturesProps = {
  */
 function MiniPlayerGestures({ width, children }: MiniPlayerGesturesProps) {
   const swipe = useSwipeToSkip(width, skipNext, skipPrevious);
-  const lift = useSharedValue(0);
+  const [lift] = useState(() => new Animated.Value(0));
 
   const gesture = useMemo(() => {
     const pullUp = Gesture.Pan()
+      .runOnJS(true)
       .activeOffsetY(-ACTIVATE)
       .failOffsetX([-ACTIVATE, ACTIVATE])
       .onUpdate((e) => {
-        'worklet';
-        lift.set(Math.min(0, e.translationY) * LIFT_FOLLOW);
+        lift.setValue(Math.min(0, e.translationY) * LIFT_FOLLOW);
       })
       .onEnd((e) => {
-        'worklet';
         if (e.translationY < -OPEN_DISTANCE || e.velocityY < -OPEN_VELOCITY) {
-          runOnJS(openPlayer)();
+          openPlayer();
         }
-        lift.set(withSpring(0, DESKTOP_SPRING));
+        Animated.spring(lift, {
+          toValue: 0,
+          ...DESKTOP_SPRING,
+          useNativeDriver: true,
+        }).start();
       });
     return Gesture.Race(swipe.gesture, pullUp);
   }, [swipe.gesture, lift]);
 
-  const liftStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: lift.get() }],
-  }));
-
   return (
     <GestureDetector gesture={gesture}>
-      <Animated.View style={liftStyle}>{children(swipe.style)}</Animated.View>
+      <Animated.View style={{ transform: [{ translateY: lift }] }}>
+        {children(swipe.style)}
+      </Animated.View>
     </GestureDetector>
   );
 }
@@ -116,22 +107,30 @@ function MiniPlayerProgress({
       ? Math.round(s.progress * STEPPED_PROGRESS_STEPS) / STEPPED_PROGRESS_STEPS
       : s.progress,
   );
-  const fill = useSharedValue(Math.max(progress, 0.005));
+  const [fill] = useState(() => new Animated.Value(Math.max(progress, 0.005)));
 
+  // Native driver, not Reanimated: a Reanimated timing every 250 ms kept a
+  // UI-thread animation (and on Android a shadow-tree commit per frame)
+  // running for as long as music played.
   useEffect(() => {
     const ratio = Math.max(progress, 0.005);
     if (stepped) {
-      fill.set(ratio);
+      fill.setValue(ratio);
       return;
     }
-    fill.set(withTiming(ratio, { duration: 250, easing: Easing.linear }));
+    const run = Animated.timing(fill, {
+      toValue: ratio,
+      duration: 250,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    });
+    run.start();
+    return () => run.stop();
   }, [progress, fill, stepped]);
 
   // A scaled full-width bar instead of an animated width: transforms skip
   // layout, a percentage width re-runs it on every frame.
-  const progressStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: fill.get() }],
-  }));
+  const progressStyle = { transform: [{ scaleX: fill }] };
 
   return (
     <View
@@ -287,19 +286,13 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
           backgroundColor: glassMode ? COLORS.textPrimary : 'transparent',
         }}
       >
-        <Animated.View
-          key={isPlaying ? 'pause' : 'play'}
-          entering={ZoomIn.springify()
-            .damping(DESKTOP_SPRING.damping)
-            .stiffness(DESKTOP_SPRING.stiffness)
-            .mass(DESKTOP_SPRING.mass)}
-        >
+        <Pop key={isPlaying ? 'pause' : 'play'}>
           <AppIcon
             name={isPlaying ? 'pause' : 'play'}
             size={glassMode ? 18 : 20}
             color={glassMode ? COLORS.background : COLORS.textPrimary}
           />
-        </Animated.View>
+        </Pop>
       </AnimatedPressable>
 
       <AnimatedPressable
@@ -324,14 +317,7 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
 
   if (glassMode) {
     return (
-      <Animated.View
-        entering={FadeInDown.springify()
-          .damping(DESKTOP_SPRING.damping)
-          .stiffness(DESKTOP_SPRING.stiffness)
-          .mass(DESKTOP_SPRING.mass)}
-        exiting={FadeOutDown.duration(MOTION.dur.quick)}
-        style={{ marginHorizontal: 12, marginBottom: 8 }}
-      >
+      <Rise style={{ marginHorizontal: 12, marginBottom: 8 }}>
         <MiniPlayerGestures width={nowWidth}>
           {(swipeStyle) => (
             <AnimatedPressable scaleValue={0.97} onPress={openPlayer}>
@@ -347,7 +333,7 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
             </AnimatedPressable>
           )}
         </MiniPlayerGestures>
-      </Animated.View>
+      </Rise>
     );
   }
 

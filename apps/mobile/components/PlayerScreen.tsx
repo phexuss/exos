@@ -1,17 +1,14 @@
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  Animated as RNAnimated,
+  View,
+} from 'react-native';
 import { GestureDetector, type PanGesture } from 'react-native-gesture-handler';
-import Animated, {
-  SlideInDown,
-  SlideOutDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-  ZoomIn,
-} from 'react-native-reanimated';
+import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
@@ -23,6 +20,7 @@ import {
 } from '@/components/glass/transitions';
 import { LyricsView } from '@/components/LyricsView';
 import { PlayRing } from '@/components/motion/PlayRing';
+import { Pop } from '@/components/motion/Pop';
 import { Rise } from '@/components/motion/Rise';
 import { useSwipeToSkip } from '@/components/motion/useSwipeToSkip';
 import { SeekBar } from '@/components/SeekBar';
@@ -35,7 +33,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
 import { GLASS, SECONDARY_BLUR } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
-import { DESKTOP_SPRING, EASE_OUT_UI, MOTION } from '@/constants/motion';
+import { DESKTOP_SPRING, MOTION } from '@/constants/motion';
 import { SPACING } from '@/constants/spacing';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassMode } from '@/hooks/useGlassMode';
@@ -116,34 +114,6 @@ function PlaybackProgress({
   );
 }
 
-/** Cover and lyrics swap with a short fade and a settle, not a plain cut. */
-function swapEntering() {
-  'worklet';
-  return {
-    initialValues: { opacity: 0, transform: [{ scale: MOTION.rise.scale }] },
-    animations: {
-      opacity: withTiming(1, {
-        duration: MOTION.dur.base,
-        easing: EASE_OUT_UI,
-      }),
-      transform: [{ scale: withSpring(1, DESKTOP_SPRING) }],
-    },
-  };
-}
-
-function swapExiting() {
-  'worklet';
-  return {
-    initialValues: { opacity: 1 },
-    animations: {
-      opacity: withTiming(0, {
-        duration: MOTION.dur.quick,
-        easing: EASE_OUT_UI,
-      }),
-    },
-  };
-}
-
 type SwipeArtworkProps = {
   coverUrl?: string;
   radius: number;
@@ -158,7 +128,7 @@ function SwipeArtwork({ coverUrl, radius }: SwipeArtworkProps) {
 
   return (
     <GestureDetector gesture={swipe.gesture}>
-      <Animated.View
+      <RNAnimated.View
         style={[{ flex: 1 }, swipe.style]}
         onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       >
@@ -172,7 +142,7 @@ function SwipeArtwork({ coverUrl, radius }: SwipeArtworkProps) {
         ) : (
           <Skeleton width="100%" height="100%" radius={radius} />
         )}
-      </Animated.View>
+      </RNAnimated.View>
     </GestureDetector>
   );
 }
@@ -330,7 +300,7 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
   const closePlayer = usePlayerStore((s) => s.closePlayer);
   const accentColor = useDynamicAccent();
   const glassMode = useGlassMode();
-  const artScale = useSharedValue(1);
+  const [artScale] = useState(() => new RNAnimated.Value(1));
 
   const trackDurationSec =
     currentTrack?.durationSec ||
@@ -339,15 +309,16 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
 
   useEffect(() => {
     // Desktop now-playing: the artwork sinks back while paused.
-    artScale.value = withSpring(
-      isPlaying ? 1 : MOTION.pausedArtScale,
-      DESKTOP_SPRING,
-    );
+    const run = RNAnimated.spring(artScale, {
+      toValue: isPlaying ? 1 : MOTION.pausedArtScale,
+      ...DESKTOP_SPRING,
+      useNativeDriver: true,
+    });
+    run.start();
+    return () => run.stop();
   }, [isPlaying, artScale]);
 
-  const artStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: artScale.value }],
-  }));
+  const artStyle = { transform: [{ scale: artScale }] };
 
   const handleSeek = useCallback(
     (value: number) => {
@@ -444,7 +415,7 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
       )}
 
       <View style={{ flex: 1, justifyContent: 'center', gap: 24 }}>
-        <Animated.View
+        <RNAnimated.View
           style={[
             {
               aspectRatio: 1,
@@ -461,12 +432,7 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
             artStyle,
           ]}
         >
-          <Animated.View
-            key={showLyrics ? 'lyrics' : 'art'}
-            entering={swapEntering}
-            exiting={swapExiting}
-            style={{ flex: 1 }}
-          >
+          <Rise key={showLyrics ? 'lyrics' : 'art'} style={{ flex: 1 }}>
             {showLyrics ? (
               <LyricsView
                 key={currentTrack.id}
@@ -483,8 +449,8 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
                 radius={artRadius}
               />
             )}
-          </Animated.View>
-        </Animated.View>
+          </Rise>
+        </RNAnimated.View>
 
         <View
           style={{
@@ -620,19 +586,13 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
             }}
           >
             <PlayRing playing={isPlaying} color={accentColor} />
-            <Animated.View
-              key={isPlaying ? 'pause' : 'play'}
-              entering={ZoomIn.springify()
-                .damping(DESKTOP_SPRING.damping)
-                .stiffness(DESKTOP_SPRING.stiffness)
-                .mass(DESKTOP_SPRING.mass)}
-            >
+            <Pop key={isPlaying ? 'pause' : 'play'}>
               <AppIcon
                 name={isPlaying ? 'pause' : 'play'}
                 size={30}
                 color={COLORS.background}
               />
-            </Animated.View>
+            </Pop>
           </AnimatedPressable>
 
           <AnimatedPressable
