@@ -2,7 +2,9 @@ name: Android APK
 
 # Pull requests that touch the app: build a test APK (artifact only, no release).
 # Version bump in apps/mobile/app.json on main, or a manual run: build a signed
-# APK and publish it as a GitHub release under tag v<expo.version>.
+# APK and publish it as a GitHub release under tag android-v<expo.version>.
+# Desktop releases use desktop-v<version>; releases up to 0.4.0 used plain
+# v<version> tags, which are kept so old download links still work.
 #
 # Release signing reads these secrets from the Production environment:
 #   ANDROID_KEYSTORE_BASE64   keystore file, base64-encoded
@@ -63,13 +65,13 @@ jobs:
             # 1.2.3 -> 1002003 (the pre-release suffix is ignored)
             code=$(node -p "const [a,b,c]='$version'.split('-')[0].split('.').map(Number); a*1e6+b*1e3+(c||0)")
           fi
-          tag="v$version"
+          tag="android-v$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "apk=exos-$tag.apk" >> "$GITHUB_OUTPUT"
-          if [ "${{ github.event_name }}" != "pull_request" ] && git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-            echo "Tag $tag already exists, bump expo.version in apps/mobile/app.json to release."
+          echo "apk=exos-android-$version.apk" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" != "pull_request" ] && { git rev-parse -q --verify "refs/tags/$tag" >/dev/null || git rev-parse -q --verify "refs/tags/v$version" >/dev/null; }; then
+            echo "Version $version is already released, bump expo.version in apps/mobile/app.json to release."
             echo "release=false" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "release=false" >> "$GITHUB_OUTPUT"
@@ -203,6 +205,6 @@ jobs:
           case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
           gh release create "$TAG" "$APK" \
             --target "$GITHUB_SHA" \
-            --title "EXØS $TAG" \
+            --title "EXØS Android $VERSION" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             $prerelease

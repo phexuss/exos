@@ -5,7 +5,7 @@ name: Desktop app
 # Pull requests: installers as workflow artifacts (for testing).
 # Version bump in desktop/package.json on main, or a manual run: the same
 # installers published as a GitHub release under tag desktop-v<version>.
-# Mobile releases keep their own v<version> tags.
+# Android releases use their own android-v<version> tags.
 on:
   pull_request:
     paths:

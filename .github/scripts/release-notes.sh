@@ -7,10 +7,12 @@ tag="$1"
 apk="${2:-}"
 repo="${GITHUB_REPOSITORY:-phexuss/exos}"
 
-# Mobile tags only (v1.2.3); the desktop app has its own desktop-v* tags.
-prev=$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD 2>/dev/null || true)
+# Android tags only: android-v1.2.3, or v1.2.3 for releases up to 0.4.0. The
+# desktop app has its own desktop-v* tags.
+match=(--match 'android-v[0-9]*' --match 'v[0-9]*')
+prev=$(git describe --tags --abbrev=0 "${match[@]}" HEAD 2>/dev/null || true)
 if [[ "$prev" == "$tag" ]]; then
-  prev=$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD^ 2>/dev/null || true)
+  prev=$(git describe --tags --abbrev=0 "${match[@]}" HEAD^ 2>/dev/null || true)
 fi
 range="${prev:+$prev..}HEAD"
 
@@ -33,7 +35,7 @@ while IFS=$'\t' read -r hash subject; do
   lines[$type]+="- ${text} (${hash})"$'\n'
 done < <(git log --no-merges --format=$'%h\t%s' "$range" -- apps/mobile patches)
 
-echo "## EXØS ${tag}"
+echo "## EXØS Android ${tag#android-v}"
 echo
 if [[ ${#lines[@]} -eq 0 ]]; then
   echo "Изменений в мобильном приложении нет."
