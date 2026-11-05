@@ -1,23 +1,29 @@
 import { Image } from 'expo-image';
-import { useEffect } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
   FadeInDown,
   FadeOutDown,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
   ZoomIn,
 } from 'react-native-reanimated';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { GlassSurface } from '@/components/glass/GlassSurface';
+import { Rise } from '@/components/motion/Rise';
+import { useSwipeToSkip } from '@/components/motion/useSwipeToSkip';
 import { SourceBadge } from '@/components/SourceBadge';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
-import { GLASS, GLASS_SPRING } from '@/constants/glass';
+import { GLASS } from '@/constants/glass';
+import { DESKTOP_SPRING, MOTION } from '@/constants/motion';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useOverlayStore } from '@/store/useOverlayStore';
@@ -37,6 +43,59 @@ const ANIMATE_PROGRESS = Platform.OS !== 'android';
 // (a couple of pixels) so the bar, and the blur behind it, update about once
 // a second instead of on every poll.
 const STEPPED_PROGRESS_STEPS = 200;
+
+/** Upward pull that opens the player on release. */
+const OPEN_DISTANCE = 40;
+const OPEN_VELOCITY = 500;
+const ACTIVATE = 14;
+/** How far the bar follows an upward pull, as a share of the finger. */
+const LIFT_FOLLOW = 0.3;
+
+const openPlayer = () => usePlayerStore.getState().openPlayer();
+const skipNext = () => usePlayerStore.getState().skipNext();
+const skipPrevious = () => usePlayerStore.getState().skipPrevious();
+
+type MiniPlayerGesturesProps = {
+  width: number;
+  children: (swipeStyle: object) => ReactNode;
+};
+
+/**
+ * Swipe the bar sideways to change track, pull it up to open the player.
+ * The bar follows the finger both ways, so it feels held, not tapped.
+ */
+function MiniPlayerGestures({ width, children }: MiniPlayerGesturesProps) {
+  const swipe = useSwipeToSkip(width, skipNext, skipPrevious);
+  const lift = useSharedValue(0);
+
+  const gesture = useMemo(() => {
+    const pullUp = Gesture.Pan()
+      .activeOffsetY(-ACTIVATE)
+      .failOffsetX([-ACTIVATE, ACTIVATE])
+      .onUpdate((e) => {
+        'worklet';
+        lift.set(Math.min(0, e.translationY) * LIFT_FOLLOW);
+      })
+      .onEnd((e) => {
+        'worklet';
+        if (e.translationY < -OPEN_DISTANCE || e.velocityY < -OPEN_VELOCITY) {
+          runOnJS(openPlayer)();
+        }
+        lift.set(withSpring(0, DESKTOP_SPRING));
+      });
+    return Gesture.Race(swipe.gesture, pullUp);
+  }, [swipe.gesture, lift]);
+
+  const liftStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: lift.get() }],
+  }));
+
+  return (
+    <GestureDetector gesture={gesture}>
+      <Animated.View style={liftStyle}>{children(swipe.style)}</Animated.View>
+    </GestureDetector>
+  );
+}
 
 type MiniPlayerProgressProps = {
   glassMode: boolean;
@@ -112,14 +171,18 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
   const togglePlayback = usePlayerStore((s) => s.togglePlayback);
   const accentColor = useDynamicAccent();
   const glassMode = useGlassMode();
+  const [nowWidth, setNowWidth] = useState(0);
 
   if (!currentTrack) return null;
+
+  const coverSize = glassMode ? 42 : 36;
+  const coverRadius = glassMode ? 12 : 6;
 
   const progressBar = (
     <MiniPlayerProgress glassMode={glassMode} accentColor={accentColor} />
   );
 
-  const row = (
+  const row = (swipeStyle: object) => (
     <View
       style={{
         flexDirection: 'row',
@@ -129,74 +192,91 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
         gap: 12,
       }}
     >
-      {currentTrack.coverUrl ? (
-        <Image
-          source={{ uri: currentTrack.coverUrl }}
-          style={{
-            width: glassMode ? 42 : 36,
-            height: glassMode ? 42 : 36,
-            borderRadius: glassMode ? 12 : 6,
-          }}
-        />
-      ) : (
-        <View
-          style={{
-            width: glassMode ? 42 : 36,
-            height: glassMode ? 42 : 36,
-            borderRadius: glassMode ? 12 : 6,
-            backgroundColor: COLORS.surfaceMuted,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 0.5,
-            borderColor: COLORS.border,
-          }}
-        >
-          <AppIcon name="music" size={14} color={COLORS.textMuted} />
-        </View>
-      )}
-
-      <View style={{ flex: 1, gap: 1 }}>
-        <AppText
-          variant="caption"
-          weight="medium"
-          style={{ color: COLORS.textPrimary, fontSize: 13 }}
-          numberOfLines={1}
-        >
-          {currentTrack.title}
-        </AppText>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Pressable
-            onPress={(e) => {
-              e.stopPropagation();
-              if (currentTrack.source === 'deezer' && currentTrack.artist.id) {
-                useOverlayStore.getState().openArtist(currentTrack.artist.id);
-              }
+      {/* Cover and text move with a sideways swipe; the buttons stay put. */}
+      <Animated.View
+        onLayout={(e) => setNowWidth(e.nativeEvent.layout.width)}
+        style={[
+          { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+          swipeStyle,
+        ]}
+      >
+        {currentTrack.coverUrl ? (
+          <Image
+            source={{ uri: currentTrack.coverUrl }}
+            style={{
+              width: coverSize,
+              height: coverSize,
+              borderRadius: coverRadius,
             }}
-            hitSlop={4}
+            transition={MOTION.dur.base}
+          />
+        ) : (
+          <View
+            style={{
+              width: coverSize,
+              height: coverSize,
+              borderRadius: coverRadius,
+              backgroundColor: COLORS.surfaceMuted,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 0.5,
+              borderColor: COLORS.border,
+            }}
           >
-            <AppText
-              variant="caption"
-              style={{
-                color: COLORS.textMuted,
-                fontSize: 11,
-                textDecorationLine:
-                  currentTrack.source === 'deezer' ? 'underline' : 'none',
-              }}
-              numberOfLines={1}
-            >
-              {currentTrack.artist.name}
-            </AppText>
-          </Pressable>
-          <SourceBadge source={currentTrack.source} />
-        </View>
-      </View>
+            <AppIcon name="music" size={14} color={COLORS.textMuted} />
+          </View>
+        )}
 
-      <Pressable
+        {/* Desktop player bar: a new track's text rises into place. */}
+        <Rise key={currentTrack.id} style={{ flex: 1, gap: 1 }}>
+          <AppText
+            variant="caption"
+            weight="medium"
+            style={{ color: COLORS.textPrimary, fontSize: 13 }}
+            numberOfLines={1}
+          >
+            {currentTrack.title}
+          </AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                if (
+                  currentTrack.source === 'deezer' &&
+                  currentTrack.artist.id
+                ) {
+                  useOverlayStore.getState().openArtist(currentTrack.artist.id);
+                }
+              }}
+              hitSlop={4}
+              style={{ flexShrink: 1 }}
+            >
+              <AppText
+                variant="caption"
+                style={{
+                  color: COLORS.textMuted,
+                  fontSize: 11,
+                  textDecorationLine:
+                    currentTrack.source === 'deezer' ? 'underline' : 'none',
+                }}
+                numberOfLines={1}
+              >
+                {currentTrack.artist.name}
+              </AppText>
+            </Pressable>
+            <SourceBadge source={currentTrack.source} />
+          </View>
+        </Rise>
+      </Animated.View>
+
+      <AnimatedPressable
+        scaleValue={0.88}
         onPress={(e) => {
           e.stopPropagation();
           togglePlayback();
         }}
         hitSlop={12}
+        accessibilityRole="button"
         style={{
           width: 40,
           height: 40,
@@ -207,34 +287,29 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
           backgroundColor: glassMode ? COLORS.textPrimary : 'transparent',
         }}
       >
-        {glassMode ? (
-          <Animated.View
-            key={isPlaying ? 'pause' : 'play'}
-            entering={ZoomIn.springify()
-              .damping(GLASS_SPRING.snappy.damping)
-              .stiffness(GLASS_SPRING.snappy.stiffness)}
-          >
-            <AppIcon
-              name={isPlaying ? 'pause' : 'play'}
-              size={18}
-              color={COLORS.background}
-            />
-          </Animated.View>
-        ) : (
+        <Animated.View
+          key={isPlaying ? 'pause' : 'play'}
+          entering={ZoomIn.springify()
+            .damping(DESKTOP_SPRING.damping)
+            .stiffness(DESKTOP_SPRING.stiffness)
+            .mass(DESKTOP_SPRING.mass)}
+        >
           <AppIcon
             name={isPlaying ? 'pause' : 'play'}
-            size={20}
-            color={COLORS.textPrimary}
+            size={glassMode ? 18 : 20}
+            color={glassMode ? COLORS.background : COLORS.textPrimary}
           />
-        )}
-      </Pressable>
+        </Animated.View>
+      </AnimatedPressable>
 
-      <Pressable
+      <AnimatedPressable
+        scaleValue={0.85}
         onPress={(e) => {
           e.stopPropagation();
-          usePlayerStore.getState().skipNext();
+          skipNext();
         }}
         hitSlop={12}
+        accessibilityRole="button"
         style={{
           width: 40,
           height: 40,
@@ -243,53 +318,59 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
         }}
       >
         <AppIcon name="next" size={20} color={COLORS.textMuted} />
-      </Pressable>
+      </AnimatedPressable>
     </View>
   );
-
-  const openPlayer = () => usePlayerStore.getState().openPlayer();
 
   if (glassMode) {
     return (
       <Animated.View
         entering={FadeInDown.springify()
-          .damping(GLASS_SPRING.smooth.damping)
-          .stiffness(GLASS_SPRING.smooth.stiffness)
-          .mass(GLASS_SPRING.smooth.mass)}
-        exiting={FadeOutDown.duration(200)}
+          .damping(DESKTOP_SPRING.damping)
+          .stiffness(DESKTOP_SPRING.stiffness)
+          .mass(DESKTOP_SPRING.mass)}
+        exiting={FadeOutDown.duration(MOTION.dur.quick)}
         style={{ marginHorizontal: 12, marginBottom: 8 }}
       >
-        <AnimatedPressable scaleValue={0.96} onPress={openPlayer}>
-          <GlassSurface
-            floating
-            variant="regular"
-            blur={blur}
-            style={{ borderRadius: GLASS.radius.card }}
-          >
-            {row}
-            {progressBar}
-          </GlassSurface>
-        </AnimatedPressable>
+        <MiniPlayerGestures width={nowWidth}>
+          {(swipeStyle) => (
+            <AnimatedPressable scaleValue={0.97} onPress={openPlayer}>
+              <GlassSurface
+                floating
+                variant="regular"
+                blur={blur}
+                style={{ borderRadius: GLASS.radius.card }}
+              >
+                {row(swipeStyle)}
+                {progressBar}
+              </GlassSurface>
+            </AnimatedPressable>
+          )}
+        </MiniPlayerGestures>
       </Animated.View>
     );
   }
 
   return (
-    <AnimatedPressable
-      scaleValue={0.975}
-      onPress={openPlayer}
-      style={{
-        backgroundColor: COLORS.surfaceElevated,
-        marginHorizontal: 8,
-        marginBottom: 6,
-        borderRadius: 12,
-        borderWidth: 0.5,
-        borderColor: COLORS.border,
-        overflow: 'hidden',
-      }}
-    >
-      {progressBar}
-      {row}
-    </AnimatedPressable>
+    <MiniPlayerGestures width={nowWidth}>
+      {(swipeStyle) => (
+        <AnimatedPressable
+          scaleValue={0.975}
+          onPress={openPlayer}
+          style={{
+            backgroundColor: COLORS.surfaceElevated,
+            marginHorizontal: 8,
+            marginBottom: 6,
+            borderRadius: 12,
+            borderWidth: 0.5,
+            borderColor: COLORS.border,
+            overflow: 'hidden',
+          }}
+        >
+          {progressBar}
+          {row(swipeStyle)}
+        </AnimatedPressable>
+      )}
+    </MiniPlayerGestures>
   );
 }

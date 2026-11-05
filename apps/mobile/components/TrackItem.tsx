@@ -10,6 +10,7 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { GLASS } from '@/constants/glass';
+import { MOTION } from '@/constants/motion';
 import { SPACING } from '@/constants/spacing';
 import type { DownloadResult } from '@/services/download/downloadService';
 import { useOverlayStore } from '@/store/useOverlayStore';
@@ -46,6 +47,8 @@ function TrackItemComponent({
 
   return (
     <AnimatedPressable
+      scaleValue={MOTION.rowPressScale}
+      highlightRadius={14}
       onPress={() => onPress?.(track)}
       onLongPress={() => onLongPress?.(track)}
       // Desktop track-table row: rounded, no dividers, the playing row sits

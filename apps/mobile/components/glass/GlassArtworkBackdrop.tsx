@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
@@ -10,7 +11,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { AccentGlow } from '@/components/motion/AccentGlow';
 import { COLORS } from '@/constants/colors';
+import { MOTION, prefersReducedMotion } from '@/constants/motion';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 type GlassArtworkBackdropProps = {
   coverUrl?: string;
@@ -20,8 +24,13 @@ type GlassArtworkBackdropProps = {
 const DRIFT_MS = 18000;
 
 // On Android every frame of the drift makes each native blur on screen
-// re-capture and re-blur its whole source view, so the backdrop stays still.
-const DRIFT_ENABLED = Platform.OS !== 'android';
+// re-capture and re-blur its whole source view, so there the backdrop
+// drifts only while live blur is off (the default): then nothing on screen
+// re-blurs, and moving one pre-blurred bitmap is a cheap transform.
+function useDriftEnabled(): boolean {
+  const liveBlur = useSettingsStore((s) => s.glassBlur);
+  return Platform.OS !== 'android' || !liveBlur;
+}
 
 /**
  * Full-bleed, heavily blurred album art that slowly drifts and breathes —
@@ -32,15 +41,21 @@ export function GlassArtworkBackdrop({
   accentColor,
 }: GlassArtworkBackdropProps) {
   const drift = useSharedValue(0);
+  const driftEnabled = useDriftEnabled();
 
   useEffect(() => {
-    if (!DRIFT_ENABLED) return;
+    if (!driftEnabled || prefersReducedMotion()) {
+      cancelAnimation(drift);
+      drift.set(0);
+      return;
+    }
     drift.value = withRepeat(
       withTiming(1, { duration: DRIFT_MS, easing: Easing.inOut(Easing.sin) }),
       -1,
       true,
     );
-  }, [drift]);
+    return () => cancelAnimation(drift);
+  }, [drift, driftEnabled]);
 
   const driftStyle = useAnimatedStyle(() => ({
     transform: [
@@ -55,12 +70,7 @@ export function GlassArtworkBackdrop({
       pointerEvents="none"
       style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.background }]}
     >
-      <LinearGradient
-        colors={[accentColor, COLORS.background]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={[StyleSheet.absoluteFill, { opacity: 0.55 }]}
-      />
+      <AccentGlow color={accentColor} opacity={0.55} />
       {coverUrl ? (
         <Animated.View style={[StyleSheet.absoluteFill, driftStyle]}>
           <Image
@@ -68,7 +78,7 @@ export function GlassArtworkBackdrop({
             style={StyleSheet.absoluteFill}
             contentFit="cover"
             blurRadius={60}
-            transition={700}
+            transition={MOTION.dur.glide}
           />
         </Animated.View>
       ) : null}

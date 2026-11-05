@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
 import { GlassSurface } from '@/components/glass/GlassSurface';
+import { Rise } from '@/components/motion/Rise';
 import { TrackActionsSheet } from '@/components/TrackActionsSheet';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
@@ -24,6 +25,7 @@ import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { GLASS, GLASS_SPRING } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
+import { MOTION } from '@/constants/motion';
 import { SPACING } from '@/constants/spacing';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
@@ -351,16 +353,18 @@ export default function LibraryScreen() {
   }, [bulkPlaylistName, addingSelection, selectedTracks, clearSelection, load]);
 
   const renderTrack = useCallback<ListRenderItem<Track>>(
-    ({ item }) => (
-      <TrackItem
-        track={item}
-        onPress={handlePlay}
-        onLongPress={handleLongPress}
-        isActive={currentTrackId === item.id}
-        isSelected={selectedIds.has(item.id)}
-        selectionMode={selectionMode}
-        accentColor={accentColor}
-      />
+    ({ item, index }) => (
+      <Rise index={index} after={1} animate={index <= MOTION.staggerCap}>
+        <TrackItem
+          track={item}
+          onPress={handlePlay}
+          onLongPress={handleLongPress}
+          isActive={currentTrackId === item.id}
+          isSelected={selectedIds.has(item.id)}
+          selectionMode={selectionMode}
+          accentColor={accentColor}
+        />
+      </Rise>
     ),
     [
       handlePlay,

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { AppDialog } from '@/components/AppDialog';
+import { Rise } from '@/components/motion/Rise';
 import { TrackActionsSheet } from '@/components/TrackActionsSheet';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
@@ -15,6 +16,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
 import { LAYOUT } from '@/constants/layout';
+import { MOTION } from '@/constants/motion';
 import { FONT_FAMILY } from '@/constants/typography';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassMode } from '@/hooks/useGlassMode';
@@ -86,14 +88,16 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
   );
 
   const renderTrack = useCallback<ListRenderItem<Track>>(
-    ({ item }) => (
-      <TrackItem
-        track={item}
-        onPress={handlePlay}
-        onLongPress={handleLongPress}
-        isActive={currentTrackId === item.id}
-        accentColor={accentColor}
-      />
+    ({ item, index }) => (
+      <Rise index={index} after={2} animate={index <= MOTION.staggerCap}>
+        <TrackItem
+          track={item}
+          onPress={handlePlay}
+          onLongPress={handleLongPress}
+          isActive={currentTrackId === item.id}
+          accentColor={accentColor}
+        />
+      </Rise>
     ),
     [handlePlay, handleLongPress, currentTrackId, accentColor],
   );

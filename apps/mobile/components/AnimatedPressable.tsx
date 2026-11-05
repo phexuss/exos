@@ -4,16 +4,22 @@ import {
   Pressable,
   type PressableProps,
   type StyleProp,
+  StyleSheet,
   type ViewStyle,
 } from 'react-native';
 
-import { GLASS_SPRING } from '@/constants/glass';
-import { useGlassMode } from '@/hooks/useGlassMode';
+import { GLASS, GLASS_SPRING } from '@/constants/glass';
+import { MOTION } from '@/constants/motion';
 
 type AnimatedPressableProps = Omit<PressableProps, 'style'> & {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
   scaleValue?: number;
+  /**
+   * Corner radius of a soft fill that lights up under the finger, the touch
+   * equivalent of the desktop row hover. Leave out for no fill.
+   */
+  highlightRadius?: number;
 };
 
 const AnimatedPressableView = Animated.createAnimatedComponent(Pressable);
@@ -38,47 +44,56 @@ function spring(
   }).start();
 }
 
-function timing(value: Animated.Value, toValue: number, duration: number) {
+function fade(value: Animated.Value, toValue: number, duration: number) {
   Animated.timing(value, { toValue, duration, useNativeDriver: true }).start();
 }
 
+/**
+ * Gives under a press and springs back, like desktop `:active`. It never
+ * dims: dimming reads as a rendering glitch over glass and as "disabled"
+ * everywhere else.
+ */
 export function AnimatedPressable({
   children,
   scaleValue = 0.97,
+  highlightRadius,
   onPressIn,
   onPressOut,
   style,
   ...props
 }: AnimatedPressableProps) {
-  const glassMode = useGlassMode();
   const [scale] = useState(() => new Animated.Value(1));
-  const [opacity] = useState(() => new Animated.Value(1));
+  const [lit] = useState(() => new Animated.Value(0));
+  const withHighlight = highlightRadius !== undefined;
 
   return (
     <AnimatedPressableView
       onPressIn={(e) => {
-        if (glassMode) {
-          // Glass surfaces should squish, not dim — dimming a blur reads as
-          // a rendering glitch rather than feedback.
-          spring(scale, scaleValue, 'press');
-        } else {
-          timing(scale, scaleValue, 120);
-          timing(opacity, 0.7, 120);
-        }
+        spring(scale, scaleValue, 'press');
+        if (withHighlight) fade(lit, 1, MOTION.dur.quick / 2);
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
-        if (glassMode) {
-          spring(scale, 1, 'snappy');
-        } else {
-          timing(scale, 1, 200);
-          timing(opacity, 1, 200);
-        }
+        spring(scale, 1, 'snappy');
+        if (withHighlight) fade(lit, 0, MOTION.dur.base);
         onPressOut?.(e);
       }}
-      style={[{ transform: [{ scale }], opacity }, style]}
+      style={[{ transform: [{ scale }] }, style]}
       {...props}
     >
+      {withHighlight ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              borderRadius: highlightRadius,
+              backgroundColor: GLASS.innerGlow,
+              opacity: lit,
+            },
+          ]}
+        />
+      ) : null}
       {children}
     </AnimatedPressableView>
   );

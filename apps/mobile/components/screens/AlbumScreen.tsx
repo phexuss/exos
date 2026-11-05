@@ -4,12 +4,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Rise } from '@/components/motion/Rise';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS } from '@/constants/colors';
 import { LAYOUT } from '@/constants/layout';
+import { MOTION } from '@/constants/motion';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import { type AlbumDetail, getAlbumDetail } from '@/services/api/albums';
@@ -64,15 +66,20 @@ export function AlbumScreen({ id, titleHint }: Props) {
   );
 
   const renderTrack = useCallback<ListRenderItem<Track>>(
-    ({ item }) => (
-      <View style={{ paddingHorizontal: 12 }}>
+    ({ item, index }) => (
+      <Rise
+        index={index}
+        after={2}
+        animate={index <= MOTION.staggerCap}
+        style={{ paddingHorizontal: 12 }}
+      >
         <TrackItem
           track={item}
           onPress={handlePlay}
           isActive={currentTrackId === item.id}
           showDownload
         />
-      </View>
+      </Rise>
     ),
     [handlePlay, currentTrackId],
   );

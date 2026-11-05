@@ -1,4 +1,7 @@
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type {
+  BottomTabBarProps,
+  BottomTabNavigationOptions,
+} from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
 import { Tabs } from 'expo-router';
 import { Platform, View } from 'react-native';
@@ -10,6 +13,7 @@ import { MiniPlayer } from '@/components/MiniPlayer';
 import type { IconName } from '@/components/ui/AppIcon';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { COLORS } from '@/constants/colors';
+import { DESKTOP_SPRING, MOTION } from '@/constants/motion';
 import { useGlassMode } from '@/hooks/useGlassMode';
 
 // A screen that throws while rendering shows a retry button here instead of
@@ -20,6 +24,37 @@ const TAB_ICONS: Record<string, IconName> = {
   index: 'home',
   search: 'search',
   library: 'library',
+};
+
+/**
+ * Desktop `route-in`: the next screen slides in from the side you travel
+ * towards while the old one leaves the other way, both fading. Progress is
+ * -1/0/1 for tabs left of/at/right of the active one, so the direction
+ * comes for free.
+ */
+const routeSlide: NonNullable<
+  BottomTabNavigationOptions['sceneStyleInterpolator']
+> = ({ current }) => ({
+  sceneStyle: {
+    opacity: current.progress.interpolate({
+      inputRange: [-1, 0, 1],
+      outputRange: [0, 1, 0],
+      extrapolate: 'clamp',
+    }),
+    transform: [
+      {
+        translateX: current.progress.interpolate({
+          inputRange: [-1, 0, 1],
+          outputRange: [-MOTION.routeShift, 0, MOTION.routeShift],
+        }),
+      },
+    ],
+  },
+});
+
+const routeSpring: NonNullable<BottomTabNavigationOptions['transitionSpec']> = {
+  animation: 'spring',
+  config: { ...DESKTOP_SPRING, overshootClamping: false },
 };
 
 function CustomTabBar({ state, navigation }: BottomTabBarProps) {
@@ -105,7 +140,9 @@ export default function TabLayout() {
         }
         screenOptions={{
           headerShown: false,
-          animation: 'fade',
+          animation: 'shift',
+          sceneStyleInterpolator: routeSlide,
+          transitionSpec: routeSpring,
           sceneStyle: glassMode
             ? { backgroundColor: 'transparent' }
             : undefined,

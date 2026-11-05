@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { Rise } from '@/components/motion/Rise';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
@@ -11,6 +12,7 @@ import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
 import { GLASS } from '@/constants/glass';
+import { MOTION } from '@/constants/motion';
 import { SPACING } from '@/constants/spacing';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useI18n } from '@/hooks/useI18n';
@@ -72,6 +74,7 @@ function Cover({
 }
 
 type TileProps = {
+  index: number;
   track: Track;
   isActive: boolean;
   accentColor: string;
@@ -80,104 +83,116 @@ type TileProps = {
 
 /** Desktop "quick" tile: a recent play as cover + title on a glass chip. */
 const QuickTile = memo(function QuickTile({
+  index,
   track,
   isActive,
   accentColor,
   onPress,
 }: TileProps) {
   return (
-    <AnimatedPressable
-      scaleValue={0.97}
-      onPress={() => onPress(track)}
-      style={{
-        width: '48.5%',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: SPACING.sm,
-        borderRadius: 12,
-        overflow: 'hidden',
-        backgroundColor: isActive ? GLASS.fillActive : 'rgba(255,255,255,0.07)',
-        borderWidth: 1,
-        borderColor: isActive ? GLASS.rim : 'transparent',
-      }}
-    >
-      <Cover uri={track.coverUrl} size={52} radius={0} />
-      <View style={{ flex: 1, paddingRight: SPACING.sm }}>
-        <AppText
-          variant="caption"
-          weight="medium"
-          numberOfLines={2}
-          style={{
-            fontSize: 13,
-            color: isActive ? accentColor : COLORS.textPrimary,
-          }}
-        >
-          {track.title}
-        </AppText>
-      </View>
-    </AnimatedPressable>
+    <Rise index={index} after={1} style={{ width: '48.5%' }}>
+      <AnimatedPressable
+        scaleValue={MOTION.rowPressScale}
+        highlightRadius={12}
+        onPress={() => onPress(track)}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: SPACING.sm,
+          borderRadius: 12,
+          overflow: 'hidden',
+          backgroundColor: isActive
+            ? GLASS.fillActive
+            : 'rgba(255,255,255,0.07)',
+          borderWidth: 1,
+          borderColor: isActive ? GLASS.rim : 'transparent',
+        }}
+      >
+        <Cover uri={track.coverUrl} size={52} radius={0} />
+        <View style={{ flex: 1, paddingRight: SPACING.sm }}>
+          <AppText
+            variant="caption"
+            weight="medium"
+            numberOfLines={2}
+            style={{
+              fontSize: 13,
+              color: isActive ? accentColor : COLORS.textPrimary,
+            }}
+          >
+            {track.title}
+          </AppText>
+        </View>
+      </AnimatedPressable>
+    </Rise>
   );
 });
 
 /** Square cover with two lines under it, for the "Like …" shelf. */
 const ShelfCard = memo(function ShelfCard({
+  index,
   track,
   isActive,
   accentColor,
   onPress,
 }: TileProps) {
   return (
-    <AnimatedPressable
-      scaleValue={0.95}
-      onPress={() => onPress(track)}
-      style={{ width: 132, gap: SPACING.sm }}
-    >
-      <Cover uri={track.coverUrl} size={132} radius={12} />
-      <View style={{ gap: 2 }}>
-        <AppText
-          variant="caption"
-          weight="medium"
-          numberOfLines={1}
-          style={{
-            fontSize: 13,
-            color: isActive ? accentColor : COLORS.textPrimary,
-          }}
-        >
-          {track.title}
-        </AppText>
-        <AppText
-          variant="caption"
-          numberOfLines={1}
-          style={{ color: COLORS.textMuted }}
-        >
-          {track.artist.name}
-        </AppText>
-      </View>
-    </AnimatedPressable>
+    <Rise index={index} after={2}>
+      <AnimatedPressable
+        scaleValue={0.97}
+        onPress={() => onPress(track)}
+        style={{ width: 132, gap: SPACING.sm }}
+      >
+        <Cover uri={track.coverUrl} size={132} radius={12} />
+        <View style={{ gap: 2 }}>
+          <AppText
+            variant="caption"
+            weight="medium"
+            numberOfLines={1}
+            style={{
+              fontSize: 13,
+              color: isActive ? accentColor : COLORS.textPrimary,
+            }}
+          >
+            {track.title}
+          </AppText>
+          <AppText
+            variant="caption"
+            numberOfLines={1}
+            style={{ color: COLORS.textMuted }}
+          >
+            {track.artist.name}
+          </AppText>
+        </View>
+      </AnimatedPressable>
+    </Rise>
   );
 });
 
 const ArtistTile = memo(function ArtistTile({
+  index,
   artist,
 }: {
+  index: number;
   artist: YourArtist;
 }) {
   return (
-    <AnimatedPressable
-      scaleValue={0.95}
-      onPress={() => useOverlayStore.getState().openArtist(artist.id)}
-      style={{ width: 92, alignItems: 'center', gap: SPACING.sm }}
-    >
-      <Cover uri={artist.coverUrl} size={84} radius={42} />
-      <AppText
-        variant="caption"
-        weight="medium"
-        numberOfLines={1}
-        style={{ color: COLORS.textSecondary, textAlign: 'center' }}
+    <Rise index={index} after={2}>
+      <AnimatedPressable
+        scaleValue={0.97}
+        onPress={() => useOverlayStore.getState().openArtist(artist.id)}
+        style={{ width: 92, alignItems: 'center', gap: SPACING.sm }}
       >
-        {artist.name}
-      </AppText>
-    </AnimatedPressable>
+        <Cover uri={artist.coverUrl} size={84} radius={42} />
+        <AppText
+          variant="caption"
+          weight="medium"
+          numberOfLines={1}
+          style={{ color: COLORS.textSecondary, textAlign: 'center' }}
+        >
+          {artist.name}
+        </AppText>
+      </AnimatedPressable>
+    </Rise>
   );
 });
 
@@ -320,7 +335,7 @@ export default function HomeScreen() {
 
   return (
     <ScreenContainer withTabBar>
-      <View
+      <Rise
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -337,7 +352,8 @@ export default function HomeScreen() {
           {t(greeting())}
           {user?.name ? `, ${user.name}` : ''}
         </AppText>
-        <Pressable
+        <AnimatedPressable
+          scaleValue={0.9}
           onPress={() => useOverlayStore.getState().openProfile()}
           hitSlop={12}
           style={{
@@ -352,8 +368,8 @@ export default function HomeScreen() {
           }}
         >
           <AppIcon name="profile" size={18} color={COLORS.textSecondary} />
-        </Pressable>
-      </View>
+        </AnimatedPressable>
+      </Rise>
 
       {quick.length > 0 ? (
         <View
@@ -364,9 +380,10 @@ export default function HomeScreen() {
             rowGap: SPACING.sm,
           }}
         >
-          {quick.map((track) => (
+          {quick.map((track, i) => (
             <QuickTile
               key={track.id}
+              index={i}
               track={track}
               isActive={currentTrackId === track.id}
               accentColor={accentColor}
@@ -419,15 +436,16 @@ export default function HomeScreen() {
             <MixSkeleton />
           ) : mix.length > 0 ? (
             <View>
-              {mix.map((track) => (
-                <TrackItem
-                  key={track.id}
-                  track={track}
-                  onPress={playMix}
-                  isActive={currentTrackId === track.id}
-                  accentColor={accentColor}
-                  showDownload
-                />
+              {mix.map((track, i) => (
+                <Rise key={track.id} index={i} after={2}>
+                  <TrackItem
+                    track={track}
+                    onPress={playMix}
+                    isActive={currentTrackId === track.id}
+                    accentColor={accentColor}
+                    showDownload
+                  />
+                </Rise>
               ))}
             </View>
           ) : (
@@ -452,9 +470,10 @@ export default function HomeScreen() {
               gap: SPACING.md,
             }}
           >
-            {similarTracks.map((track) => (
+            {similarTracks.map((track, i) => (
               <ShelfCard
                 key={track.id}
+                index={i}
                 track={track}
                 isActive={currentTrackId === track.id}
                 accentColor={accentColor}
@@ -477,8 +496,8 @@ export default function HomeScreen() {
               gap: SPACING.md,
             }}
           >
-            {artists.slice(0, SHELF_ARTISTS).map((artist) => (
-              <ArtistTile key={artist.id} artist={artist} />
+            {artists.slice(0, SHELF_ARTISTS).map((artist, i) => (
+              <ArtistTile key={artist.id} index={i} artist={artist} />
             ))}
           </ScrollView>
         </View>
