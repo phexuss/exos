@@ -7,6 +7,7 @@ import {
   StyleSheet,
   type ViewStyle,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -146,6 +147,7 @@ export function AnimatedModal({
   if (!mounted) return null;
 
   const isSheet = variant === 'sheet';
+  const backdropAlign = StyleSheet.flatten(backdropStyle)?.alignItems;
 
   const contentEntering = glassMode
     ? isSheet
@@ -277,13 +279,24 @@ export function AnimatedModal({
               left: 0,
             }}
           />
-          <AnimatedPressable
-            entering={contentEntering}
-            exiting={contentExiting}
-            style={animatedContentStyle}
+          {/* Lifts sheets and dialogs with inputs above the keyboard. */}
+          <KeyboardAvoidingView
+            behavior="padding"
+            pointerEvents="box-none"
+            style={{
+              flex: 1,
+              justifyContent: isSheet ? 'flex-end' : 'center',
+              alignItems: backdropAlign,
+            }}
           >
-            {content}
-          </AnimatedPressable>
+            <AnimatedPressable
+              entering={contentEntering}
+              exiting={contentExiting}
+              style={animatedContentStyle}
+            >
+              {content}
+            </AnimatedPressable>
+          </KeyboardAvoidingView>
         </Animated.View>
       ) : null}
     </Modal>

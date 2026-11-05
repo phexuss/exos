@@ -300,12 +300,13 @@ export function LyricsView({
           visible={showLyricsFaq}
           onRequestClose={() => setShowLyricsFaq(false)}
           onBackdropPress={() => setShowLyricsFaq(false)}
-          backdropStyle={{ alignItems: 'center' }}
+          backdropStyle={{ alignItems: 'center', paddingHorizontal: 32 }}
           contentStyle={{
             backgroundColor: COLORS.surface,
-            borderRadius: 16,
-            padding: 24,
-            marginHorizontal: 32,
+            borderRadius: 18,
+            padding: 22,
+            width: '100%',
+            maxWidth: 340,
             gap: 12,
             borderWidth: 0.5,
             borderColor: COLORS.border,

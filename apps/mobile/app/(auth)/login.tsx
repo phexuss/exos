@@ -1,12 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Pressable,
-  type TextInput as RNTextInput,
-  ScrollView,
-  View,
-} from 'react-native';
+import { Pressable, type TextInput as RNTextInput, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppDialog } from '@/components/AppDialog';
@@ -71,129 +66,128 @@ export default function LoginScreen() {
       style={{ flex: 1, backgroundColor: COLORS.background }}
       edges={['top', 'bottom']}
     >
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingHorizontal: SPACING.xxl,
-            paddingTop: SPACING.lg,
-            paddingBottom: SPACING.xxl,
-          }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <HeaderIconButton
-            icon="chevron-left"
-            onPress={() => router.back()}
-            accessibilityLabel={t('common.back')}
+      <KeyboardAwareScrollView
+        bottomOffset={SPACING.xxl}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingHorizontal: SPACING.xxl,
+          paddingTop: SPACING.lg,
+          paddingBottom: SPACING.xxl,
+        }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <HeaderIconButton
+          icon="chevron-left"
+          onPress={() => router.back()}
+          accessibilityLabel={t('common.back')}
+        />
+
+        <View style={{ marginTop: SPACING.xxl, gap: 6 }}>
+          <AppText variant="display" weight="bold">
+            {t('auth.welcomeBack')}
+          </AppText>
+          <AppText
+            variant="body"
+            style={{ color: COLORS.textSecondary, fontSize: 14 }}
+          >
+            {t('auth.welcomeSubtitle')}
+          </AppText>
+        </View>
+
+        <View style={{ marginTop: SPACING.xxxl, gap: SPACING.lg }}>
+          <AuthTextField
+            label={t('auth.username')}
+            value={username}
+            onChangeText={setUsername}
+            placeholder={t('auth.usernamePlaceholder')}
+            autoComplete="username"
+            textContentType="username"
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
+            maxLength={36}
           />
-
-          <View style={{ marginTop: SPACING.xxl, gap: 6 }}>
-            <AppText variant="display" weight="bold">
-              {t('auth.welcomeBack')}
-            </AppText>
+          <AuthTextField
+            ref={passwordRef}
+            label={t('auth.password')}
+            value={password}
+            onChangeText={setPassword}
+            placeholder={t('auth.passwordPlaceholder')}
+            secureTextEntry
+            autoComplete="password"
+            textContentType="password"
+            returnKeyType="go"
+            onSubmitEditing={handleSubmit}
+          />
+          <Pressable
+            onPress={() => router.push('/(auth)/forgot-password' as never)}
+            hitSlop={8}
+            style={{ alignSelf: 'flex-end', paddingVertical: 2 }}
+          >
             <AppText
-              variant="body"
-              style={{ color: COLORS.textSecondary, fontSize: 14 }}
+              variant="caption"
+              weight="medium"
+              style={{ color: COLORS.accent, fontSize: 13 }}
             >
-              {t('auth.welcomeSubtitle')}
+              {t('auth.forgotPassword')}
             </AppText>
-          </View>
-
-          <View style={{ marginTop: SPACING.xxxl, gap: SPACING.lg }}>
-            <AuthTextField
-              label={t('auth.username')}
-              value={username}
-              onChangeText={setUsername}
-              placeholder={t('auth.usernamePlaceholder')}
-              autoComplete="username"
-              textContentType="username"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
-              maxLength={36}
-            />
-            <AuthTextField
-              ref={passwordRef}
-              label={t('auth.password')}
-              value={password}
-              onChangeText={setPassword}
-              placeholder={t('auth.passwordPlaceholder')}
-              secureTextEntry
-              autoComplete="password"
-              textContentType="password"
-              returnKeyType="go"
-              onSubmitEditing={handleSubmit}
-            />
-            <Pressable
-              onPress={() => router.push('/(auth)/forgot-password' as never)}
-              hitSlop={8}
-              style={{ alignSelf: 'flex-end', paddingVertical: 2 }}
+          </Pressable>
+          {error ? (
+            <AppText
+              variant="caption"
+              style={{ color: COLORS.danger, fontSize: 12 }}
             >
+              {error}
+            </AppText>
+          ) : null}
+          {info ? (
+            <AppText
+              variant="caption"
+              style={{ color: COLORS.accent, fontSize: 12 }}
+            >
+              {info}
+            </AppText>
+          ) : null}
+        </View>
+
+        <View style={{ marginTop: SPACING.xxxl, gap: SPACING.lg }}>
+          <PrimaryButton
+            label={t('auth.signIn')}
+            onPress={handleSubmit}
+            loading={isLoading}
+          />
+          <Pressable
+            onPress={() => router.replace('/(auth)/register' as never)}
+            hitSlop={8}
+            style={{ alignItems: 'center', paddingVertical: 8 }}
+          >
+            <AppText
+              variant="caption"
+              style={{ color: COLORS.textSecondary, fontSize: 13 }}
+            >
+              {t('auth.dontHaveAccount')}{' '}
               <AppText
                 variant="caption"
-                weight="medium"
+                weight="bold"
                 style={{ color: COLORS.accent, fontSize: 13 }}
               >
-                {t('auth.forgotPassword')}
+                {t('auth.signUp')}
               </AppText>
-            </Pressable>
-            {error ? (
-              <AppText
-                variant="caption"
-                style={{ color: COLORS.danger, fontSize: 12 }}
-              >
-                {error}
-              </AppText>
-            ) : null}
-            {info ? (
-              <AppText
-                variant="caption"
-                style={{ color: COLORS.accent, fontSize: 12 }}
-              >
-                {info}
-              </AppText>
-            ) : null}
-          </View>
-
-          <View style={{ marginTop: SPACING.xxxl, gap: SPACING.lg }}>
-            <PrimaryButton
-              label={t('auth.signIn')}
-              onPress={handleSubmit}
-              loading={isLoading}
-            />
-            <Pressable
-              onPress={() => router.replace('/(auth)/register' as never)}
-              hitSlop={8}
-              style={{ alignItems: 'center', paddingVertical: 8 }}
+            </AppText>
+          </Pressable>
+          <Pressable
+            onPress={() => setShowOfflineWarning(true)}
+            hitSlop={8}
+            style={{ alignItems: 'center', paddingVertical: 8 }}
+          >
+            <AppText
+              variant="caption"
+              style={{ color: COLORS.textMuted, fontSize: 13 }}
             >
-              <AppText
-                variant="caption"
-                style={{ color: COLORS.textSecondary, fontSize: 13 }}
-              >
-                {t('auth.dontHaveAccount')}{' '}
-                <AppText
-                  variant="caption"
-                  weight="bold"
-                  style={{ color: COLORS.accent, fontSize: 13 }}
-                >
-                  {t('auth.signUp')}
-                </AppText>
-              </AppText>
-            </Pressable>
-            <Pressable
-              onPress={() => setShowOfflineWarning(true)}
-              hitSlop={8}
-              style={{ alignItems: 'center', paddingVertical: 8 }}
-            >
-              <AppText
-                variant="caption"
-                style={{ color: COLORS.textMuted, fontSize: 13 }}
-              >
-                {t('auth.orContinueOffline')}
-              </AppText>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+              {t('auth.orContinueOffline')}
+            </AppText>
+          </Pressable>
+        </View>
+      </KeyboardAwareScrollView>
 
       <AppDialog
         visible={showOfflineWarning}
