@@ -40,6 +40,14 @@ type PasswordResetTokenPayload = {
   passwordHashFingerprint: string;
 };
 
+/**
+ * Wrong guesses allowed per 6-digit code before it is burned and a new one
+ * has to be requested. Counted in the database, so it holds regardless of
+ * which IP or how many parallel requests the guesses come from.
+ */
+const MAX_CODE_ATTEMPTS = 5;
+const TOO_MANY_ATTEMPTS = 'Too many attempts, request a new code';
+
 type DecodedTokenPayload = {
   exp?: number;
 };
@@ -363,7 +371,10 @@ export class AuthService {
       where: { email: normalizedEmail },
     });
 
-    if (!user) {
+    // An unverified address was never proven to belong to the account owner
+    // (e.g. it was just changed with a stolen token), so it cannot receive
+    // reset codes.
+    if (!user?.isVerified) {
       return;
     }
 
@@ -396,7 +407,7 @@ export class AuthService {
       where: { email: normalizedEmail },
     });
 
-    if (!user) {
+    if (!user?.isVerified) {
       throw new UnauthorizedException('Invalid code');
     }
 
@@ -418,7 +429,26 @@ export class AuthService {
       throw new UnauthorizedException('Code expired');
     }
 
+    // Take an attempt before checking, conditionally on the limit, so
+    // concurrent guesses cannot all slip under it.
+    const claimed = await this.prismaService.verificationCode.updateMany({
+      where: { id: resetCode.id, attempts: { lt: MAX_CODE_ATTEMPTS } },
+      data: { attempts: { increment: 1 } },
+    });
+    if (claimed.count === 0) {
+      await this.prismaService.verificationCode.deleteMany({
+        where: { id: resetCode.id },
+      });
+      throw new UnauthorizedException(TOO_MANY_ATTEMPTS);
+    }
+
     if (!(await this.verifyStoredCode(resetCode.code, code))) {
+      if (resetCode.attempts + 1 >= MAX_CODE_ATTEMPTS) {
+        await this.prismaService.verificationCode.deleteMany({
+          where: { id: resetCode.id },
+        });
+        throw new UnauthorizedException(TOO_MANY_ATTEMPTS);
+      }
       throw new UnauthorizedException('Invalid code');
     }
 
@@ -473,7 +503,11 @@ export class AuthService {
 
     await this.prismaService.user.update({
       where: { id: userId },
-      data: { verifyToken: codeHash, verifyTokenExp: codeExp },
+      data: {
+        verifyToken: codeHash,
+        verifyTokenExp: codeExp,
+        verifyAttempts: 0,
+      },
     });
 
     await this.resendService.sendVerificationEmail(email, code);
@@ -496,6 +530,14 @@ export class AuthService {
     await this.sendVerificationEmail(user.id, user.email);
   }
 
+  /** Clears the code only if it is still the one that was guessed at. */
+  private async burnVerifyToken(userId: string, token: string): Promise<void> {
+    await this.prismaService.user.updateMany({
+      where: { id: userId, verifyToken: token },
+      data: { verifyToken: null, verifyTokenExp: null },
+    });
+  }
+
   async verifyEmail(
     userId: string,
     code: string,
@@ -504,15 +546,34 @@ export class AuthService {
       where: { id: userId },
     });
 
-    if (
-      !user?.verifyToken ||
-      !(await this.verifyStoredCode(user.verifyToken, code))
-    ) {
+    if (!user?.verifyToken) {
       throw new UnauthorizedException('Invalid code');
     }
 
     if (!user.verifyTokenExp || user.verifyTokenExp < new Date()) {
       throw new UnauthorizedException('Code expired');
+    }
+
+    // Same claim-then-check as password reset codes.
+    const claimed = await this.prismaService.user.updateMany({
+      where: {
+        id: user.id,
+        verifyToken: user.verifyToken,
+        verifyAttempts: { lt: MAX_CODE_ATTEMPTS },
+      },
+      data: { verifyAttempts: { increment: 1 } },
+    });
+    if (claimed.count === 0) {
+      await this.burnVerifyToken(user.id, user.verifyToken);
+      throw new UnauthorizedException(TOO_MANY_ATTEMPTS);
+    }
+
+    if (!(await this.verifyStoredCode(user.verifyToken, code))) {
+      if (user.verifyAttempts + 1 >= MAX_CODE_ATTEMPTS) {
+        await this.burnVerifyToken(user.id, user.verifyToken);
+        throw new UnauthorizedException(TOO_MANY_ATTEMPTS);
+      }
+      throw new UnauthorizedException('Invalid code');
     }
 
     await this.prismaService.user.update({
@@ -521,6 +582,7 @@ export class AuthService {
         isVerified: true,
         verifyToken: null,
         verifyTokenExp: null,
+        verifyAttempts: 0,
       },
     });
 

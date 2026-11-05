@@ -16,6 +16,8 @@ model User {
   isVerified     Boolean            @default(false)
   verifyToken    String?            @unique
   verifyTokenExp DateTime?
+  /// Wrong guesses against the current verifyToken; reset with each new code.
+  verifyAttempts Int                @default(0)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   userLibraries  UserLibrary[]
@@ -31,6 +33,8 @@ model VerificationCode {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
+  /// Guesses made against this code; it stops working at the limit.
+  attempts  Int      @default(0)
   createdAt DateTime @default(now())
 }
 

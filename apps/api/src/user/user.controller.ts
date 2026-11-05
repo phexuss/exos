@@ -49,21 +49,25 @@ export class UserController {
     description: 'Updated user profile',
     type: UserPublicDto,
   })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token' })
+  @ApiUnauthorizedResponse({
+    description:
+      'Missing or invalid bearer token, or wrong/missing currentPassword ' +
+      'when changing email',
+  })
   @Patch('me')
   async updateMe(
     @Req() req: Request,
     @Body() dto: UpdateUserDto,
   ): Promise<UserPublicDto> {
-    const { sub } = req.user as AuthStatusResponseDto;
-    const { user, emailChanged, verificationCode } =
-      await this.userService.updateProfile(sub, dto);
+    const { sub, sessionId } = req.user as AuthStatusResponseDto;
+    const { user, emailChanged, previousEmail, verificationCode } =
+      await this.userService.updateProfile(sub, sessionId, dto);
 
     if (emailChanged && verificationCode) {
-      await this.resendService.sendVerificationEmail(
-        user.email,
-        verificationCode,
-      );
+      await Promise.all([
+        this.resendService.sendVerificationEmail(user.email, verificationCode),
+        this.resendService.sendEmailChangedNotice(previousEmail, user.email),
+      ]);
     }
 
     return user;

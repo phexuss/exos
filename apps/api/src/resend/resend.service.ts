@@ -2,6 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 @Injectable()
 export class ResendService {
   private readonly resend: Resend;
@@ -28,7 +37,7 @@ export class ResendService {
     preview: string;
     title: string;
     body: string;
-    code: string;
+    code?: string;
     footer: string;
   }): string {
     const font = "'Jost','Segoe UI',system-ui,-apple-system,Roboto,sans-serif";
@@ -39,6 +48,18 @@ export class ResendService {
     const accent = '#818cf8';
     const text2 = 'rgba(255,255,255,0.7)';
     const text3 = 'rgba(255,255,255,0.45)';
+
+    const codeBlock = code
+      ? `              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="background:${tile};border:1px solid rgba(129,140,248,0.32);border-radius:14px;padding:22px 12px;">
+                    <span style="font-family:${font};font-size:40px;line-height:1;font-weight:700;letter-spacing:0.28em;padding-left:0.28em;color:${accent};font-variant-numeric:tabular-nums;">${code}</span>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:12px 0 0;font-family:${font};font-size:13px;font-weight:500;color:${text3};">Expires in 30 minutes</p>
+`
+      : '';
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -63,15 +84,7 @@ export class ResendService {
             <td style="background:${pane};border:1px solid ${rim};border-radius:24px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.1),0 24px 48px rgba(0,0,0,0.45);padding:32px;">
               <h1 style="margin:0 0 8px;font-family:${font};font-size:24px;line-height:1.25;font-weight:700;color:#ffffff;">${title}</h1>
               <p style="margin:0 0 24px;font-family:${font};font-size:15px;line-height:1.6;font-weight:400;color:${text2};">${body}</p>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="background:${tile};border:1px solid rgba(129,140,248,0.32);border-radius:14px;padding:22px 12px;">
-                    <span style="font-family:${font};font-size:40px;line-height:1;font-weight:700;letter-spacing:0.28em;padding-left:0.28em;color:${accent};font-variant-numeric:tabular-nums;">${code}</span>
-                  </td>
-                </tr>
-              </table>
-              <p style="margin:12px 0 0;font-family:${font};font-size:13px;font-weight:500;color:${text3};">Expires in 30 minutes</p>
-            </td>
+${codeBlock}            </td>
           </tr>
           <tr>
             <td style="padding:24px 8px 0;font-family:${font};font-size:13px;line-height:1.6;color:${text3};">${footer}</td>
@@ -125,6 +138,26 @@ export class ResendService {
       code,
       footer:
         'If you didn’t request this code, you can safely ignore this email.',
+    });
+  }
+
+  /** Sent to the previous address after the account email was changed. */
+  async sendEmailChangedNotice(
+    previousEmail: string,
+    newEmail: string,
+  ): Promise<void> {
+    const title = 'Your email was changed';
+    await this.resend.emails.send({
+      from: 'EXØS <noreply@phexuss.dev>',
+      to: previousEmail,
+      subject: 'Your EXØS email was changed',
+      html: this.buildCodeEmailHtml({
+        preview: title,
+        title,
+        body: `The email on your EXØS account was changed to <strong style="color:#ffffff;">${escapeHtml(newEmail)}</strong>. Other devices were signed out.`,
+        footer:
+          'If this wasn’t you, someone else knows your password. Contact the EXØS team so we can restore your account.',
+      }),
     });
   }
 

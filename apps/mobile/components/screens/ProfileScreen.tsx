@@ -97,9 +97,17 @@ export function ProfileScreen() {
     }
   };
 
-  const handleSaveField = async (field: EditableField, value: string) => {
+  const handleSaveField = async (
+    field: EditableField,
+    value: string,
+    currentPassword?: string,
+  ) => {
     try {
-      await updateProfile({ [field]: value });
+      await updateProfile(
+        field === 'email'
+          ? { email: value, currentPassword }
+          : { [field]: value },
+      );
       if (field === 'email') {
         setNotice({
           title: t('common.save'),
@@ -374,8 +382,9 @@ export function ProfileScreen() {
         label={t('profile.editEmail')}
         initialValue={user.email}
         keyboardType="email-address"
+        requirePassword
         onClose={() => setEditing(null)}
-        onSubmit={(v) => handleSaveField('email', v)}
+        onSubmit={(v, password) => handleSaveField('email', v, password)}
       />
       <ChangePasswordModal
         visible={showChangePassword}
