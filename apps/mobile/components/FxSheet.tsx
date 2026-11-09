@@ -1,9 +1,7 @@
-import { useState } from 'react';
-import { Pressable, View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useMemo, useRef, useState } from 'react';
+import { PanResponder, Pressable, View } from 'react-native';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
-import { SeekBar } from '@/components/SeekBar';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { GLASS } from '@/constants/glass';
@@ -59,10 +57,7 @@ export function FxSheet({ visible, onClose, accentColor }: FxSheetProps) {
         paddingBottom: 34,
       }}
     >
-      {/* A Modal renders outside the app's gesture root on Android. Its
-          default style is flex: 1, which collapses to zero height inside a
-          sheet that sizes to its content, so give it a plain one. */}
-      <GestureHandlerRootView style={{ width: '100%' }}>
+      <View>
         <View style={{ alignItems: 'center', paddingVertical: 12 }}>
           <View
             style={{
@@ -164,7 +159,7 @@ export function FxSheet({ visible, onClose, accentColor }: FxSheetProps) {
             {t('fx.hint')}
           </AppText>
         </View>
-      </GestureHandlerRootView>
+      </View>
     </AnimatedModal>
   );
 }
@@ -187,8 +182,14 @@ function FxRow({
   onCommit,
 }: FxRowProps) {
   return (
-    <View style={{ gap: 8 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+    <View style={{ gap: 4 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
         <AppText variant="label" weight="medium">
           {label}
         </AppText>
@@ -199,11 +200,130 @@ function FxRow({
           {value}
         </AppText>
       </View>
-      <SeekBar
+      <FxSlider
         progress={Math.min(1, Math.max(0, progress))}
         accentColor={accentColor}
         onScrub={onScrub}
-        onSeek={onCommit}
+        onCommit={onCommit}
+        label={label}
+      />
+    </View>
+  );
+}
+
+const THUMB = 18;
+const TRACK = 4;
+const SLIDER_HEIGHT = 36;
+
+type FxSliderProps = {
+  progress: number;
+  accentColor: string;
+  label: string;
+  onScrub: (ratio: number | null) => void;
+  onCommit: (ratio: number) => void;
+};
+
+/**
+ * A plain slider on React Native's own touch system. The sheet lives in a
+ * Modal, outside the app's gesture-handler root, where the player's seek bar
+ * gestures never start; a responder works there like anywhere else. The thumb
+ * stays inside the row, so its edges line up with the labels above.
+ */
+function FxSlider({
+  progress,
+  accentColor,
+  label,
+  onScrub,
+  onCommit,
+}: FxSliderProps) {
+  const [width, setWidth] = useState(0);
+  const [drag, setDrag] = useState<number | null>(null);
+  const widthRef = useRef(0);
+  const ratioRef = useRef(0);
+  const startX = useRef(0);
+  // Latest callbacks for the responder, which is built once.
+  const cb = useRef({ onScrub, onCommit });
+  cb.current = { onScrub, onCommit };
+
+  const responder = useMemo(() => {
+    const ratioAt = (x: number) => {
+      const travel = widthRef.current - THUMB;
+      if (travel <= 0) return 0;
+      return Math.min(1, Math.max(0, (x - THUMB / 2) / travel));
+    };
+    const move = (x: number) => {
+      const r = ratioAt(x);
+      ratioRef.current = r;
+      setDrag(r);
+      cb.current.onScrub(r);
+    };
+    const end = (commit: boolean) => {
+      if (commit) cb.current.onCommit(ratioRef.current);
+      setDrag(null);
+      cb.current.onScrub(null);
+    };
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      // Keep the drag even when it wanders vertically.
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: (e) => {
+        startX.current = e.nativeEvent.locationX;
+        move(startX.current);
+      },
+      onPanResponderMove: (_e, g) => move(startX.current + g.dx),
+      onPanResponderRelease: () => end(true),
+      onPanResponderTerminate: () => end(true),
+    });
+  }, []);
+
+  const shown = drag ?? progress;
+  const travel = Math.max(0, width - THUMB);
+  const thumbX = shown * travel;
+
+  return (
+    <View
+      accessible
+      accessibilityRole="adjustable"
+      accessibilityLabel={label}
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(shown * 100) }}
+      onLayout={(e) => {
+        const w = e.nativeEvent.layout.width;
+        widthRef.current = w;
+        setWidth(w);
+      }}
+      {...responder.panHandlers}
+      style={{ height: SLIDER_HEIGHT, justifyContent: 'center' }}
+    >
+      {/* Children ignore touches, so locationX is always the row's own. */}
+      <View
+        pointerEvents="none"
+        style={{
+          marginHorizontal: THUMB / 2,
+          height: TRACK,
+          borderRadius: TRACK / 2,
+          backgroundColor: COLORS.divider,
+          overflow: 'hidden',
+        }}
+      >
+        <View
+          style={{
+            width: thumbX,
+            height: TRACK,
+            backgroundColor: accentColor,
+          }}
+        />
+      </View>
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          left: thumbX,
+          width: THUMB,
+          height: THUMB,
+          borderRadius: THUMB / 2,
+          backgroundColor: COLORS.textPrimary,
+        }}
       />
     </View>
   );
