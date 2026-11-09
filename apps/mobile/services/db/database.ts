@@ -142,6 +142,17 @@ async function migrate(database: SQLite.SQLiteDatabase) {
      )`,
   );
 
+  // Lyrics set by hand in the editor, by track id. They win over the ones
+  // saved with a download and over LRCLIB, and survive deleting the track.
+  await database.runAsync(
+    `CREATE TABLE IF NOT EXISTS user_lyrics (
+       track_id      TEXT PRIMARY KEY,
+       synced_lyrics TEXT,
+       plain_lyrics  TEXT,
+       updated_at    INTEGER NOT NULL
+     )`,
+  );
+
   await ensureColumn(database, 'tracks', 'artist_id', 'artist_id TEXT');
   await ensureColumn(
     database,
@@ -219,6 +230,42 @@ export type LyricsData = {
   syncedLyrics: string | null;
   plainLyrics: string | null;
 };
+
+export function getUserLyrics(trackId: string): Promise<LyricsData | null> {
+  return withDb(async (database) => {
+    const row = await database.getFirstAsync<{
+      synced_lyrics: string | null;
+      plain_lyrics: string | null;
+    }>(
+      'SELECT synced_lyrics, plain_lyrics FROM user_lyrics WHERE track_id = ?',
+      [trackId],
+    );
+    return row
+      ? { syncedLyrics: row.synced_lyrics, plainLyrics: row.plain_lyrics }
+      : null;
+  });
+}
+
+export function setUserLyrics(
+  trackId: string,
+  lyrics: LyricsData,
+): Promise<void> {
+  return withDb(async (database) => {
+    await database.runAsync(
+      `INSERT OR REPLACE INTO user_lyrics (track_id, synced_lyrics, plain_lyrics, updated_at)
+       VALUES (?, ?, ?, ?)`,
+      [trackId, lyrics.syncedLyrics, lyrics.plainLyrics, Date.now()],
+    );
+  });
+}
+
+export function deleteUserLyrics(trackId: string): Promise<void> {
+  return withDb(async (database) => {
+    await database.runAsync('DELETE FROM user_lyrics WHERE track_id = ?', [
+      trackId,
+    ]);
+  });
+}
 
 export type DownloadedTrackInfo = LyricsData & {
   filePath: string;

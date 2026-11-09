@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import { AnimatedModal } from '@/components/AnimatedModal';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { useI18n } from '@/hooks/useI18n';
@@ -196,7 +197,40 @@ type LyricsViewProps = {
   duration: number;
   onSeekToTime?: (seconds: number) => void;
   accentColor?: string;
+  /** Opens the lyrics editor; `find` when there are no lyrics yet. */
+  onEdit?: (find: boolean) => void;
 };
+
+/** Small round pencil in the corner of the lyrics box. */
+function EditButton({
+  onPress,
+  label,
+}: {
+  onPress: () => void;
+  label: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.35)',
+      }}
+    >
+      <AppIcon name="edit" size={17} color={COLORS.textSecondary} />
+    </Pressable>
+  );
+}
 
 export function LyricsView({
   syncedLyrics,
@@ -205,6 +239,7 @@ export function LyricsView({
   duration,
   onSeekToTime,
   accentColor,
+  onEdit,
 }: LyricsViewProps) {
   const scrollRef = useRef<ScrollView>(null);
   const lineHeights = useRef<number[]>([]);
@@ -299,6 +334,27 @@ export function LyricsView({
         >
           {t('lyricsFaq.noLyrics')}
         </AppText>
+        {onEdit ? (
+          <Pressable
+            onPress={() => onEdit(true)}
+            accessibilityRole="button"
+            style={{
+              marginTop: 4,
+              paddingHorizontal: 18,
+              paddingVertical: 9,
+              borderRadius: 999,
+              backgroundColor: 'rgba(99, 102, 241, 0.15)',
+            }}
+          >
+            <AppText
+              variant="label"
+              weight="medium"
+              style={{ color: accentColor ?? COLORS.accent }}
+            >
+              {t('lyricsEditor.find')}
+            </AppText>
+          </Pressable>
+        ) : null}
         <Pressable onPress={() => setShowLyricsFaq(true)}>
           <AppText
             variant="caption"
@@ -401,6 +457,12 @@ export function LyricsView({
             );
           })}
         </ScrollView>
+        {onEdit ? (
+          <EditButton
+            onPress={() => onEdit(false)}
+            label={t('lyricsEditor.edit')}
+          />
+        ) : null}
       </View>
     );
   }
@@ -439,6 +501,12 @@ export function LyricsView({
           </AppText>
         ))}
       </ScrollView>
+      {onEdit ? (
+        <EditButton
+          onPress={() => onEdit(false)}
+          label={t('lyricsEditor.edit')}
+        />
+      ) : null}
     </View>
   );
 }

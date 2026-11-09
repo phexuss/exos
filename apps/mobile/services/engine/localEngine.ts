@@ -287,6 +287,40 @@ async function runDownload(
   return { path: info.filepath, ext };
 }
 
+const LRCLIB_HEADERS = {
+  'User-Agent': 'EXOS (https://github.com/phexuss/exos)',
+};
+
+export type LrclibEntry = {
+  id: number;
+  trackName: string;
+  artistName: string;
+  albumName?: string | null;
+  duration?: number | null;
+  instrumental?: boolean;
+  syncedLyrics?: string | null;
+  plainLyrics?: string | null;
+};
+
+/** LRCLIB's own search, for picking lyrics by hand in the editor. */
+export async function searchLyricsDirect(
+  query: string,
+): Promise<LrclibEntry[]> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const res = await fetch(
+      `https://lrclib.net/api/search?${new URLSearchParams({ q: query })}`,
+      { headers: LRCLIB_HEADERS, signal: controller.signal },
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const hits = (await res.json()) as LrclibEntry[];
+    return hits.filter((h) => h.syncedLyrics || h.plainLyrics);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 type LrclibResult = {
   syncedLyrics?: string | null;
   plainLyrics?: string | null;
@@ -303,7 +337,7 @@ export async function fetchLyricsDirect(
     track_name: title,
   });
   if (durationSec > 0) params.set('duration', String(Math.round(durationSec)));
-  const headers = { 'User-Agent': 'EXOS (https://github.com/phexuss/exos)' };
+  const headers = LRCLIB_HEADERS;
   // Covers both requests and their bodies, so a stalled LRCLIB never
   // leaves the lyrics tab spinning.
   const controller = new AbortController();
