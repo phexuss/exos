@@ -17,6 +17,7 @@ import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { DownloadButton } from '@/components/DownloadButton';
 import { FxSheet } from '@/components/FxSheet';
 import { GlassSurface } from '@/components/glass/GlassSurface';
+import { LyricsEditor } from '@/components/LyricsEditor';
 import { LyricsView } from '@/components/LyricsView';
 import { MarqueeText } from '@/components/motion/MarqueeText';
 import { PlayRing } from '@/components/motion/PlayRing';
@@ -287,6 +288,19 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
   const { t } = useI18n();
   const [showLyrics, setShowLyrics] = useState(false);
   const [showFx, setShowFx] = useState(false);
+  /**
+   * Lyrics editor, with the track and lyrics it was opened on: the queue
+   * moving on mustn't swap them out from under an edit.
+   */
+  const [editLyrics, setEditLyrics] = useState<{
+    track: Track;
+    durationSec: number;
+    find: boolean;
+    syncedLyrics?: string;
+    plainLyrics?: string;
+    custom: boolean;
+  } | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
   const fxActive = useSettingsStore((s) => s.speed !== 1 || s.reverb > 0);
   const currentTrack = usePlayerStore((s) => s.currentTrack);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
@@ -447,6 +461,17 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
                 duration={trackDurationSec}
                 onSeekToTime={handleLyricSeek}
                 accentColor={accentColor}
+                onEdit={(find) => {
+                  setEditLyrics({
+                    track: currentTrack,
+                    durationSec: trackDurationSec,
+                    find,
+                    syncedLyrics: lyrics.syncedLyrics,
+                    plainLyrics: lyrics.plainLyrics,
+                    custom: lyrics.custom,
+                  });
+                  setEditorOpen(true);
+                }}
               />
             ) : (
               <SwipeArtwork
@@ -689,6 +714,21 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
         onClose={() => setShowFx(false)}
         accentColor={accentColor}
       />
+
+      {editLyrics ? (
+        <LyricsEditor
+          key={editLyrics.track.id}
+          visible={editorOpen}
+          track={editLyrics.track}
+          durationSec={editLyrics.durationSec}
+          syncedLyrics={editLyrics.syncedLyrics}
+          plainLyrics={editLyrics.plainLyrics}
+          custom={editLyrics.custom}
+          startOnFind={editLyrics.find}
+          accentColor={accentColor}
+          onClose={() => setEditorOpen(false)}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

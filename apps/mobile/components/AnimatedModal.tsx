@@ -71,6 +71,7 @@ const OUTER_KEYS = new Set([
   'maxHeight',
   'minHeight',
   'alignSelf',
+  'flex',
 ]);
 
 /**
@@ -240,7 +241,9 @@ export function AnimatedModal({
           },
           // Size constraints live on the animated wrapper; the surface just
           // fills/obeys it so scrollable children can shrink.
-          outer.height !== undefined ? { flex: 1 } : undefined,
+          outer.height !== undefined || outer.flex !== undefined
+            ? { flex: 1 }
+            : undefined,
           outer.maxHeight !== undefined ? { maxHeight: '100%' } : undefined,
         ]}
         contentStyle={[
@@ -255,7 +258,9 @@ export function AnimatedModal({
                 ),
               }
             : undefined,
-          outer.height !== undefined ? { flex: 1 } : { flexShrink: 1 },
+          outer.height !== undefined || outer.flex !== undefined
+            ? { flex: 1 }
+            : { flexShrink: 1 },
         ]}
       >
         {children}

@@ -8,6 +8,7 @@ import { List as ListLinear } from '@solar-icons/react-native/category/list/Line
 import { Playlist as PlaylistLinear } from '@solar-icons/react-native/category/list/Linear/Playlist';
 import { Global as GlobeLinear } from '@solar-icons/react-native/category/map/Linear/Global';
 import { Letter as LetterLinear } from '@solar-icons/react-native/category/messages/Linear/Letter';
+import { Pen as PenLinear } from '@solar-icons/react-native/category/messages/Linear/Pen';
 import { DocumentText as DocumentTextLinear } from '@solar-icons/react-native/category/notes/Linear/DocumentText';
 import { Magnifier as MagnifierLinear } from '@solar-icons/react-native/category/search/Linear/Magnifier';
 import { Eye as EyeLinear } from '@solar-icons/react-native/category/security/Linear/Eye';
@@ -74,7 +75,8 @@ export type IconName =
   | 'eye'
   | 'eye-closed'
   | 'id'
-  | 'plus';
+  | 'plus'
+  | 'edit';
 
 const ICON_MAP: Record<IconName, ComponentType<IconProps>> = {
   home: HomeLinear,
@@ -114,6 +116,7 @@ const ICON_MAP: Record<IconName, ComponentType<IconProps>> = {
   'eye-closed': EyeClosedLinear,
   id: UserIdLinear,
   plus: AddCircleLinear,
+  edit: PenLinear,
 };
 
 type AppIconProps = {
