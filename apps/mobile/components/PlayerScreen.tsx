@@ -482,18 +482,64 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
           </Rise>
         </RNAnimated.View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          {/* Desktop player text: a new track's title rises into place. */}
-          <Rise key={currentTrack.id} style={{ flex: 1, gap: 4 }}>
-            <MarqueeText variant="title" weight="bold">
-              {currentTrack.title}
-            </MarqueeText>
+        {/* Title and badge share one centred line; the artist sits under
+            them. Desktop player text: a new track's title rises into place. */}
+        <View style={{ gap: 4 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <Rise key={currentTrack.id} style={{ flex: 1, minWidth: 0 }}>
+              <MarqueeText variant="title" weight="bold">
+                {currentTrack.title}
+              </MarqueeText>
+            </Rise>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <SourceBadge source={currentTrack.source} />
+              <DownloadButton
+                track={currentTrack}
+                size={18}
+                accentColor={accentColor}
+              />
+              <AnimatedPressable
+                scaleValue={0.85}
+                hitSlop={10}
+                onPress={() => setShowFx(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t('fx.button')}
+                accessibilityState={{ selected: fxActive }}
+              >
+                <AppIcon
+                  name="fx"
+                  size={20}
+                  color={fxActive ? accentColor : COLORS.textSecondary}
+                />
+              </AnimatedPressable>
+              <AnimatedPressable
+                scaleValue={0.85}
+                hitSlop={10}
+                onPress={() => setShowLyrics((v) => !v)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: showLyrics }}
+              >
+                <AppIcon
+                  name="lyrics"
+                  size={20}
+                  color={showLyrics ? accentColor : COLORS.textSecondary}
+                />
+              </AnimatedPressable>
+            </View>
+          </View>
+          <Rise key={`${currentTrack.id}:artist`} after={1}>
             <Pressable
               onPress={() => {
                 if (
@@ -519,47 +565,6 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
               </AppText>
             </Pressable>
           </Rise>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 12,
-            }}
-          >
-            <SourceBadge source={currentTrack.source} />
-            <DownloadButton
-              track={currentTrack}
-              size={18}
-              accentColor={accentColor}
-            />
-            <AnimatedPressable
-              scaleValue={0.85}
-              hitSlop={10}
-              onPress={() => setShowFx(true)}
-              accessibilityRole="button"
-              accessibilityLabel={t('fx.button')}
-              accessibilityState={{ selected: fxActive }}
-            >
-              <AppIcon
-                name="fx"
-                size={20}
-                color={fxActive ? accentColor : COLORS.textSecondary}
-              />
-            </AnimatedPressable>
-            <AnimatedPressable
-              scaleValue={0.85}
-              hitSlop={10}
-              onPress={() => setShowLyrics((v) => !v)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: showLyrics }}
-            >
-              <AppIcon
-                name="lyrics"
-                size={20}
-                color={showLyrics ? accentColor : COLORS.textSecondary}
-              />
-            </AnimatedPressable>
-          </View>
         </View>
 
         <PlaybackProgress
