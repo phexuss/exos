@@ -2,7 +2,9 @@ import { AltArrowDown as AltArrowDownLinear } from '@solar-icons/react-native/ca
 import { AltArrowLeft as AltArrowLeftLinear } from '@solar-icons/react-native/category/arrows/Linear/AltArrowLeft';
 import { AltArrowRight as AltArrowRightLinear } from '@solar-icons/react-native/category/arrows/Linear/AltArrowRight';
 import { ArrowRight as ArrowRightLinear } from '@solar-icons/react-native/category/arrows/Linear/ArrowRight';
+import { Restart as RestartLinear } from '@solar-icons/react-native/category/arrows/Linear/Restart';
 import { DownloadMinimalistic as DownloadLinear } from '@solar-icons/react-native/category/arrows-action/Linear/DownloadMinimalistic';
+import { UndoLeft as UndoLeftLinear } from '@solar-icons/react-native/category/arrows-action/Linear/UndoLeft';
 import { Heart as HeartLinear } from '@solar-icons/react-native/category/like/Linear/Heart';
 import { List as ListBold } from '@solar-icons/react-native/category/list/Bold/List';
 import { List as ListLinear } from '@solar-icons/react-native/category/list/Linear/List';
@@ -18,6 +20,7 @@ import { EyeClosed as EyeClosedLinear } from '@solar-icons/react-native/category
 import { Key as KeyLinear } from '@solar-icons/react-native/category/security/Linear/Key';
 import { Lock as LockLinear } from '@solar-icons/react-native/category/security/Linear/Lock';
 import { Settings as SettingsLinear } from '@solar-icons/react-native/category/settings/Linear/Settings';
+import { Stopwatch as StopwatchLinear } from '@solar-icons/react-native/category/time/Linear/Stopwatch';
 import { Palette as PaletteLinear } from '@solar-icons/react-native/category/tools/Linear/Palette';
 import { Home as HomeBold } from '@solar-icons/react-native/category/ui/Bold/Home';
 import { InfoCircle as InfoCircleBroken } from '@solar-icons/react-native/category/ui/Broken/InfoCircle';
@@ -90,7 +93,10 @@ export type IconName =
   | 'eye-closed'
   | 'id'
   | 'plus'
-  | 'edit';
+  | 'edit'
+  | 'undo'
+  | 'restart'
+  | 'stopwatch';
 
 const ICON_MAP: Record<IconName, ComponentType<IconProps>> = {
   home: HomeLinear,
@@ -138,6 +144,9 @@ const ICON_MAP: Record<IconName, ComponentType<IconProps>> = {
   id: UserIdLinear,
   plus: AddCircleLinear,
   edit: PenLinear,
+  undo: UndoLeftLinear,
+  restart: RestartLinear,
+  stopwatch: StopwatchLinear,
 };
 
 type AppIconProps = {

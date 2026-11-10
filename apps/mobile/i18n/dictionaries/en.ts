@@ -257,6 +257,17 @@ export const en = {
     nearLength: 'same length',
     back: 'Back to results',
     use: 'Use these lyrics',
+    sync: 'Sync to track',
+    syncHint:
+      'Tap "Line" the moment each new line starts. Tap a finished line to jump back to it.',
+    syncNotPlaying: 'Syncing needs this track playing.',
+    syncPlay: 'Play it',
+    syncRestart: 'From the start',
+    syncStamp: 'Line',
+    syncUndo: 'Undo line',
+    syncDone: 'Done',
+    syncLeft: '{n} left',
+    syncBack: 'Back to text',
   },
   previewFaq: {
     title: 'Why 30 seconds?',
