@@ -1,12 +1,7 @@
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
-import { useCallback, useEffect, useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  Animated as RNAnimated,
-  View,
-} from 'react-native';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { Pressable, Animated as RNAnimated, View } from 'react-native';
 import { GestureDetector, type PanGesture } from 'react-native-gesture-handler';
 import {
   SafeAreaView,
@@ -28,7 +23,7 @@ import { useSwipeToSkip } from '@/components/motion/useSwipeToSkip';
 import { SeekBar } from '@/components/SeekBar';
 import { SourceBadge } from '@/components/SourceBadge';
 import { TrackItem } from '@/components/TrackItem';
-import { AppIcon } from '@/components/ui/AppIcon';
+import { AppIcon, type IconName } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -46,6 +41,7 @@ import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import type { Track } from '@/types/domain';
+import { haptic } from '@/utils/haptics';
 
 type QueueOverlayProps = {
   visible: boolean;
@@ -82,41 +78,62 @@ function PlaybackProgress({
   const [scrubRatio, setScrubRatio] = useState<number | null>(null);
   const totalDurationSec = audio.getDuration() || durationSec;
   const displayedCurrentTimeSec = (scrubRatio ?? progress) * totalDurationSec;
+  const timeTone = {
+    color: scrubRatio === null ? COLORS.textMuted : COLORS.textPrimary,
+  };
 
   return (
-    <View style={{ gap: 4 }}>
+    <View>
       <SeekBar
         progress={progress}
         isPlaying={isPlaying}
         onSeek={onSeek}
-        onSeekStart={audio.startSeeking}
+        onSeekStart={() => {
+          haptic('tick');
+          audio.startSeeking();
+        }}
         onSeekEnd={audio.stopSeeking}
         onScrub={setScrubRatio}
         accentColor={accentColor}
         glass={glass}
       />
+      {/* The bar keeps a tall touch area; the times tuck up under the line
+          itself and light up while a finger moves it. */}
       <View
         style={{
           flexDirection: 'row',
           justifyContent: 'space-between',
+          marginTop: -SPACING.sm,
         }}
       >
-        <AppText
-          variant="caption"
-          style={{ color: COLORS.textMuted, fontSize: 10 }}
-        >
+        <AppText variant="caption" style={[TIME_STYLE, timeTone]}>
           {formatTime(displayedCurrentTimeSec)}
         </AppText>
-        <AppText
-          variant="caption"
-          style={{ color: COLORS.textMuted, fontSize: 10 }}
-        >
+        <AppText variant="caption" style={[TIME_STYLE, timeTone]}>
           {durationLabel}
         </AppText>
       </View>
     </View>
   );
 }
+
+const TIME_STYLE = {
+  fontSize: 11,
+  fontVariant: ['tabular-nums' as const],
+};
+
+/** The cover floats over the backdrop on a soft, wide shadow. */
+const ART_SHADOW = {
+  boxShadow: [
+    {
+      offsetX: 0,
+      offsetY: 18,
+      blurRadius: 36,
+      spreadDistance: -6,
+      color: 'rgba(0,0,0,0.5)',
+    },
+  ],
+};
 
 type SwipeArtworkProps = {
   coverUrl?: string;
@@ -133,7 +150,7 @@ function SwipeArtwork({ coverUrl, radius }: SwipeArtworkProps) {
   return (
     <GestureDetector gesture={swipe.gesture}>
       <RNAnimated.View
-        style={[{ flex: 1 }, swipe.style]}
+        style={[{ flex: 1, borderRadius: radius }, ART_SHADOW, swipe.style]}
         onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       >
         {coverUrl ? (
@@ -203,7 +220,7 @@ function QueueOverlay({
         style={{
           flex: 1,
           paddingTop: insets.top,
-          paddingHorizontal: 24,
+          paddingHorizontal: SPACING.xxl,
         }}
       >
         <View
@@ -279,12 +296,98 @@ function QueueOverlay({
   );
 }
 
+type ModeButtonProps = {
+  icon: IconName;
+  on: boolean;
+  color: string;
+  label: string;
+  onPress: () => void;
+};
+
+/** Shuffle and repeat: tinted while on, with a dot under the glyph. */
+function ModeButton({ icon, on, color, label, onPress }: ModeButtonProps) {
+  return (
+    <AnimatedPressable
+      scaleValue={0.85}
+      haptic={on ? 'off' : 'on'}
+      onPress={onPress}
+      hitSlop={12}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: on }}
+      style={{
+        width: LAYOUT.minTouch,
+        height: LAYOUT.minTouch,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <AppIcon name={icon} size={22} color={on ? color : COLORS.textMuted} />
+      {on ? (
+        <Pop>
+          <View
+            style={{
+              position: 'absolute',
+              alignSelf: 'center',
+              top: SPACING.xs,
+              width: SPACING.xs,
+              height: SPACING.xs,
+              borderRadius: SPACING.xs / 2,
+              backgroundColor: color,
+            }}
+          />
+        </Pop>
+      ) : null}
+    </AnimatedPressable>
+  );
+}
+
+type ActionButtonProps = {
+  on?: boolean;
+  /** Leave both out for a slot whose child is a button itself. */
+  label?: string;
+  onPress?: () => void;
+  children: ReactNode;
+};
+
+/** One of the quiet actions under the transport; lit on a soft disc while on. */
+function ActionButton({ on, label, onPress, children }: ActionButtonProps) {
+  const box = {
+    width: LAYOUT.minTouch,
+    height: LAYOUT.minTouch,
+    borderRadius: LAYOUT.minTouch / 2,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: on ? GLASS.selection : 'transparent',
+  };
+  if (!onPress) return <View style={box}>{children}</View>;
+  return (
+    <AnimatedPressable
+      scaleValue={0.85}
+      haptic="tick"
+      onPress={onPress}
+      hitSlop={SPACING.sm}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: !!on }}
+      style={box}
+    >
+      {children}
+    </AnimatedPressable>
+  );
+}
+
 type PlayerScreenProps = {
   /** Pull-down-to-close, from the overlay that hosts the player. */
   dismissGesture?: { body: PanGesture; handle: PanGesture };
+  /** False while the player is put away: its endless loops rest. */
+  active?: boolean;
 };
 
-export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
+export default function PlayerScreen({
+  dismissGesture,
+  active = true,
+}: PlayerScreenProps) {
   const { t } = useI18n();
   const [showLyrics, setShowLyrics] = useState(false);
   const [showFx, setShowFx] = useState(false);
@@ -301,6 +404,8 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
     custom: boolean;
   } | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  /** The room between the header and the title: the cover fits inside it. */
+  const [stage, setStage] = useState({ width: 0, height: 0 });
   const fxActive = useSettingsStore((s) => s.speed !== 1 || s.reverb > 0);
   const currentTrack = usePlayerStore((s) => s.currentTrack);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
@@ -336,8 +441,6 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
     run.start();
     return () => run.stop();
   }, [isPlaying, artScale]);
-
-  const artStyle = { transform: [{ scale: artScale }] };
 
   const handleSeek = useCallback(
     (value: number) => {
@@ -375,6 +478,9 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
   const bodyGesture = dismissGesture?.body.enabled(!scrollableOpen);
   const handleGesture = dismissGesture?.handle.enabled(scrollableOpen);
   const artRadius = glassMode ? 22 : 16;
+  const artSize = Math.floor(Math.min(stage.width, stage.height));
+  const canOpenArtist =
+    currentTrack.source === 'deezer' && !!currentTrack.artist.id;
 
   const header = (
     <View
@@ -426,147 +532,136 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
   );
 
   const body = (
-    <View style={{ flex: 1, paddingHorizontal: 24 }}>
+    <View style={{ flex: 1, paddingHorizontal: PAGE }}>
       {handleGesture ? (
         <GestureDetector gesture={handleGesture}>{header}</GestureDetector>
       ) : (
         header
       )}
 
-      <View style={{ flex: 1, justifyContent: 'center', gap: 24 }}>
-        <RNAnimated.View
-          style={[
-            {
-              aspectRatio: 1,
-              width: '100%',
-            },
-            glassMode && Platform.OS === 'ios'
-              ? {
-                  shadowColor: '#000',
-                  shadowOpacity: 0.45,
-                  shadowRadius: 30,
-                  shadowOffset: { width: 0, height: 18 },
-                }
-              : undefined,
-            artStyle,
-          ]}
-        >
-          <Rise key={showLyrics ? 'lyrics' : 'art'} style={{ flex: 1 }}>
-            {showLyrics ? (
-              <LyricsView
-                key={currentTrack.id}
-                syncedLyrics={lyrics.syncedLyrics}
-                plainLyrics={lyrics.plainLyrics}
-                loading={lyrics.loading}
-                duration={trackDurationSec}
-                onSeekToTime={handleLyricSeek}
-                accentColor={accentColor}
-                onEdit={(find) => {
-                  setEditLyrics({
-                    track: currentTrack,
-                    durationSec: trackDurationSec,
-                    find,
-                    syncedLyrics: lyrics.syncedLyrics,
-                    plainLyrics: lyrics.plainLyrics,
-                    custom: lyrics.custom,
-                  });
-                  setEditorOpen(true);
-                }}
-              />
-            ) : (
+      {/* The cover takes whatever room is left and stays square inside it,
+          so short screens shrink the cover instead of pushing the controls
+          off the bottom. Lyrics get the whole room. */}
+      <View
+        style={{
+          flex: 1,
+          marginVertical: SPACING.md,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setStage((now) =>
+            now.width === width && now.height === height
+              ? now
+              : { width, height },
+          );
+        }}
+      >
+        {showLyrics ? (
+          <Rise key="lyrics" style={{ flex: 1, alignSelf: 'stretch' }}>
+            <LyricsView
+              key={currentTrack.id}
+              syncedLyrics={lyrics.syncedLyrics}
+              plainLyrics={lyrics.plainLyrics}
+              loading={lyrics.loading}
+              duration={trackDurationSec}
+              onSeekToTime={handleLyricSeek}
+              accentColor={accentColor}
+              onEdit={(find) => {
+                setEditLyrics({
+                  track: currentTrack,
+                  durationSec: trackDurationSec,
+                  find,
+                  syncedLyrics: lyrics.syncedLyrics,
+                  plainLyrics: lyrics.plainLyrics,
+                  custom: lyrics.custom,
+                });
+                setEditorOpen(true);
+              }}
+            />
+          </Rise>
+        ) : artSize > 0 ? (
+          <Rise key="art">
+            <RNAnimated.View
+              style={{
+                width: artSize,
+                height: artSize,
+                transform: [{ scale: artScale }],
+              }}
+            >
               <SwipeArtwork
                 coverUrl={currentTrack.coverUrl}
                 radius={artRadius}
               />
-            )}
+            </RNAnimated.View>
           </Rise>
-        </RNAnimated.View>
+        ) : null}
+      </View>
 
-        {/* Title and badge share one centred line; the artist sits under
-            them. Desktop player text: a new track's title rises into place. */}
-        <View style={{ gap: 4 }}>
-          <View
+      {/* Title over artist, as on the desktop player: a new track's text
+          rises into place. With the lyrics up, the cover sits beside it as
+          a thumbnail. */}
+      <View
+        style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md }}
+      >
+        {showLyrics && currentTrack.coverUrl ? (
+          <Pop>
+            <Image
+              source={{ uri: currentTrack.coverUrl }}
+              style={{
+                width: THUMB,
+                height: THUMB,
+                borderRadius: SPACING.md,
+              }}
+              contentFit="cover"
+              transition={MOTION.dur.base}
+            />
+          </Pop>
+        ) : null}
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <Rise key={currentTrack.id}>
+            <MarqueeText
+              variant="title"
+              weight="bold"
+              bleed={showLyrics ? 0 : PAGE}
+              paused={!active}
+            >
+              {currentTrack.title}
+            </MarqueeText>
+          </Rise>
+          <Rise
+            key={`${currentTrack.id}:artist`}
+            after={1}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 12,
+              gap: SPACING.sm,
             }}
           >
-            <Rise key={currentTrack.id} style={{ flex: 1, minWidth: 0 }}>
-              <MarqueeText variant="title" weight="bold">
-                {currentTrack.title}
-              </MarqueeText>
-            </Rise>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 12,
-              }}
-            >
-              <SourceBadge source={currentTrack.source} />
-              <DownloadButton
-                track={currentTrack}
-                size={18}
-                accentColor={accentColor}
-              />
-              <AnimatedPressable
-                scaleValue={0.85}
-                hitSlop={10}
-                onPress={() => setShowFx(true)}
-                accessibilityRole="button"
-                accessibilityLabel={t('fx.button')}
-                accessibilityState={{ selected: fxActive }}
-              >
-                <AppIcon
-                  name="fx"
-                  size={20}
-                  color={fxActive ? accentColor : COLORS.textSecondary}
-                />
-              </AnimatedPressable>
-              <AnimatedPressable
-                scaleValue={0.85}
-                hitSlop={10}
-                onPress={() => setShowLyrics((v) => !v)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: showLyrics }}
-              >
-                <AppIcon
-                  name="lyrics"
-                  size={20}
-                  color={showLyrics ? accentColor : COLORS.textSecondary}
-                />
-              </AnimatedPressable>
-            </View>
-          </View>
-          <Rise key={`${currentTrack.id}:artist`} after={1}>
             <Pressable
+              disabled={!canOpenArtist}
               onPress={() => {
-                if (
-                  currentTrack.source === 'deezer' &&
-                  currentTrack.artist.id
-                ) {
-                  closePlayer();
-                  useOverlayStore.getState().openArtist(currentTrack.artist.id);
-                }
+                closePlayer();
+                useOverlayStore.getState().openArtist(currentTrack.artist.id);
               }}
-              hitSlop={4}
+              hitSlop={SPACING.sm}
+              style={{ flexShrink: 1 }}
             >
               <AppText
                 variant="body"
                 numberOfLines={1}
-                style={{
-                  color: COLORS.textSecondary,
-                  textDecorationLine:
-                    currentTrack.source === 'deezer' ? 'underline' : 'none',
-                }}
+                style={{ color: COLORS.textSecondary, fontSize: 17 }}
               >
                 {currentTrack.artist.name}
               </AppText>
             </Pressable>
+            <SourceBadge source={currentTrack.source} />
           </Rise>
         </View>
+      </View>
 
+      <View style={{ marginTop: SPACING.sm }}>
         <PlaybackProgress
           durationSec={trackDurationSec}
           durationLabel={currentTrack.duration}
@@ -575,111 +670,124 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
           glass={glassMode}
           onSeek={handleSeek}
         />
+      </View>
 
-        <View
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: SPACING.md,
+        }}
+      >
+        <ModeButton
+          icon="shuffle"
+          on={shuffle}
+          color={accentColor}
+          label={t('player.shuffle')}
+          onPress={toggleShuffle}
+        />
+
+        <AnimatedPressable
+          scaleValue={0.82}
+          haptic="tap"
+          onPress={skipPrevious}
+          hitSlop={SPACING.md}
+          accessibilityRole="button"
+          accessibilityLabel={t('player.previous')}
+          style={SKIP_BOX}
+        >
+          <AppIcon name="previous-solid" size={34} color={COLORS.textPrimary} />
+        </AnimatedPressable>
+
+        <AnimatedPressable
+          scaleValue={0.9}
+          haptic="tap"
+          onPress={togglePlayback}
+          accessibilityRole="button"
+          accessibilityLabel={t(isPlaying ? 'player.pause' : 'player.play')}
+          // Desktop player: a solid white disc with a dark glyph, and an
+          // accent ring that breathes out of it while music plays.
           style={{
-            flexDirection: 'row',
+            width: PLAY_DISC,
+            height: PLAY_DISC,
+            borderRadius: PLAY_DISC / 2,
             alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: 4,
+            justifyContent: 'center',
+            backgroundColor: COLORS.textPrimary,
           }}
         >
-          <AnimatedPressable
-            scaleValue={0.85}
-            onPress={toggleShuffle}
-            hitSlop={12}
-            style={{
-              width: 40,
-              height: 40,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
+          <PlayRing playing={isPlaying && active} color={accentColor} />
+          <Pop key={isPlaying ? 'pause' : 'play'}>
             <AppIcon
-              name="shuffle"
-              size={20}
-              color={shuffle ? accentColor : COLORS.textMuted}
+              name={isPlaying ? 'pause-solid' : 'play-solid'}
+              size={32}
+              color={COLORS.background}
             />
-          </AnimatedPressable>
+          </Pop>
+        </AnimatedPressable>
 
-          <AnimatedPressable
-            scaleValue={0.85}
-            onPress={skipPrevious}
-            hitSlop={12}
-            style={{
-              width: 48,
-              height: 48,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <AppIcon
-              name="previous"
-              size={glassMode ? 32 : 24}
-              color={COLORS.textPrimary}
-            />
-          </AnimatedPressable>
+        <AnimatedPressable
+          scaleValue={0.82}
+          haptic="tap"
+          onPress={skipNext}
+          hitSlop={SPACING.md}
+          accessibilityRole="button"
+          accessibilityLabel={t('player.next')}
+          style={SKIP_BOX}
+        >
+          <AppIcon name="next-solid" size={34} color={COLORS.textPrimary} />
+        </AnimatedPressable>
 
-          <AnimatedPressable
-            scaleValue={0.9}
-            onPress={togglePlayback}
-            // Desktop player: a solid white disc with a dark glyph, and an
-            // accent ring that breathes out of it while music plays.
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: 36,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: COLORS.textPrimary,
-            }}
-          >
-            <PlayRing playing={isPlaying} color={accentColor} />
-            <Pop key={isPlaying ? 'pause' : 'play'}>
-              <AppIcon
-                name={isPlaying ? 'pause' : 'play'}
-                size={30}
-                color={COLORS.background}
-              />
-            </Pop>
-          </AnimatedPressable>
+        <ModeButton
+          icon={repeat === 'one' ? 'repeat-one' : 'repeat'}
+          on={repeat !== 'off'}
+          color={accentColor}
+          label={t('player.repeat')}
+          onPress={cycleRepeat}
+        />
+      </View>
 
-          <AnimatedPressable
-            scaleValue={0.85}
-            onPress={skipNext}
-            hitSlop={12}
-            style={{
-              width: 48,
-              height: 48,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <AppIcon
-              name="next"
-              size={glassMode ? 32 : 24}
-              color={COLORS.textPrimary}
-            />
-          </AnimatedPressable>
-
-          <AnimatedPressable
-            scaleValue={0.85}
-            onPress={cycleRepeat}
-            hitSlop={12}
-            style={{
-              width: 40,
-              height: 40,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <AppIcon
-              name={repeat === 'one' ? 'repeat-one' : 'repeat'}
-              size={20}
-              color={repeat !== 'off' ? accentColor : COLORS.textMuted}
-            />
-          </AnimatedPressable>
-        </View>
+      {/* What used to crowd the title: lyrics, sound, download. */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: SPACING.lg,
+          marginBottom: SPACING.sm,
+          paddingHorizontal: SPACING.xxxl,
+        }}
+      >
+        <ActionButton
+          on={showLyrics}
+          label={t('player.lyrics')}
+          onPress={() => setShowLyrics((v) => !v)}
+        >
+          <AppIcon
+            name="lyrics"
+            size={22}
+            color={showLyrics ? COLORS.textPrimary : COLORS.textSecondary}
+          />
+        </ActionButton>
+        <ActionButton
+          on={fxActive}
+          label={t('fx.button')}
+          onPress={() => setShowFx(true)}
+        >
+          <AppIcon
+            name="fx"
+            size={22}
+            color={fxActive ? accentColor : COLORS.textSecondary}
+          />
+        </ActionButton>
+        <ActionButton>
+          <DownloadButton
+            track={currentTrack}
+            size={22}
+            accentColor={accentColor}
+          />
+        </ActionButton>
       </View>
     </View>
   );
@@ -732,6 +840,18 @@ export default function PlayerScreen({ dismissGesture }: PlayerScreenProps) {
     </SafeAreaView>
   );
 }
+
+/** Side padding of the player page. */
+const PAGE = SPACING.xxl;
+const PLAY_DISC = 76;
+/** The cover beside the title while lyrics have its place. */
+const THUMB = 52;
+const SKIP_BOX = {
+  width: 56,
+  height: 56,
+  alignItems: 'center' as const,
+  justifyContent: 'center' as const,
+};
 
 function parseDuration(duration: string): number {
   const [min, sec] = duration.split(':').map(Number);

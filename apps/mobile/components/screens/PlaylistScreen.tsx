@@ -2,10 +2,10 @@ import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { AnimatedModal } from '@/components/AnimatedModal';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { AppDialog } from '@/components/AppDialog';
 import { Rise } from '@/components/motion/Rise';
 import { TrackActionsSheet } from '@/components/TrackActionsSheet';
@@ -334,7 +334,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
           {t('library.editPlaylist')}
         </AppText>
 
-        <Pressable
+        <AnimatedPressable
           onPress={pickCoverFromGallery}
           style={{ alignSelf: 'center' }}
         >
@@ -346,6 +346,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
                 height: 100,
                 borderRadius: 12,
               }}
+              transition={MOTION.dur.quick}
             />
           ) : (
             <View
@@ -374,7 +375,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
               </AppText>
             </View>
           )}
-        </Pressable>
+        </AnimatedPressable>
 
         <TextInput
           maxFontSizeMultiplier={LAYOUT.maxFontScale}
@@ -395,7 +396,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
           }}
         />
 
-        <Pressable
+        <AnimatedPressable
           onPress={handleDeletePlaylist}
           style={{
             paddingVertical: 12,
@@ -413,10 +414,10 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
           >
             {t('playlist.deletePlaylist')}
           </AppText>
-        </Pressable>
+        </AnimatedPressable>
 
         <View style={{ flexDirection: 'row', gap: 12 }}>
-          <Pressable
+          <AnimatedPressable
             onPress={() => setShowEdit(false)}
             style={{
               flex: 1,
@@ -433,8 +434,8 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
             >
               {t('common.cancel')}
             </AppText>
-          </Pressable>
-          <Pressable
+          </AnimatedPressable>
+          <AnimatedPressable
             onPress={handleSaveEdit}
             disabled={saving}
             style={{
@@ -449,7 +450,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
             <AppText variant="body" weight="medium" style={{ color: '#fff' }}>
               {t('common.save')}
             </AppText>
-          </Pressable>
+          </AnimatedPressable>
         </View>
         {saveError ? (
           <AppText

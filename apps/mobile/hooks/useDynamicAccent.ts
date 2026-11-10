@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useEffect, useRef, useState } from 'react';
+import { create } from 'zustand';
 
 import { COLORS } from '@/constants/colors';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -147,49 +147,59 @@ function extractColor(url: string): Promise<string | null> {
   return job;
 }
 
+/**
+ * The accent of the current cover, worked out once and shared. The mini
+ * player, the player, the backdrops and the lists all read it; with a state
+ * of their own each, a track change re-rendered them one after another as
+ * every copy caught up. Now they all change in one render.
+ */
+const useAccentStore = create<{ color: string }>(() => ({
+  color: COLORS.accent,
+}));
+
+let followedUrl: string | undefined;
+
+function followCover(coverUrl: string | undefined, enabled: boolean): void {
+  const url = enabled ? coverUrl : undefined;
+  if (url === followedUrl) return;
+  followedUrl = url;
+  if (!url) {
+    useAccentStore.setState({ color: COLORS.accent });
+    return;
+  }
+  const cached = cacheGet(url);
+  if (cached) {
+    useAccentStore.setState({ color: cached });
+    return;
+  }
+  // The previous accent stays until the new one is known, so the colour
+  // glides from cover to cover instead of dipping to the default between.
+  extractColor(url)
+    .then((hex) => {
+      const color = hex ? boostSaturation(hex) : COLORS.accent;
+      if (hex) cacheSet(url, color);
+      if (followedUrl === url) useAccentStore.setState({ color });
+    })
+    .catch(() => {
+      if (followedUrl === url)
+        useAccentStore.setState({ color: COLORS.accent });
+    });
+}
+
+const follow = () =>
+  followCover(
+    usePlayerStore.getState().currentTrack?.coverUrl,
+    useSettingsStore.getState().dynamicAccent,
+  );
+
+usePlayerStore.subscribe((state, prev) => {
+  if (state.currentTrack?.coverUrl !== prev.currentTrack?.coverUrl) follow();
+});
+useSettingsStore.subscribe((state, prev) => {
+  if (state.dynamicAccent !== prev.dynamicAccent) follow();
+});
+follow();
+
 export function useDynamicAccent(): string {
-  const coverUrl = usePlayerStore((s) => s.currentTrack?.coverUrl);
-  const dynamicAccent = useSettingsStore((s) => s.dynamicAccent);
-  const [color, setColor] = useState<string>(COLORS.accent);
-  const lastUrlRef = useRef<string | undefined>(undefined);
-
-  useEffect(() => {
-    if (!dynamicAccent || !coverUrl) {
-      lastUrlRef.current = undefined;
-      setColor(COLORS.accent);
-      return;
-    }
-
-    if (coverUrl === lastUrlRef.current) return;
-    lastUrlRef.current = coverUrl;
-
-    const cached = cacheGet(coverUrl);
-    if (cached) {
-      setColor(cached);
-      return;
-    }
-
-    let cancelled = false;
-
-    extractColor(coverUrl)
-      .then((hex) => {
-        if (cancelled) return;
-        if (!hex) {
-          setColor(COLORS.accent);
-          return;
-        }
-        const boosted = boostSaturation(hex);
-        cacheSet(coverUrl, boosted);
-        setColor(boosted);
-      })
-      .catch(() => {
-        if (!cancelled) setColor(COLORS.accent);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [coverUrl, dynamicAccent]);
-
-  return dynamicAccent ? color : COLORS.accent;
+  return useAccentStore((s) => s.color);
 }

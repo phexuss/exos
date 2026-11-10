@@ -6,6 +6,7 @@ import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
 import { useI18n } from '@/hooks/useI18n';
 import type { UserProfile } from '@/types/domain';
+import { MOTION } from '@/constants/motion';
 
 type ProfileHeaderProps = {
   profile: UserProfile;
@@ -31,6 +32,7 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
         <Image
           source={{ uri: profile.avatarUrl }}
           style={{ width: 72, height: 72, borderRadius: 36 }}
+          transition={MOTION.dur.quick}
         />
       ) : (
         <View

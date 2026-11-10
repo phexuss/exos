@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
-import { PanResponder, Pressable, View } from 'react-native';
-
+import { PanResponder, View } from 'react-native';
 import { AnimatedModal } from '@/components/AnimatedModal';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { GLASS } from '@/constants/glass';
@@ -81,7 +81,7 @@ export function FxSheet({ visible, onClose, accentColor }: FxSheetProps) {
               {t('fx.title')}
             </AppText>
             {active ? (
-              <Pressable
+              <AnimatedPressable
                 hitSlop={10}
                 onPress={() => setFx(FX_PRESETS.off)}
                 accessibilityRole="button"
@@ -93,7 +93,7 @@ export function FxSheet({ visible, onClose, accentColor }: FxSheetProps) {
                 >
                   {t('fx.reset')}
                 </AppText>
-              </Pressable>
+              </AnimatedPressable>
             ) : null}
           </View>
 
@@ -109,7 +109,7 @@ export function FxSheet({ visible, onClose, accentColor }: FxSheetProps) {
             {PRESETS.map((p) => {
               const on = preset === p;
               return (
-                <Pressable
+                <AnimatedPressable
                   key={p}
                   onPress={() => setFx(FX_PRESETS[p])}
                   accessibilityRole="tab"
@@ -130,7 +130,7 @@ export function FxSheet({ visible, onClose, accentColor }: FxSheetProps) {
                   >
                     {t(`fx.${p}`)}
                   </AppText>
-                </Pressable>
+                </AnimatedPressable>
               );
             })}
           </View>

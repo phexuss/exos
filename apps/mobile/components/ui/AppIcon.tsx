@@ -4,12 +4,14 @@ import { AltArrowRight as AltArrowRightLinear } from '@solar-icons/react-native/
 import { ArrowRight as ArrowRightLinear } from '@solar-icons/react-native/category/arrows/Linear/ArrowRight';
 import { DownloadMinimalistic as DownloadLinear } from '@solar-icons/react-native/category/arrows-action/Linear/DownloadMinimalistic';
 import { Heart as HeartLinear } from '@solar-icons/react-native/category/like/Linear/Heart';
+import { List as ListBold } from '@solar-icons/react-native/category/list/Bold/List';
 import { List as ListLinear } from '@solar-icons/react-native/category/list/Linear/List';
 import { Playlist as PlaylistLinear } from '@solar-icons/react-native/category/list/Linear/Playlist';
 import { Global as GlobeLinear } from '@solar-icons/react-native/category/map/Linear/Global';
 import { Letter as LetterLinear } from '@solar-icons/react-native/category/messages/Linear/Letter';
 import { Pen as PenLinear } from '@solar-icons/react-native/category/messages/Linear/Pen';
 import { DocumentText as DocumentTextLinear } from '@solar-icons/react-native/category/notes/Linear/DocumentText';
+import { Magnifier as MagnifierBold } from '@solar-icons/react-native/category/search/Bold/Magnifier';
 import { Magnifier as MagnifierLinear } from '@solar-icons/react-native/category/search/Linear/Magnifier';
 import { Eye as EyeLinear } from '@solar-icons/react-native/category/security/Linear/Eye';
 import { EyeClosed as EyeClosedLinear } from '@solar-icons/react-native/category/security/Linear/EyeClosed';
@@ -17,6 +19,7 @@ import { Key as KeyLinear } from '@solar-icons/react-native/category/security/Li
 import { Lock as LockLinear } from '@solar-icons/react-native/category/security/Linear/Lock';
 import { Settings as SettingsLinear } from '@solar-icons/react-native/category/settings/Linear/Settings';
 import { Palette as PaletteLinear } from '@solar-icons/react-native/category/tools/Linear/Palette';
+import { Home as HomeBold } from '@solar-icons/react-native/category/ui/Bold/Home';
 import { InfoCircle as InfoCircleBroken } from '@solar-icons/react-native/category/ui/Broken/InfoCircle';
 import { AddCircle as AddCircleLinear } from '@solar-icons/react-native/category/ui/Linear/AddCircle';
 import { CheckCircle as CheckCircleLinear } from '@solar-icons/react-native/category/ui/Linear/CheckCircle';
@@ -25,6 +28,10 @@ import { Home as HomeLinear } from '@solar-icons/react-native/category/ui/Linear
 import { TrashBinTrash as TrashLinear } from '@solar-icons/react-native/category/ui/Linear/TrashBinTrash';
 import { User as UserLinear } from '@solar-icons/react-native/category/users/Linear/User';
 import { UserId as UserIdLinear } from '@solar-icons/react-native/category/users/Linear/UserId';
+import { Pause as PauseBold } from '@solar-icons/react-native/category/video/Bold/Pause';
+import { Play as PlayBold } from '@solar-icons/react-native/category/video/Bold/Play';
+import { SkipNext as SkipNextBold } from '@solar-icons/react-native/category/video/Bold/SkipNext';
+import { SkipPrevious as SkipPreviousBold } from '@solar-icons/react-native/category/video/Bold/SkipPrevious';
 import { Pause as PauseBroken } from '@solar-icons/react-native/category/video/Broken/Pause';
 import { Play as PlayBroken } from '@solar-icons/react-native/category/video/Broken/Play';
 import { MusicNote as MusicNoteLinear } from '@solar-icons/react-native/category/video/Linear/MusicNote';
@@ -46,6 +53,13 @@ export type IconName =
   | 'playlist'
   | 'download'
   | 'play'
+  | 'play-solid'
+  | 'pause-solid'
+  | 'next-solid'
+  | 'previous-solid'
+  | 'home-solid'
+  | 'search-solid'
+  | 'library-solid'
   | 'pause'
   | 'next'
   | 'previous'
@@ -92,6 +106,13 @@ const ICON_MAP: Record<IconName, ComponentType<IconProps>> = {
   heart: HeartLinear,
   settings: SettingsLinear,
   close: CloseCircleLinear,
+  'play-solid': PlayBold,
+  'pause-solid': PauseBold,
+  'next-solid': SkipNextBold,
+  'previous-solid': SkipPreviousBold,
+  'home-solid': HomeBold,
+  'search-solid': MagnifierBold,
+  'library-solid': ListBold,
   trash: TrashLinear,
   globe: GlobeLinear,
   check: CheckCircleLinear,

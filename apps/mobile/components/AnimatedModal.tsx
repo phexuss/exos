@@ -16,10 +16,12 @@ import { GlassSurface } from '@/components/glass/GlassSurface';
 import { GLASS, SECONDARY_BLUR } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
 import {
+  afterMount,
   DESKTOP_SPRING,
   EASE_OUT,
   MOTION,
   prefersReducedMotion,
+  SHEET_SPRING,
 } from '@/constants/motion';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -123,12 +125,18 @@ export function AnimatedModal({
     }
     const run = Animated.spring(progress, {
       toValue: 1,
-      ...DESKTOP_SPRING,
+      // A dialog may settle with a little bounce; a sheet's edge must not.
+      ...(isSheet ? SHEET_SPRING : DESKTOP_SPRING),
       useNativeDriver: true,
     });
-    run.start();
-    return () => run.stop();
-  }, [visible, mounted, progress]);
+    // The native modal window and its content are created in this commit:
+    // start once they are on screen, or the first frames are lost to it.
+    const cancel = afterMount(() => run.start());
+    return () => {
+      cancel();
+      run.stop();
+    };
+  }, [visible, mounted, progress, isSheet]);
 
   // Exit: play it back down, then take the modal off screen. Reopening
   // mid-exit stops this and springs up from wherever it got to.

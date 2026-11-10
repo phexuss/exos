@@ -1,5 +1,4 @@
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
@@ -7,11 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassSurface } from '@/components/glass/GlassSurface';
 import { MiniPlayer } from '@/components/MiniPlayer';
-import type { IconName } from '@/components/ui/AppIcon';
-import { AppIcon } from '@/components/ui/AppIcon';
-import { COLORS } from '@/constants/colors';
+import { TabIcon } from '@/components/TabIcon';
 import { GLASS, GLASS_SPRING } from '@/constants/glass';
 import { useTabChromeCovered } from '@/hooks/useTabChromeCovered';
+import { haptic } from '@/utils/haptics';
 
 export const GLASS_TAB_BAR_HEIGHT = 62;
 export const GLASS_TAB_BAR_MARGIN = 10;
@@ -21,11 +19,13 @@ const BUBBLE_STRETCH_X = 0.3;
 const BUBBLE_SQUASH_Y = 0.12;
 
 type GlassTabBarProps = BottomTabBarProps & {
-  icons: Record<string, IconName>;
+  icons: Record<string, TabGlyph>;
 };
 
+type TabGlyph = 'home' | 'search' | 'library';
+
 type GlassTabProps = {
-  icon: IconName;
+  icon: TabGlyph;
   label?: string;
   focused: boolean;
   onPress: () => void;
@@ -54,16 +54,11 @@ function GlassTab({
   onPress,
   onLongPress,
 }: GlassTabProps) {
-  const [scale] = useState(() => new Animated.Value(focused ? 1 : 0.92));
   const [pressScale] = useState(() => new Animated.Value(1));
 
-  useEffect(() => {
-    spring(scale, focused ? 1 : 0.92, 'snappy');
-  }, [focused, scale]);
-
   const iconStyle = useMemo(
-    () => ({ transform: [{ scale: Animated.multiply(scale, pressScale) }] }),
-    [scale, pressScale],
+    () => ({ transform: [{ scale: pressScale }] }),
+    [pressScale],
   );
 
   return (
@@ -73,7 +68,7 @@ function GlassTab({
       accessibilityState={focused ? { selected: true } : {}}
       onPressIn={() => {
         spring(pressScale, 0.8, 'press');
-        Haptics.selectionAsync().catch(() => {});
+        haptic('tap');
       }}
       onPressOut={() => {
         spring(pressScale, 1, 'snappy');
@@ -83,11 +78,7 @@ function GlassTab({
       style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
     >
       <Animated.View style={iconStyle}>
-        <AppIcon
-          name={icon}
-          size={26}
-          color={focused ? COLORS.textPrimary : COLORS.textMuted}
-        />
+        <TabIcon icon={icon} focused={focused} size={26} />
       </Animated.View>
     </Pressable>
   );

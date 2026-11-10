@@ -10,6 +10,7 @@ import {
 
 import { GLASS, GLASS_SPRING } from '@/constants/glass';
 import { MOTION } from '@/constants/motion';
+import { type HapticKind, haptic as playHaptic } from '@/utils/haptics';
 
 type AnimatedPressableProps = Omit<PressableProps, 'style'> & {
   children: ReactNode;
@@ -20,6 +21,8 @@ type AnimatedPressableProps = Omit<PressableProps, 'style'> & {
    * equivalent of the desktop row hover. Leave out for no fill.
    */
   highlightRadius?: number;
+  /** Touch response as the finger lands. Leave out for rows and cards. */
+  haptic?: HapticKind;
 };
 
 const AnimatedPressableView = Animated.createAnimatedComponent(Pressable);
@@ -57,6 +60,7 @@ export function AnimatedPressable({
   children,
   scaleValue = 0.97,
   highlightRadius,
+  haptic,
   onPressIn,
   onPressOut,
   style,
@@ -71,6 +75,7 @@ export function AnimatedPressable({
       onPressIn={(e) => {
         spring(scale, scaleValue, 'press');
         if (withHighlight) fade(lit, 1, MOTION.dur.quick / 2);
+        if (haptic) playHaptic(haptic);
         onPressIn?.(e);
       }}
       onPressOut={(e) => {

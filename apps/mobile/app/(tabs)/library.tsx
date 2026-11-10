@@ -11,16 +11,10 @@ import {
   useRef,
   useState,
 } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { AnimatedModal } from '@/components/AnimatedModal';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
 import { GlassSurface } from '@/components/glass/GlassSurface';
 import { Presence } from '@/components/motion/Presence';
@@ -125,7 +119,7 @@ function PlaylistCardComponent({
   }, [id]);
 
   return (
-    <Pressable onPress={handlePress} style={{ width: 120, gap: 8 }}>
+    <AnimatedPressable onPress={handlePress} style={{ width: 120, gap: 8 }}>
       {coverUrl ? (
         <Image
           source={{ uri: coverUrl }}
@@ -134,6 +128,7 @@ function PlaylistCardComponent({
             height: 120,
             borderRadius: 12,
           }}
+          transition={MOTION.dur.quick}
         />
       ) : (
         <View
@@ -169,7 +164,7 @@ function PlaylistCardComponent({
       >
         {tn('tracks', trackCount)}
       </AppText>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -503,7 +498,7 @@ export default function LibraryScreen() {
               {loadFailed ? t('common.loadFailed') : t('library.noDownloads')}
             </AppText>
             {loadFailed ? (
-              <Pressable
+              <AnimatedPressable
                 onPress={() => void load()}
                 hitSlop={8}
                 accessibilityRole="button"
@@ -515,7 +510,7 @@ export default function LibraryScreen() {
                 >
                   {t('common.retry')}
                 </AppText>
-              </Pressable>
+              </AnimatedPressable>
             ) : null}
           </View>
         }
@@ -542,7 +537,7 @@ export default function LibraryScreen() {
         glass={glassMode}
         bottom={SPACING.lg + glassInset}
       >
-        <Pressable
+        <AnimatedPressable
           onPress={clearSelection}
           hitSlop={10}
           style={{
@@ -553,7 +548,7 @@ export default function LibraryScreen() {
           }}
         >
           <AppIcon name="close" size={22} color={COLORS.textSecondary} />
-        </Pressable>
+        </AnimatedPressable>
         <View style={{ flex: 1, minWidth: 0 }}>
           <AppText variant="body" weight="bold" numberOfLines={1}>
             {tn('selected', selectedCount)}
@@ -567,7 +562,7 @@ export default function LibraryScreen() {
           </AppText>
         </View>
         {selectedCount === 1 ? (
-          <Pressable
+          <AnimatedPressable
             onPress={openSelectedActions}
             hitSlop={8}
             style={{
@@ -585,10 +580,10 @@ export default function LibraryScreen() {
             <AppText variant="caption" weight="medium">
               {t('library.more')}
             </AppText>
-          </Pressable>
+          </AnimatedPressable>
         ) : null}
         {selectedCount > 1 ? (
-          <Pressable
+          <AnimatedPressable
             onPress={() => setShowBulkPlaylists(true)}
             hitSlop={8}
             style={{
@@ -606,9 +601,9 @@ export default function LibraryScreen() {
             <AppText variant="caption" weight="medium">
               {t('library.playlistAction')}
             </AppText>
-          </Pressable>
+          </AnimatedPressable>
         ) : null}
-        <Pressable
+        <AnimatedPressable
           onPress={() => setShowBulkDelete(true)}
           hitSlop={8}
           style={{
@@ -623,7 +618,7 @@ export default function LibraryScreen() {
           }}
         >
           <AppIcon name="trash" size={18} color={COLORS.danger} />
-        </Pressable>
+        </AnimatedPressable>
       </SelectionBar>
 
       <AnimatedModal
@@ -660,7 +655,7 @@ export default function LibraryScreen() {
           </AppText>
         </View>
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Pressable
+          <AnimatedPressable
             disabled={deletingSelection}
             onPress={() => setShowBulkDelete(false)}
             style={{
@@ -675,8 +670,8 @@ export default function LibraryScreen() {
             <AppText variant="body" weight="medium">
               {t('common.cancel')}
             </AppText>
-          </Pressable>
-          <Pressable
+          </AnimatedPressable>
+          <AnimatedPressable
             disabled={deletingSelection}
             onPress={confirmBulkDelete}
             style={{
@@ -697,7 +692,7 @@ export default function LibraryScreen() {
             >
               {deletingSelection ? t('common.deleting') : t('common.delete')}
             </AppText>
-          </Pressable>
+          </AnimatedPressable>
         </View>
       </AnimatedModal>
 
@@ -766,7 +761,7 @@ export default function LibraryScreen() {
                 fontSize: 14,
               }}
             />
-            <Pressable
+            <AnimatedPressable
               disabled={addingSelection || !bulkPlaylistName.trim()}
               onPress={createPlaylistForSelection}
               style={{
@@ -782,11 +777,11 @@ export default function LibraryScreen() {
                   ? t('common.adding')
                   : t('library.createAndAdd')}
               </AppText>
-            </Pressable>
+            </AnimatedPressable>
           </View>
         ) : (
           <View style={{ paddingHorizontal: 20, gap: 4 }}>
-            <Pressable
+            <AnimatedPressable
               disabled={addingSelection}
               onPress={() => setShowBulkCreatePlaylist(true)}
               style={{
@@ -816,9 +811,9 @@ export default function LibraryScreen() {
               <AppText variant="body" weight="medium">
                 {t('library.newPlaylist')}
               </AppText>
-            </Pressable>
+            </AnimatedPressable>
             {playlists.map((playlist) => (
-              <Pressable
+              <AnimatedPressable
                 key={playlist.id}
                 disabled={addingSelection}
                 onPress={() => addSelectionToPlaylist(playlist.id)}
@@ -855,7 +850,7 @@ export default function LibraryScreen() {
                     {tn('tracks', playlist.track_count)}
                   </AppText>
                 </View>
-              </Pressable>
+              </AnimatedPressable>
             ))}
           </View>
         )}

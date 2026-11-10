@@ -1,11 +1,23 @@
 import { Image } from 'expo-image';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { Animated, Easing, Platform, Pressable, View } from 'react-native';
+import {
+  Animated,
+  Easing,
+  Platform,
+  Pressable,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { GlassSurface } from '@/components/glass/GlassSurface';
 import { Pop } from '@/components/motion/Pop';
+import {
+  dragPlayerSheet,
+  grabPlayerSheet,
+  settlePlayerSheet,
+} from '@/components/motion/playerMotion';
 import { Rise } from '@/components/motion/Rise';
 import { useSwipeToSkip } from '@/components/motion/useSwipeToSkip';
 import { SourceBadge } from '@/components/SourceBadge';
@@ -13,11 +25,12 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { GLASS } from '@/constants/glass';
-import { DESKTOP_SPRING, MOTION } from '@/constants/motion';
+import { MOTION } from '@/constants/motion';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
+import { haptic } from '@/utils/haptics';
 
 type MiniPlayerProps = {
   /** Glass mode only: native backdrop blur. Off while an overlay covers it. */
@@ -35,11 +48,9 @@ const ANIMATE_PROGRESS = Platform.OS !== 'android';
 const STEPPED_PROGRESS_STEPS = 200;
 
 /** Upward pull that opens the player on release. */
-const OPEN_DISTANCE = 40;
+const OPEN_DISTANCE = 0.12;
 const OPEN_VELOCITY = 500;
 const ACTIVATE = 14;
-/** How far the bar follows an upward pull, as a share of the finger. */
-const LIFT_FOLLOW = 0.3;
 
 const openPlayer = () => usePlayerStore.getState().openPlayer();
 const skipNext = () => usePlayerStore.getState().skipNext();
@@ -52,49 +63,44 @@ type MiniPlayerGesturesProps = {
 
 /**
  * Swipe the bar sideways to change track, pull it up to open the player.
- * The bar follows the finger both ways, so it feels held, not tapped.
+ * The pull lifts the real player sheet with the finger, so it can be peeked
+ * at, pushed back down, or flicked open.
  */
 function MiniPlayerGestures({ width, children }: MiniPlayerGesturesProps) {
   const swipe = useSwipeToSkip(width, skipNext, skipPrevious);
-  const [lift] = useState(() => new Animated.Value(0));
+  const { height } = useWindowDimensions();
 
   const gesture = useMemo(() => {
+    const h = Math.max(height, 1);
+    // Only a pull that took the sheet may settle it (see useDragToDismiss).
+    // An object, not a `let`: worklet-compiled callbacks copy plain variables.
+    const held = { current: false };
     const pullUp = Gesture.Pan()
       .runOnJS(true)
       .activeOffsetY(-ACTIVATE)
       .failOffsetX([-ACTIVATE, ACTIVATE])
+      .onStart(() => {
+        held.current = true;
+        grabPlayerSheet();
+      })
       .onUpdate((e) => {
-        lift.setValue(Math.min(0, e.translationY) * LIFT_FOLLOW);
+        dragPlayerSheet(-e.translationY / h);
       })
-      .onFinalize((_e, success) => {
-        // Cancelled (system back, a call, another gesture won): onEnd
-        // never runs, so put the view back here.
-        if (!success) {
-          Animated.spring(lift, {
-            toValue: 0,
-            ...DESKTOP_SPRING,
-            useNativeDriver: true,
-          }).start();
-        }
-      })
-      .onEnd((e) => {
-        if (e.translationY < -OPEN_DISTANCE || e.velocityY < -OPEN_VELOCITY) {
-          openPlayer();
-        }
-        Animated.spring(lift, {
-          toValue: 0,
-          ...DESKTOP_SPRING,
-          useNativeDriver: true,
-        }).start();
+      .onFinalize((e, success) => {
+        if (!held.current) return;
+        held.current = false;
+        const open =
+          success &&
+          (-e.translationY > h * OPEN_DISTANCE || e.velocityY < -OPEN_VELOCITY);
+        if (open) haptic('tick');
+        settlePlayerSheet(open, success ? -e.velocityY / h : 0);
       });
     return Gesture.Race(swipe.gesture, pullUp);
-  }, [swipe.gesture, lift]);
+  }, [swipe.gesture, height]);
 
   return (
     <GestureDetector gesture={gesture}>
-      <Animated.View style={{ transform: [{ translateY: lift }] }}>
-        {children(swipe.style)}
-      </Animated.View>
+      <View>{children(swipe.style)}</View>
     </GestureDetector>
   );
 }
@@ -281,6 +287,7 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
 
       <AnimatedPressable
         scaleValue={0.88}
+        haptic="tap"
         onPress={(e) => {
           e.stopPropagation();
           togglePlayback();
@@ -299,8 +306,8 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
       >
         <Pop key={isPlaying ? 'pause' : 'play'}>
           <AppIcon
-            name={isPlaying ? 'pause' : 'play'}
-            size={glassMode ? 18 : 20}
+            name={isPlaying ? 'pause-solid' : 'play-solid'}
+            size={glassMode ? 18 : 22}
             color={glassMode ? COLORS.background : COLORS.textPrimary}
           />
         </Pop>
@@ -308,6 +315,7 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
 
       <AnimatedPressable
         scaleValue={0.85}
+        haptic="tap"
         onPress={(e) => {
           e.stopPropagation();
           skipNext();
@@ -321,7 +329,7 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
           justifyContent: 'center',
         }}
       >
-        <AppIcon name="next" size={20} color={COLORS.textMuted} />
+        <AppIcon name="next-solid" size={22} color={COLORS.textSecondary} />
       </AnimatedPressable>
     </View>
   );

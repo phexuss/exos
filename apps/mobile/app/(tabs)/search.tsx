@@ -7,9 +7,10 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
 import { GlassSurface } from '@/components/glass/GlassSurface';
 import { Rise } from '@/components/motion/Rise';
@@ -219,7 +220,7 @@ export default function SearchScreen() {
             gap: 8,
           }}
         >
-          <Pressable onPress={() => setSelectedSource('all')}>
+          <AnimatedPressable onPress={() => setSelectedSource('all')}>
             <View
               style={{
                 paddingHorizontal: 12,
@@ -252,15 +253,18 @@ export default function SearchScreen() {
                 {t('common.all')}
               </AppText>
             </View>
-          </Pressable>
+          </AnimatedPressable>
           {SOURCE_KEYS.map((source) => (
-            <Pressable key={source} onPress={() => setSelectedSource(source)}>
+            <AnimatedPressable
+              key={source}
+              onPress={() => setSelectedSource(source)}
+            >
               <SourcePill
                 source={source}
                 selected={selectedSource === source}
                 glass={glassMode}
               />
-            </Pressable>
+            </AnimatedPressable>
           ))}
         </View>
       </View>
@@ -295,7 +299,7 @@ export default function SearchScreen() {
         {failed ? t('search.failed') : t('search.noResults')}
       </AppText>
       {failed ? (
-        <Pressable onPress={() => void fetchResults(query)} hitSlop={8}>
+        <AnimatedPressable onPress={() => void fetchResults(query)} hitSlop={8}>
           <AppText
             variant="label"
             weight="medium"
@@ -303,7 +307,7 @@ export default function SearchScreen() {
           >
             {t('common.retry')}
           </AppText>
-        </Pressable>
+        </AnimatedPressable>
       ) : null}
     </View>
   ) : null;

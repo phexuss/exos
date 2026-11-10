@@ -40,6 +40,21 @@ export const MOTION = {
  */
 export const DESKTOP_SPRING = { damping: 28, stiffness: 450, mass: 1 } as const;
 
+/**
+ * Full-screen layers (the player, pages, sheets): no overshoot, because an
+ * edge that bounces past the screen edge shows a gap. Close to critically
+ * damped, it settles in about a third of a second and carries on at the
+ * speed a finger let go with.
+ */
+export const SHEET_SPRING = {
+  stiffness: 320,
+  damping: 34,
+  mass: 1,
+  overshootClamping: true,
+  restDisplacementThreshold: 0.001,
+  restSpeedThreshold: 0.001,
+} as const;
+
 /** Desktop `--ease-out`, for React Native `Animated` (JS/native driver). */
 export const EASE_OUT = Easing.bezier(0.22, 1, 0.36, 1);
 
@@ -63,4 +78,21 @@ export function prefersReducedMotion(): boolean {
 /** Cascade delay for the n-th sibling. */
 export function staggerDelay(index: number): number {
   return Math.min(Math.max(index, 0), MOTION.staggerCap) * MOTION.stagger;
+}
+
+/**
+ * Runs `start` once the frame that mounted a layer has been drawn. A spring
+ * started in the same commit that creates a whole screen spends its first
+ * frames behind that work and then jumps to catch up; two frames later the
+ * views exist and it runs clean. Returns a cancel.
+ */
+export function afterMount(start: () => void): () => void {
+  let second = 0;
+  const first = requestAnimationFrame(() => {
+    second = requestAnimationFrame(start);
+  });
+  return () => {
+    cancelAnimationFrame(first);
+    cancelAnimationFrame(second);
+  };
 }

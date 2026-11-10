@@ -23,6 +23,8 @@ type SeekBarProps = {
 const TRACK_HEIGHT = 4;
 const THUMB_SIZE = 14;
 const HIT_SLOP = 16;
+/** How often the player reports its position. */
+const POLL_MS = 250;
 const GLASS_TRACK_HEIGHT = 6;
 const GLASS_TRACK_ACTIVE_HEIGHT = 14;
 
@@ -70,9 +72,11 @@ export function SeekBar({
       return;
     }
 
+    // As long as a poll interval, so one glide hands over to the next
+    // without the bar resting in between.
     Animated.timing(position, {
       toValue: target,
-      duration: 220,
+      duration: POLL_MS,
       easing: Easing.linear,
       useNativeDriver: true,
     }).start();

@@ -15,6 +15,14 @@ type MarqueeTextProps = {
   variant?: React.ComponentProps<typeof AppText>['variant'];
   weight?: React.ComponentProps<typeof AppText>['weight'];
   style?: TextStyle;
+  /**
+   * Lets the text run this far past both sides of its box before it is
+   * cut off. Set to the page gutter, a scrolling title then slides out
+   * under the screen edge instead of being sliced mid-letter at the margin.
+   */
+  bleed?: number;
+  /** Holds the text still at its start (the screen is not showing). */
+  paused?: boolean;
 };
 
 /** Pixels per second while the text scrolls. */
@@ -30,7 +38,13 @@ const GAP = 48;
  * where it started, rests again and goes on. Runs on the native driver, so
  * it costs the JS thread nothing; short titles render as plain text.
  */
-export function MarqueeText({ children, style, ...props }: MarqueeTextProps) {
+export function MarqueeText({
+  children,
+  style,
+  bleed = 0,
+  paused = false,
+  ...props
+}: MarqueeTextProps) {
   const base: TextStyle = style ?? {};
   const [boxWidth, setBoxWidth] = useState(0);
   const [textWidth, setTextWidth] = useState(0);
@@ -38,11 +52,12 @@ export function MarqueeText({ children, style, ...props }: MarqueeTextProps) {
 
   const overflows =
     boxWidth > 0 && textWidth > boxWidth + 1 && !prefersReducedMotion();
+  const moving = overflows && !paused;
   const distance = textWidth + GAP;
 
   useEffect(() => {
     x.setValue(0);
-    if (!overflows) return;
+    if (!moving) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.delay(PAUSE_MS),
@@ -56,15 +71,22 @@ export function MarqueeText({ children, style, ...props }: MarqueeTextProps) {
     );
     loop.start();
     return () => loop.stop();
-  }, [overflows, distance, x]);
+  }, [moving, distance, x]);
 
   const onBox = (e: LayoutChangeEvent) =>
-    setBoxWidth(Math.round(e.nativeEvent.layout.width));
+    setBoxWidth(Math.round(e.nativeEvent.layout.width) - bleed * 2);
   const onText = (e: LayoutChangeEvent) =>
     setTextWidth(Math.ceil(e.nativeEvent.layout.width));
 
   return (
-    <View onLayout={onBox} style={{ overflow: 'hidden' }}>
+    <View
+      onLayout={onBox}
+      style={{
+        overflow: 'hidden',
+        marginHorizontal: -bleed,
+        paddingHorizontal: bleed,
+      }}
+    >
       {/* Unconstrained copy, only to measure the full one-line width. */}
       <View
         pointerEvents="none"

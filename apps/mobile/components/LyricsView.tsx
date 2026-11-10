@@ -10,10 +10,14 @@ import {
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import { PillButton } from '@/components/ui/PillButton';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
+import { SPACING } from '@/constants/spacing';
 import { useI18n } from '@/hooks/useI18n';
 import * as audio from '@/services/audio/audioService';
 import { usePlayerStore } from '@/store/usePlayerStore';
+import { haptic } from '@/utils/haptics';
 
 type LyricLine = { time: number; text: string };
 
@@ -92,8 +96,22 @@ function stripLrcTags(lrc: string): string {
     .join('\n');
 }
 
-const SPRING = { damping: 28, stiffness: 65, mass: 0.7 };
-const GAP = 16;
+/** Settles in about 400 ms with no bounce: lines trade places calmly. */
+const SPRING = { damping: 26, stiffness: 170, mass: 1 };
+const GAP = 18;
+/** Lines past this many away from the sung one all look the same. */
+const FAR = 5;
+const LINE_REST_SCALE = 0.94;
+
+const LINE_TEXT = {
+  fontSize: 24,
+  lineHeight: 31,
+  letterSpacing: -0.3,
+} as const;
+
+function restOpacity(distance: number): number {
+  return Math.max(0.22, 0.46 - distance * 0.06);
+}
 
 type SyncedLineProps = {
   text: string;
@@ -117,23 +135,28 @@ function SyncedLineComponent({
   accentVibrant,
 }: SyncedLineProps) {
   const handlePress = useCallback(() => {
+    haptic('tick');
     onSeek?.(time);
   }, [onSeek, time]);
 
   // React Native Animated on the native driver: a Reanimated value per line
   // would leave every line's props for Reanimated to re-apply on each commit.
-  const [scale] = useState(() => new Animated.Value(isActive ? 1.04 : 1));
-  const [opacity] = useState(() => new Animated.Value(isActive ? 1 : 0.35));
+  const [scale] = useState(
+    () => new Animated.Value(isActive ? 1 : LINE_REST_SCALE),
+  );
+  const [opacity] = useState(
+    () => new Animated.Value(isActive ? 1 : restOpacity(distance)),
+  );
 
   useEffect(() => {
     const run = Animated.parallel([
       Animated.spring(scale, {
-        toValue: isActive ? 1.04 : 1,
+        toValue: isActive ? 1 : LINE_REST_SCALE,
         ...SPRING,
         useNativeDriver: true,
       }),
       Animated.spring(opacity, {
-        toValue: isActive ? 1 : Math.max(0.2, 0.4 - distance * 0.04),
+        toValue: isActive ? 1 : restOpacity(distance),
         ...SPRING,
         useNativeDriver: true,
       }),
@@ -143,15 +166,22 @@ function SyncedLineComponent({
   }, [isActive, distance, scale, opacity]);
 
   const animStyle = useMemo(
-    () => ({ transform: [{ scale }], opacity }),
+    () => ({
+      transform: [{ scale }],
+      transformOrigin: 'left center',
+      opacity,
+    }),
     [scale, opacity],
   );
 
+  // Every line is set in the same size and weight and only its scale and
+  // opacity change: the sung line grows without re-flowing the lines around
+  // it, so the list never jumps and the scroll target stays true.
   return (
     <Pressable
       disabled={!onSeek}
       onPress={handlePress}
-      style={{ width: '100%', alignItems: 'center' }}
+      style={{ width: '100%' }}
     >
       <Animated.View
         style={animStyle}
@@ -161,22 +191,12 @@ function SyncedLineComponent({
       >
         <AppText
           variant="title"
-          weight={isActive ? 'bold' : 'medium'}
+          weight="bold"
           style={{
+            ...LINE_TEXT,
             color: isActive
-              ? (accentVibrant ?? COLORS.accent)
+              ? (accentVibrant ?? COLORS.textPrimary)
               : COLORS.textPrimary,
-            fontSize: isActive ? 22 : 18,
-            lineHeight: isActive ? 32 : 27,
-            textAlign: 'center',
-            paddingHorizontal: 4,
-            textShadowColor: isActive
-              ? accentVibrant
-                ? accentVibrant + 'CC'
-                : 'rgba(129,140,248,0.45)'
-              : 'transparent',
-            textShadowOffset: { width: 0, height: 0 },
-            textShadowRadius: isActive ? (accentVibrant ? 22 : 12) : 0,
           }}
         >
           {text}
@@ -232,6 +252,9 @@ function EditButton({
   );
 }
 
+/** Widths of the placeholder lines shown while lyrics are looked up. */
+const LOADING_LINES = ['82%', '64%', '90%', '48%', '72%'] as const;
+
 export function LyricsView({
   syncedLyrics,
   plainLyrics,
@@ -283,10 +306,10 @@ export function LyricsView({
 
     let offset = 0;
     for (let i = 0; i < currentLineIndex; i++) {
-      offset += lineHeights.current[i] || 43;
+      offset += lineHeights.current[i] || LINE_TEXT.lineHeight + GAP;
     }
 
-    const targetY = Math.max(0, offset - containerH * 0.3);
+    const targetY = Math.max(0, offset - containerH * 0.18);
 
     const prev = prevLineRef.current;
     const goingBackward = currentLineIndex < prev;
@@ -307,13 +330,13 @@ export function LyricsView({
 
   if (!syncedLyrics && !plainLyrics && loading) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <AppText
-          variant="body"
-          style={{ color: COLORS.textMuted, textAlign: 'center' }}
-        >
-          {t('lyricsFaq.loading')}
-        </AppText>
+      <View
+        style={{ flex: 1, justifyContent: 'center', gap: GAP }}
+        accessibilityLabel={t('lyricsFaq.loading')}
+      >
+        {LOADING_LINES.map((width) => (
+          <Skeleton key={width} width={width} height={22} radius={8} />
+        ))}
       </View>
     );
   }
@@ -325,41 +348,28 @@ export function LyricsView({
           flex: 1,
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 8,
+          gap: SPACING.md,
         }}
       >
-        <AppText
-          variant="body"
-          style={{ color: COLORS.textMuted, textAlign: 'center' }}
-        >
+        <AppIcon name="lyrics" size={36} color={COLORS.textMuted} />
+        <AppText variant="title" weight="bold" style={{ textAlign: 'center' }}>
           {t('lyricsFaq.noLyrics')}
         </AppText>
         {onEdit ? (
-          <Pressable
-            onPress={() => onEdit(true)}
-            accessibilityRole="button"
-            style={{
-              marginTop: 4,
-              paddingHorizontal: 18,
-              paddingVertical: 9,
-              borderRadius: 999,
-              backgroundColor: 'rgba(99, 102, 241, 0.15)',
-            }}
-          >
-            <AppText
-              variant="label"
-              weight="medium"
-              style={{ color: accentColor ?? COLORS.accent }}
-            >
-              {t('lyricsEditor.find')}
-            </AppText>
-          </Pressable>
+          <View style={{ marginTop: SPACING.sm }}>
+            <PillButton
+              label={t('lyricsEditor.find')}
+              tone="quiet"
+              fill={false}
+              onPress={() => onEdit(true)}
+            />
+          </View>
         ) : null}
-        <Pressable onPress={() => setShowLyricsFaq(true)}>
+        <Pressable onPress={() => setShowLyricsFaq(true)} hitSlop={SPACING.md}>
           <AppText
-            variant="caption"
+            variant="label"
             weight="medium"
-            style={{ color: COLORS.accent, textDecorationLine: 'underline' }}
+            style={{ color: COLORS.textSecondary }}
           >
             {t('lyricsFaq.why')}
           </AppText>
@@ -433,15 +443,13 @@ export function LyricsView({
           ref={scrollRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            paddingTop: 20,
-            paddingBottom: containerH * 0.5,
-            paddingHorizontal: 12,
+            paddingTop: containerH * 0.12,
+            paddingBottom: containerH * 0.6,
             gap: GAP,
-            alignItems: 'center',
           }}
         >
           {parsedLines.map((line, i) => {
-            const dist = Math.abs(i - currentLineIndex);
+            const dist = Math.min(Math.abs(i - currentLineIndex), FAR);
             return (
               <SyncedLine
                 key={i}
@@ -476,26 +484,18 @@ export function LyricsView({
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingVertical: 40,
-          paddingHorizontal: 12,
-          gap: 14,
+          paddingVertical: SPACING.xxl,
+          gap: GAP,
           flexGrow: 1,
           justifyContent: 'center',
-          alignItems: 'center',
         }}
       >
         {plainLines.map((line, i) => (
           <AppText
             key={i}
             variant="title"
-            weight="medium"
-            style={{
-              color: COLORS.textPrimary,
-              fontSize: 18,
-              lineHeight: 28,
-              textAlign: 'center',
-              opacity: 0.8,
-            }}
+            weight="bold"
+            style={{ ...LINE_TEXT, opacity: 0.85 }}
           >
             {line}
           </AppText>

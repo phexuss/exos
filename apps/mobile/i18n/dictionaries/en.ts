@@ -199,6 +199,13 @@ export const en = {
     source: 'Source',
     quality: 'Quality',
     noTrack: 'No track selected',
+    lyrics: 'Lyrics',
+    shuffle: 'Shuffle',
+    repeat: 'Repeat',
+    previous: 'Previous',
+    next: 'Next',
+    play: 'Play',
+    pause: 'Pause',
   },
   fx: {
     title: 'Sound',
