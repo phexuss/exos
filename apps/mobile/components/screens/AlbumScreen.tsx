@@ -1,15 +1,18 @@
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
-import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Rise } from '@/components/motion/Rise';
 import { TrackItem } from '@/components/TrackItem';
-import { AppIcon } from '@/components/ui/AppIcon';
-import { AppText } from '@/components/ui/AppText';
+import {
+  CollapsingHeader,
+  useCollapsingHeader,
+} from '@/components/ui/CollapsingHeader';
+import { CollectionHero } from '@/components/ui/CollectionHero';
+import { CollectionSkeleton } from '@/components/ui/CollectionSkeleton';
+import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
 import { LoadFailed } from '@/components/ui/LoadFailed';
-import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS } from '@/constants/colors';
 import { LAYOUT } from '@/constants/layout';
 import { MOTION } from '@/constants/motion';
@@ -39,11 +42,13 @@ export function AlbumScreen({ id, titleHint }: Props) {
   const setQueue = usePlayerStore((s) => s.setQueue);
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const closeAlbum = useOverlayStore((s) => s.closeAlbum);
+  const header = useCollapsingHeader(280);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` re-runs the load on retry.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setFailed(false);
 
     getAlbumDetail(id)
       .then((a) => {
@@ -75,9 +80,9 @@ export function AlbumScreen({ id, titleHint }: Props) {
     ({ item, index }) => (
       <Rise
         index={index}
-        after={2}
+        after={3}
         animate={index <= MOTION.staggerCap}
-        style={{ paddingHorizontal: 12 }}
+        style={{ paddingHorizontal: 12, paddingTop: 8 }}
       >
         <TrackItem
           track={item}
@@ -92,18 +97,24 @@ export function AlbumScreen({ id, titleHint }: Props) {
 
   const keyExtractor = useCallback((item: Track) => item.id, []);
 
+  const back = (
+    <HeaderIconButton
+      icon="chevron-left"
+      onPress={closeAlbum}
+      accessibilityLabel={t('common.back')}
+    />
+  );
+
   if (loading) {
     return (
-      <SafeAreaView
-        style={{
-          flex: 1,
-          backgroundColor: background,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <ActivityIndicator color={COLORS.accent} size="large" />
-      </SafeAreaView>
+      <View style={{ flex: 1, backgroundColor: background }}>
+        <CollectionSkeleton />
+        <CollapsingHeader
+          title={titleHint}
+          shown={header.shown}
+          leading={back}
+        />
+      </View>
     );
   }
 
@@ -118,62 +129,6 @@ export function AlbumScreen({ id, titleHint }: Props) {
     );
   }
 
-  const ListHeader = (
-    <View style={{ gap: 16, alignItems: 'center', paddingBottom: 16 }}>
-      <ScreenHeader
-        leading="back"
-        onLeadingPress={closeAlbum}
-        gutter={LAYOUT.gutter}
-        style={{ alignSelf: 'stretch' }}
-      />
-
-      {}
-      {album.coverUrl ? (
-        <Image
-          source={{ uri: album.coverUrl }}
-          style={{ width: 200, height: 200, borderRadius: 16 }}
-          transition={MOTION.dur.quick}
-        />
-      ) : (
-        <View
-          style={{
-            width: 200,
-            height: 200,
-            borderRadius: 16,
-            backgroundColor: COLORS.surfaceMuted,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <AppIcon name="music-notes" size={48} color={COLORS.textMuted} />
-        </View>
-      )}
-
-      <View style={{ alignItems: 'center', gap: 4 }}>
-        <AppText
-          variant="title"
-          weight="bold"
-          numberOfLines={2}
-          style={{
-            color: COLORS.textPrimary,
-            textAlign: 'center',
-            paddingHorizontal: 32,
-          }}
-        >
-          {album.title}
-        </AppText>
-        {album.artistName ? (
-          <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-            {album.artistName}
-          </AppText>
-        ) : null}
-        <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-          {tn('tracks', album.tracks.length)}
-        </AppText>
-      </View>
-    </View>
-  );
-
   return (
     <SafeAreaView
       edges={['top', 'bottom']}
@@ -183,8 +138,30 @@ export function AlbumScreen({ id, titleHint }: Props) {
         data={album.tracks}
         keyExtractor={keyExtractor}
         renderItem={renderTrack}
-        ListHeaderComponent={ListHeader}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        onScroll={header.onScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View style={{ paddingHorizontal: 20 }}>
+            <CollectionHero
+              coverUrl={album.coverUrl}
+              icon="music-notes"
+              title={album.title}
+              subtitle={album.artistName || undefined}
+              detail={tn('tracks', album.tracks.length)}
+              tracks={album.tracks}
+            />
+          </View>
+        }
+        contentContainerStyle={{
+          paddingTop: LAYOUT.headerHeight,
+          paddingBottom: 100,
+        }}
+      />
+      <CollapsingHeader
+        title={album.title}
+        shown={header.shown}
+        leading={back}
       />
     </SafeAreaView>
   );

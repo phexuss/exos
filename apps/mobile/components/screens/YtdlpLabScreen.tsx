@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -452,9 +451,12 @@ function CaseCard({ item, engineReady }: { item: Case; engineReady: boolean }) {
  * Prototype: proves yt-dlp runs on the phone itself (Python + QuickJS +
  * ffmpeg bundled in the APK), with no EXØS server in the path.
  */
-export default function YtdlpLabScreen() {
+type Props = {
+  onClose: () => void;
+};
+
+export function YtdlpLabScreen({ onClose }: Props) {
   const { t } = useI18n();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [engine, setEngine] = useState<EngineState>({ kind: 'starting' });
   const [updateNote, setUpdateNote] = useState<string | null>(null);
@@ -516,7 +518,8 @@ export default function YtdlpLabScreen() {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: COLORS.background }}
+      // The overlay behind draws the page colour, or the glow in Glass mode.
+      style={{ flex: 1 }}
       contentContainerStyle={{
         paddingTop: insets.top + SPACING.md,
         paddingBottom: insets.bottom + 120,
@@ -529,11 +532,7 @@ export default function YtdlpLabScreen() {
         title={t('ytdlpLab.title')}
         leading="back"
         withTopInset={false}
-        onLeadingPress={() =>
-          router.canGoBack()
-            ? router.back()
-            : router.replace('/(tabs)' as never)
-        }
+        onLeadingPress={onClose}
       />
       <AppText variant="body" style={{ color: COLORS.textSecondary }}>
         {t('ytdlpLab.intro')}

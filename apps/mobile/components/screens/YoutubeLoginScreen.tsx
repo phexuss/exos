@@ -1,11 +1,9 @@
-import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, type WebViewNavigation } from 'react-native-webview';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
-import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
 import { Rise } from '@/components/motion/Rise';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
@@ -39,8 +37,11 @@ const YOUTUBE_PAGE = /^https:\/\/(m|www)\.youtube\.com\//;
  * on-device yt-dlp. Without them YouTube answers phones with "Sign in to
  * confirm you're not a bot".
  */
-export default function YoutubeLoginScreen() {
-  const router = useRouter();
+type Props = {
+  onClose: () => void;
+};
+
+export function YoutubeLoginScreen({ onClose }: Props) {
   const insets = useSafeAreaInsets();
   const { t } = useI18n();
   const glassMode = useGlassMode();
@@ -49,11 +50,6 @@ export default function YoutubeLoginScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const exporting = useRef(false);
-
-  const goBack = useCallback(() => {
-    if (router.canGoBack()) router.back();
-    else router.replace('/(tabs)' as never);
-  }, [router]);
 
   const saveCookies = useCallback(
     async (manual: boolean) => {
@@ -152,18 +148,16 @@ export default function YoutubeLoginScreen() {
     <View
       style={{
         flex: 1,
-        backgroundColor: COLORS.background,
         paddingTop: insets.top + SPACING.md,
         paddingHorizontal: SPACING.lg,
         gap: SPACING.lg,
       }}
     >
-      {glassMode ? <GlassAmbientBackground /> : null}
       <ScreenHeader
         title={t('youtubeLogin.title')}
         leading="back"
         withTopInset={false}
-        onLeadingPress={goBack}
+        onLeadingPress={onClose}
       />
       <Rise index={0}>
         <AppText variant="body" style={{ color: COLORS.textSecondary }}>

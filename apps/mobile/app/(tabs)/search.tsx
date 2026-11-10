@@ -17,6 +17,11 @@ import { Rise } from '@/components/motion/Rise';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import {
+  CollapsingHeader,
+  useCollapsingHeader,
+} from '@/components/ui/CollapsingHeader';
+import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { SourcePill } from '@/components/ui/SourcePill';
 import { COLORS } from '@/constants/colors';
@@ -74,10 +79,10 @@ function SearchField({ glassMode, children }: SearchFieldProps) {
       style={{
         ...rowStyle,
         paddingHorizontal: 14,
-        paddingVertical: 10,
+        paddingVertical: 12,
         borderWidth: 0.5,
         borderColor: COLORS.border,
-        borderRadius: 8,
+        borderRadius: 14,
         backgroundColor: COLORS.surface,
       }}
     >
@@ -187,6 +192,7 @@ export default function SearchScreen() {
   );
 
   const keyExtractor = useCallback((item: Track) => item.id, []);
+  const header = useCollapsingHeader();
 
   const ListHeader = (
     <View style={{ gap: SPACING.xxl }}>
@@ -196,21 +202,44 @@ export default function SearchScreen() {
         </AppText>
 
         <SearchField glassMode={glassMode}>
-          <AppIcon name="search" size={16} color={COLORS.textMuted} />
+          <AppIcon name="search" size={18} color={COLORS.textMuted} />
           <TextInput
             maxFontSizeMultiplier={LAYOUT.maxFontScale}
             placeholder={t('search.placeholder')}
             placeholderTextColor={COLORS.textMuted}
             value={query}
             onChangeText={setQuery}
+            returnKeyType="search"
+            autoCorrect={false}
+            selectionColor={accentColor ?? COLORS.accent}
             style={{
               flex: 1,
               color: COLORS.textPrimary,
-              fontSize: 14,
+              fontSize: 16,
               fontFamily: FONT_FAMILY.regular,
               padding: 0,
             }}
           />
+          {query ? (
+            <AnimatedPressable
+              scaleValue={0.85}
+              haptic="tap"
+              hitSlop={12}
+              onPress={() => setQuery('')}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.clear')}
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 10,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: COLORS.fill2,
+              }}
+            >
+              <AppIcon name="close" size={10} color={COLORS.textSecondary} />
+            </AnimatedPressable>
+          ) : null}
         </SearchField>
 
         <View
@@ -269,21 +298,7 @@ export default function SearchScreen() {
         </View>
       </View>
 
-      {query.trim() ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <AppText
-            variant="label"
-            weight="medium"
-            style={{
-              color: COLORS.textSecondary,
-              letterSpacing: 1,
-              fontSize: 11,
-            }}
-          >
-            {t('search.results').toUpperCase()}
-          </AppText>
-        </View>
-      ) : null}
+      {query.trim() ? <SectionTitle title={t('search.results')} /> : null}
     </View>
   );
 
@@ -325,6 +340,8 @@ export default function SearchScreen() {
         data={filteredResults}
         keyExtractor={keyExtractor}
         renderItem={renderTrack}
+        onScroll={header.onScroll}
+        scrollEventThrottle={16}
         ListHeaderComponent={ListHeader}
         ListHeaderComponentStyle={{ marginBottom: 12 }}
         ListEmptyComponent={ListEmpty}
@@ -337,6 +354,7 @@ export default function SearchScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       />
+      <CollapsingHeader title={t('common.search')} shown={header.shown} />
     </SafeAreaView>
   );
 }

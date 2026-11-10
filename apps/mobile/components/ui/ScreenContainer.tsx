@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { GlassAmbientBackground } from '@/components/glass/GlassAmbientBackground';
+import {
+  CollapsingHeader,
+  useCollapsingHeader,
+} from '@/components/ui/CollapsingHeader';
 import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
 import { useGlassBottomInset } from '@/hooks/useGlassBottomInset';
@@ -13,13 +16,20 @@ type ScreenContainerProps = {
   scrollable?: boolean;
   /** Screen sits under the (floating in Glass mode) tab bar. */
   withTabBar?: boolean;
+  /**
+   * Shown small in a bar at the top once the page's own large heading has
+   * scrolled away.
+   */
+  title?: string;
 };
 
 export function ScreenContainer({
   children,
   scrollable = true,
   withTabBar = false,
+  title,
 }: ScreenContainerProps) {
+  const header = useCollapsingHeader();
   const glassInset = useGlassBottomInset();
   const glassMode = useGlassMode();
   const content = (
@@ -52,6 +62,8 @@ export function ScreenContainer({
         <ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
+          onScroll={title ? header.onScroll : undefined}
+          scrollEventThrottle={16}
           contentContainerStyle={{ flexGrow: 1 }}
         >
           {content}
@@ -59,6 +71,7 @@ export function ScreenContainer({
       ) : (
         content
       )}
+      {title ? <CollapsingHeader title={title} shown={header.shown} /> : null}
     </SafeAreaView>
   );
 }
