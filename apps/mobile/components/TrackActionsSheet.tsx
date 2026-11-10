@@ -12,6 +12,7 @@ import { PillButton } from '@/components/ui/PillButton';
 import { SheetItem } from '@/components/ui/SheetItem';
 import { COLORS } from '@/constants/colors';
 import { GLASS } from '@/constants/glass';
+import { MOTION } from '@/constants/motion';
 import { SPACING } from '@/constants/spacing';
 import { useI18n } from '@/hooks/useI18n';
 import {
@@ -188,6 +189,7 @@ export function TrackActionsSheet({
               source={{ uri: activeTrack.coverUrl }}
               style={{ width: COVER, height: COVER }}
               contentFit="cover"
+              transition={MOTION.dur.quick}
             />
           ) : (
             <AppIcon name="music" size={22} color={COLORS.textMuted} />

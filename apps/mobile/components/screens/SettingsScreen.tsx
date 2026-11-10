@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Switch, View } from 'react-native';
+import { Switch, View } from 'react-native';
 
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { AppDialog } from '@/components/AppDialog';
 import { RestoreLibraryModal } from '@/components/RestoreLibraryModal';
 import { SpotifyImportModal } from '@/components/SpotifyImportModal';
@@ -97,7 +98,7 @@ export function SettingsScreen() {
         </View>
 
         <SettingsGroup glass={glassMode}>
-          <Pressable
+          <AnimatedPressable
             onPress={() => setLocale('en')}
             style={{
               flexDirection: 'row',
@@ -114,9 +115,9 @@ export function SettingsScreen() {
             {locale === 'en' ? (
               <AppIcon name="check" size={16} color={COLORS.accent} />
             ) : null}
-          </Pressable>
+          </AnimatedPressable>
 
-          <Pressable
+          <AnimatedPressable
             onPress={() => setLocale('ru')}
             style={{
               flexDirection: 'row',
@@ -133,7 +134,7 @@ export function SettingsScreen() {
             {locale === 'ru' ? (
               <AppIcon name="check" size={16} color={COLORS.accent} />
             ) : null}
-          </Pressable>
+          </AnimatedPressable>
         </SettingsGroup>
       </View>
 
@@ -282,7 +283,7 @@ export function SettingsScreen() {
         </View>
 
         <SettingsGroup glass={glassMode}>
-          <Pressable
+          <AnimatedPressable
             onPress={() => {
               setClearCacheError(null);
               setShowClearCache(true);
@@ -312,7 +313,7 @@ export function SettingsScreen() {
               </AppText>
             </View>
             <AppIcon name="trash" size={16} color={COLORS.danger} />
-          </Pressable>
+          </AnimatedPressable>
         </SettingsGroup>
       </View>
       {}
@@ -339,7 +340,7 @@ export function SettingsScreen() {
         </View>
 
         <SettingsGroup glass={glassMode} style={{ opacity: user ? 1 : 0.4 }}>
-          <Pressable
+          <AnimatedPressable
             onPress={user ? () => setShowRestoreLibrary(true) : undefined}
             disabled={!user}
             style={{
@@ -365,8 +366,8 @@ export function SettingsScreen() {
               </AppText>
             </View>
             <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
-          </Pressable>
-          <Pressable
+          </AnimatedPressable>
+          <AnimatedPressable
             onPress={user ? () => setShowSpotifyImport(true) : undefined}
             disabled={!user}
             style={{
@@ -392,7 +393,7 @@ export function SettingsScreen() {
               </AppText>
             </View>
             <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
-          </Pressable>
+          </AnimatedPressable>
         </SettingsGroup>
       </View>
       {}
@@ -419,7 +420,7 @@ export function SettingsScreen() {
         </View>
 
         <SettingsGroup glass={glassMode}>
-          <Pressable
+          <AnimatedPressable
             onPress={openFaq}
             style={{
               flexDirection: 'row',
@@ -434,9 +435,9 @@ export function SettingsScreen() {
               {t('settings.faq')}
             </AppText>
             <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
-          </Pressable>
+          </AnimatedPressable>
           {isYtdlpAvailable ? (
-            <Pressable
+            <AnimatedPressable
               onPress={() => {
                 closeSettings();
                 router.push('/youtube-login' as never);
@@ -468,9 +469,9 @@ export function SettingsScreen() {
                 size={16}
                 color={COLORS.textMuted}
               />
-            </Pressable>
+            </AnimatedPressable>
           ) : null}
-          <Pressable
+          <AnimatedPressable
             onPress={() => {
               closeSettings();
               router.push('/ytdlp-lab' as never);
@@ -496,7 +497,7 @@ export function SettingsScreen() {
               </AppText>
             </View>
             <AppIcon name="chevron-right" size={16} color={COLORS.textMuted} />
-          </Pressable>
+          </AnimatedPressable>
         </SettingsGroup>
       </View>
       <RestoreLibraryModal

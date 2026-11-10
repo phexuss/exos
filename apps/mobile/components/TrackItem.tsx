@@ -104,6 +104,7 @@ function TrackItemComponent({
             height: 48,
             borderRadius: 8,
           }}
+          transition={MOTION.dur.quick}
         />
       ) : (
         <View

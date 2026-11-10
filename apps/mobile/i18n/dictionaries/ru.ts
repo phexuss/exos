@@ -198,6 +198,13 @@ export const ru = {
     source: 'Источник',
     quality: 'Качество',
     noTrack: 'Трек не выбран',
+    lyrics: 'Текст',
+    shuffle: 'Перемешать',
+    repeat: 'Повтор',
+    previous: 'Назад',
+    next: 'Дальше',
+    play: 'Играть',
+    pause: 'Пауза',
   },
   fx: {
     title: 'Звук',

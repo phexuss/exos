@@ -2,12 +2,13 @@ import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, ScrollView, View } from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { Rise } from '@/components/motion/Rise';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
@@ -47,11 +48,12 @@ function AlbumCardComponent({ album }: AlbumCardProps) {
   const year = album.releaseDate?.slice(0, 4);
 
   return (
-    <Pressable onPress={handlePress} style={{ width: 140, gap: 8 }}>
+    <AnimatedPressable onPress={handlePress} style={{ width: 140, gap: 8 }}>
       {album.coverUrl ? (
         <Image
           source={{ uri: album.coverUrl }}
           style={{ width: 140, height: 140, borderRadius: 12 }}
+          transition={MOTION.dur.quick}
         />
       ) : (
         <View
@@ -83,7 +85,7 @@ function AlbumCardComponent({ album }: AlbumCardProps) {
           {year}
         </AppText>
       ) : null}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -212,6 +214,7 @@ export function ArtistScreen({ id }: Props) {
               borderBottomRightRadius: 24,
             }}
             contentFit="cover"
+            transition={MOTION.dur.quick}
           />
           <LinearGradient
             colors={[

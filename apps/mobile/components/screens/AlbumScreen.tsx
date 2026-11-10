@@ -132,6 +132,7 @@ export function AlbumScreen({ id, titleHint }: Props) {
         <Image
           source={{ uri: album.coverUrl }}
           style={{ width: 200, height: 200, borderRadius: 16 }}
+          transition={MOTION.dur.quick}
         />
       ) : (
         <View

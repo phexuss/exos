@@ -2,14 +2,18 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   type StyleProp,
+  StyleSheet,
   useWindowDimensions,
   type ViewStyle,
 } from 'react-native';
 
+import { GLASS } from '@/constants/glass';
 import {
+  afterMount,
   DESKTOP_SPRING,
   EASE_OUT,
   prefersReducedMotion,
+  SHEET_SPRING,
 } from '@/constants/motion';
 
 /** A dismissal is quicker than an arrival: it starts fast and gets out of the way. */
@@ -35,6 +39,8 @@ type PresenceProps = {
 
 /** How far a `rise` travels. */
 const RISE = 24;
+/** How dark what is behind a full-screen layer gets while it is up. */
+const SCRIM = 0.5;
 
 /**
  * Keeps an overlay mounted for its exit and slides it in and out on React
@@ -62,46 +68,58 @@ export function Presence({
     }
     if (!mounted) return;
     const reduced = prefersReducedMotion();
-    const run = visible
-      ? reduced
-        ? Animated.timing(progress, {
-            toValue: 1,
-            duration: 0,
-            useNativeDriver: true,
-          })
-        : Animated.spring(progress, {
-            toValue: 1,
-            ...DESKTOP_SPRING,
-            useNativeDriver: true,
-          })
-      : Animated.timing(progress, {
-          toValue: 0,
-          duration: reduced ? 0 : EXIT_MS,
-          easing: EASE_OUT,
+    if (!visible) {
+      const run = Animated.timing(progress, {
+        toValue: 0,
+        duration: reduced ? 0 : EXIT_MS,
+        easing: EASE_OUT,
+        useNativeDriver: true,
+      });
+      run.start(({ finished }) => {
+        if (finished) setMounted(false);
+      });
+      return () => run.stop();
+    }
+    const run = reduced
+      ? Animated.timing(progress, {
+          toValue: 1,
+          duration: 0,
+          useNativeDriver: true,
+        })
+      : Animated.spring(progress, {
+          toValue: 1,
+          // A floating bar may bounce; a full-screen edge must not.
+          ...(from === 'rise' ? DESKTOP_SPRING : SHEET_SPRING),
           useNativeDriver: true,
         });
-    run.start(({ finished }) => {
-      if (finished && !visible) setMounted(false);
-    });
-    return () => run.stop();
-  }, [visible, mounted, progress]);
+    // The layer's content was mounted in this very commit: let it draw
+    // first, so the slide doesn't start behind that work and jump.
+    const cancel = afterMount(() => run.start());
+    return () => {
+      cancel();
+      run.stop();
+    };
+  }, [visible, mounted, progress, from]);
 
   const motion = useMemo(() => {
     if (from === 'rise') {
       return {
-        opacity: progress.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, 1],
-          extrapolate: 'clamp',
-        }),
-        transform: [
-          {
-            translateY: progress.interpolate({
-              inputRange: [0, 1],
-              outputRange: [RISE, 0],
-            }),
-          },
-        ],
+        scrim: null,
+        layer: {
+          opacity: progress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 1],
+            extrapolate: 'clamp',
+          }),
+          transform: [
+            {
+              translateY: progress.interpolate({
+                inputRange: [0, 1],
+                outputRange: [RISE, 0],
+              }),
+            },
+          ],
+        },
       };
     }
     // Clamped: the spring's overshoot must not pull the far edge into view.
@@ -111,21 +129,48 @@ export function Presence({
       extrapolate: 'clamp',
     });
     return {
-      transform: [
-        from === 'right' ? { translateX: offset } : { translateY: offset },
-      ],
+      scrim: {
+        opacity: progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, SCRIM],
+          extrapolate: 'clamp',
+        }),
+      },
+      layer: {
+        transform: [
+          from === 'right' ? { translateX: offset } : { translateY: offset },
+        ],
+      },
     };
   }, [progress, from, width, height]);
 
   if (!mounted) return null;
 
   return (
-    <Animated.View
-      pointerEvents={visible ? pointerEvents : 'none'}
-      style={[style, motion]}
-    >
-      {children}
-    </Animated.View>
+    <>
+      {/* What is behind dims as the layer covers it and clears as it
+          leaves, so the edge of a sliding page reads against the old one.
+          Same stacking level as the layer, drawn just before it. */}
+      {motion.scrim ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              zIndex: StyleSheet.flatten(style)?.zIndex,
+              backgroundColor: GLASS.shadow,
+            },
+            motion.scrim,
+          ]}
+        />
+      ) : null}
+      <Animated.View
+        pointerEvents={visible ? pointerEvents : 'none'}
+        style={[style, motion.layer]}
+      >
+        {children}
+      </Animated.View>
+    </>
   );
 }
 

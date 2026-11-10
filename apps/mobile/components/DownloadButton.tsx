@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { AppDialog } from '@/components/AppDialog';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
@@ -73,7 +74,7 @@ export function DownloadButton({
 
   return (
     <>
-      <Pressable
+      <AnimatedPressable
         onPress={handlePress}
         hitSlop={10}
         style={{
@@ -132,7 +133,7 @@ export function DownloadButton({
             color={status === 'done' ? activeColor : COLORS.textMuted}
           />
         )}
-      </Pressable>
+      </AnimatedPressable>
 
       <AppDialog
         visible={!!errorMessage}

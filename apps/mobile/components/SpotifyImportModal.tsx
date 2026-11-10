@@ -17,6 +17,7 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
 import { GLASS } from '@/constants/glass';
+import { MOTION } from '@/constants/motion';
 import { SOURCES } from '@/constants/sources';
 import { SPACING } from '@/constants/spacing';
 import { useI18n } from '@/hooks/useI18n';
@@ -353,6 +354,7 @@ export function SpotifyImportModal({
               <Image
                 source={{ uri: playlist.coverUrl }}
                 style={{ width: 44, height: 44, borderRadius: 10 }}
+                transition={MOTION.dur.quick}
               />
             ) : (
               <View

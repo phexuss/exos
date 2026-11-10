@@ -7,6 +7,7 @@ import { SourcePill } from '@/components/ui/SourcePill';
 import { COLORS } from '@/constants/colors';
 import { SPACING } from '@/constants/spacing';
 import type { Track } from '@/types/domain';
+import { MOTION } from '@/constants/motion';
 
 type RecentlyPlayedCardProps = {
   track: Track;
@@ -30,6 +31,7 @@ export function RecentlyPlayedCard({ track }: RecentlyPlayedCardProps) {
         <Image
           source={{ uri: track.coverUrl }}
           style={{ width: 56, height: 56, borderRadius: 12 }}
+          transition={MOTION.dur.quick}
         />
       ) : (
         <View

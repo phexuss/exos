@@ -60,11 +60,22 @@ export function PillButton({
         },
         fill
           ? { flex: 1 }
-          : { alignSelf: 'center', paddingHorizontal: SPACING.xxl },
+          : {
+              alignSelf: 'center',
+              paddingHorizontal: SPACING.xxl,
+              // Android now and then measures a short label a few pixels
+              // narrow and wraps it; a floor keeps the pill a pill.
+              minWidth: 148,
+            },
         surface,
       ]}
     >
-      <AppText variant="body" weight="bold" style={{ color, fontSize: 15 }}>
+      <AppText
+        variant="body"
+        weight="bold"
+        numberOfLines={1}
+        style={{ color, fontSize: 15 }}
+      >
         {label}
       </AppText>
     </AnimatedPressable>

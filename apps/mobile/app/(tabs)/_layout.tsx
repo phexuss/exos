@@ -1,15 +1,13 @@
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import * as Haptics from 'expo-haptics';
 import { Tabs } from 'expo-router';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { GlassTabBar } from '@/components/glass/GlassTabBar';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { RouteIn } from '@/components/motion/RouteIn';
-import type { IconName } from '@/components/ui/AppIcon';
-import { AppIcon } from '@/components/ui/AppIcon';
+import { TabIcon } from '@/components/TabIcon';
 import { COLORS } from '@/constants/colors';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
@@ -18,7 +16,7 @@ import { useI18n } from '@/hooks/useI18n';
 // unmounting the whole app (the player and overlays stay up).
 export { ScreenErrorFallback as ErrorBoundary } from '@/components/ScreenErrorFallback';
 
-const TAB_ICONS: Record<string, IconName> = {
+const TAB_ICONS: Record<string, 'home' | 'search' | 'library'> = {
   index: 'home',
   search: 'search',
   library: 'library',
@@ -55,11 +53,7 @@ function CustomTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
               accessibilityRole="tab"
               accessibilityLabel={descriptors[route.key]?.options.title}
               accessibilityState={focused ? { selected: true } : {}}
-              onPressIn={() => {
-                if (Platform.OS === 'ios') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-              }}
+              haptic="tap"
               onPress={() => {
                 const event = navigation.emit({
                   type: 'tabPress',
@@ -83,11 +77,7 @@ function CustomTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
                 paddingVertical: 10,
               }}
             >
-              <AppIcon
-                name={iconName}
-                size={28}
-                color={focused ? COLORS.textPrimary : COLORS.textMuted}
-              />
+              <TabIcon icon={iconName} focused={focused} size={28} />
             </AnimatedPressable>
           );
         })}

@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { Rise } from '@/components/motion/Rise';
@@ -56,6 +56,7 @@ function Cover({
     <Image
       source={{ uri }}
       style={{ width: size, height: size, borderRadius: radius }}
+      transition={MOTION.dur.quick}
     />
   ) : (
     <View
@@ -221,7 +222,7 @@ function SectionTitle({
         {title}
       </AppText>
       {action ? (
-        <Pressable onPress={action.onPress} hitSlop={10}>
+        <AnimatedPressable onPress={action.onPress} hitSlop={10}>
           <AppText
             variant="label"
             weight="medium"
@@ -229,7 +230,7 @@ function SectionTitle({
           >
             {action.label}
           </AppText>
-        </Pressable>
+        </AnimatedPressable>
       ) : null}
     </View>
   );
@@ -406,7 +407,7 @@ export default function HomeScreen() {
           <AppText variant="label" style={{ color: COLORS.textMuted }}>
             {t('home.mixEmptyHint')}
           </AppText>
-          <Pressable
+          <AnimatedPressable
             onPress={() => router.push('/search' as never)}
             style={{
               paddingVertical: 10,
@@ -422,7 +423,7 @@ export default function HomeScreen() {
             >
               {t('home.findMusic')}
             </AppText>
-          </Pressable>
+          </AnimatedPressable>
         </View>
       ) : null}
 
@@ -460,7 +461,7 @@ export default function HomeScreen() {
               <AppText variant="label" style={{ color: COLORS.textMuted }}>
                 {t('common.loadFailed')}
               </AppText>
-              <Pressable
+              <AnimatedPressable
                 onPress={() => setFeedAttempt((n) => n + 1)}
                 hitSlop={8}
                 accessibilityRole="button"
@@ -472,7 +473,7 @@ export default function HomeScreen() {
                 >
                   {t('common.retry')}
                 </AppText>
-              </Pressable>
+              </AnimatedPressable>
             </View>
           ) : (
             <AppText variant="label" style={{ color: COLORS.textMuted }}>

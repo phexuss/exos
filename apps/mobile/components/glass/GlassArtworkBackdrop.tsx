@@ -11,6 +11,8 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 type GlassArtworkBackdropProps = {
   coverUrl?: string;
   accentColor: string;
+  /** Stops the drift (the player is put away). */
+  paused?: boolean;
 };
 
 const DRIFT_MS = 18000;
@@ -31,12 +33,13 @@ function useDriftEnabled(): boolean {
 export function GlassArtworkBackdrop({
   coverUrl,
   accentColor,
+  paused = false,
 }: GlassArtworkBackdropProps) {
   // React Native Animated on the native driver: a Reanimated loop here ran a
   // UI-thread animation, and on Android a shadow-tree commit, every frame
   // the player was open.
   const [drift] = useState(() => new Animated.Value(0));
-  const driftEnabled = useDriftEnabled();
+  const driftEnabled = useDriftEnabled() && !paused;
 
   useEffect(() => {
     if (!driftEnabled || prefersReducedMotion()) {
