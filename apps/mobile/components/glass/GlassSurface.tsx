@@ -105,7 +105,7 @@ export function GlassSurface({
             top: 0,
             left: 0,
             right: 0,
-            height: '60%',
+            height: '45%',
           }}
         />
       ) : null}

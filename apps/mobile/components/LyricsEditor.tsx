@@ -4,7 +4,6 @@ import {
   FlatList,
   Pressable,
   ScrollView,
-  StyleSheet,
   TextInput,
   View,
 } from 'react-native';
@@ -14,6 +13,7 @@ import { AnimatedModal } from '@/components/AnimatedModal';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { PillButton } from '@/components/ui/PillButton';
+import { Segmented } from '@/components/ui/Segmented';
 import { COLORS } from '@/constants/colors';
 import { GLASS } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
@@ -170,49 +170,14 @@ export function LyricsEditor({
         </Pressable>
       </View>
 
-      <View
-        style={{
-          flexDirection: 'row',
-          padding: 4,
-          borderRadius: GLASS.radius.capsule,
-          backgroundColor: COLORS.fill2,
-        }}
-        accessibilityRole="tablist"
-      >
-        {(['text', 'find'] as const).map((m) => {
-          const on = mode === m;
-          return (
-            <Pressable
-              key={m}
-              onPress={() => setMode(m)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: on }}
-              style={{
-                flex: 1,
-                height: 36,
-                borderRadius: GLASS.radius.capsule,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: on ? COLORS.fill2 : 'transparent',
-                borderWidth: on ? StyleSheet.hairlineWidth : 0,
-                borderColor: GLASS.rim,
-              }}
-            >
-              <AppText
-                variant="label"
-                weight={on ? 'bold' : 'medium'}
-                style={{ color: on ? COLORS.textPrimary : COLORS.textMuted }}
-              >
-                {t(
-                  m === 'text'
-                    ? 'lyricsEditor.tabText'
-                    : 'lyricsEditor.tabFind',
-                )}
-              </AppText>
-            </Pressable>
-          );
-        })}
-      </View>
+      <Segmented
+        options={[
+          { key: 'text', label: t('lyricsEditor.tabText') },
+          { key: 'find', label: t('lyricsEditor.tabFind') },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
 
       {mode === 'text' ? (
         <>

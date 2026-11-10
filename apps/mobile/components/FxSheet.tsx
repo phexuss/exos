@@ -3,6 +3,7 @@ import { PanResponder, View } from 'react-native';
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { AppText } from '@/components/ui/AppText';
+import { Segmented } from '@/components/ui/Segmented';
 import { COLORS } from '@/constants/colors';
 import { GLASS } from '@/constants/glass';
 import { useI18n } from '@/hooks/useI18n';
@@ -97,43 +98,12 @@ export function FxSheet({ visible, onClose, accentColor }: FxSheetProps) {
             ) : null}
           </View>
 
-          <View
-            style={{
-              flexDirection: 'row',
-              padding: 4,
-              borderRadius: GLASS.radius.capsule,
-              backgroundColor: COLORS.fill2,
-            }}
-            accessibilityRole="tablist"
-          >
-            {PRESETS.map((p) => {
-              const on = preset === p;
-              return (
-                <AnimatedPressable
-                  key={p}
-                  onPress={() => setFx(FX_PRESETS[p])}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: on }}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 10,
-                    borderRadius: GLASS.radius.capsule,
-                    alignItems: 'center',
-                    backgroundColor: on ? COLORS.accentSubtle : 'transparent',
-                  }}
-                >
-                  <AppText
-                    variant="label"
-                    weight={on ? 'bold' : 'medium'}
-                    numberOfLines={1}
-                    style={{ color: on ? accentColor : COLORS.textSecondary }}
-                  >
-                    {t(`fx.${p}`)}
-                  </AppText>
-                </AnimatedPressable>
-              );
-            })}
-          </View>
+          <Segmented
+            options={PRESETS.map((p) => ({ key: p, label: t(`fx.${p}`) }))}
+            value={preset}
+            onChange={(p) => setFx(FX_PRESETS[p])}
+            accentColor={accentColor}
+          />
 
           <FxRow
             label={t('fx.speed')}

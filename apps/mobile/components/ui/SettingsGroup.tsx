@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
-import { type StyleProp, View, type ViewStyle } from 'react-native';
+import { type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { GlassSurface } from '@/components/glass/GlassSurface';
 import { AppIcon, type IconName } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { COLORS } from '@/constants/colors';
@@ -16,20 +15,28 @@ type SettingsGroupProps = {
 export const GROUP_RADIUS = 22;
 
 /**
- * A block of rows. Glass mode: one tinted card (no live blur, it sits in a
- * scrolling list). Classic: rows under a hairline.
+ * A block of rows. Glass mode: one faintly filled card. Classic: rows under
+ * a hairline.
  */
 export function SettingsGroup({ glass, style, children }: SettingsGroupProps) {
   if (glass) {
+    // Desktop `.group`: a faint white fill with a hairline, no sheen.
     return (
-      <GlassSurface
-        blur={false}
-        variant="regular"
-        style={[{ borderRadius: GROUP_RADIUS }, style]}
-        contentStyle={{ paddingHorizontal: 16 }}
+      <View
+        style={[
+          {
+            borderRadius: GROUP_RADIUS,
+            paddingHorizontal: 16,
+            overflow: 'hidden',
+            backgroundColor: COLORS.fill1,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: COLORS.fill2,
+          },
+          style,
+        ]}
       >
         {children}
-      </GlassSurface>
+      </View>
     );
   }
 

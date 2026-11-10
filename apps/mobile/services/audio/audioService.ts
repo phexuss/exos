@@ -350,7 +350,10 @@ async function ensurePlayer(): Promise<TrackPlayerApi> {
     const { AppKilledPlaybackBehavior, Capability } = trackPlayerModule;
     setupPromise = trackPlayer
       .setupPlayer({
-        autoHandleInterruptions: true,
+        // Interruptions are handled in playbackService (RemoteDuck). Left to
+        // the native player, a request that allows ducking (recording a
+        // voice message) only turns the music down instead of pausing it.
+        autoHandleInterruptions: false,
         autoUpdateMetadata: true,
       })
       .then(() =>
@@ -358,6 +361,7 @@ async function ensurePlayer(): Promise<TrackPlayerApi> {
           android: {
             appKilledPlaybackBehavior:
               AppKilledPlaybackBehavior.ContinuePlayback,
+            alwaysPauseOnInterruption: true,
           },
           capabilities: [
             Capability.Play,
