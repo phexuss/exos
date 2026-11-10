@@ -43,6 +43,8 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const CENTER_EXIT_MS = MOTION.dur.quick;
 const SHEET_EXIT_MS = 220;
+/** How long to wait for the native window before animating anyway. */
+const SHOW_FALLBACK_MS = 250;
 const GLASS_SHEET_GAP = 8;
 /** A dialog grows into place from this size (desktop `menu-in`). */
 const DIALOG_FROM_SCALE = 0.97;
@@ -108,16 +110,25 @@ export function AnimatedModal({
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const [mounted, setMounted] = useState(visible);
+  const [shown, setShown] = useState(false);
   const [progress] = useState(() => new Animated.Value(0));
   const isSheet = variant === 'sheet';
   const exitDuration = isSheet ? SHEET_EXIT_MS : CENTER_EXIT_MS;
 
   // Enter: spring the one progress value up once the modal is on screen.
+  // "On screen" is the native window's `onShow`, not the React commit: on
+  // Android the window takes several frames to come up, and a spring started
+  // before that has mostly played out unseen, so the sheet just pops in.
   useEffect(() => {
     if (!visible) return;
     if (!mounted) {
       setMounted(true);
       return;
+    }
+    if (!shown) {
+      // In case a platform never reports `onShow`.
+      const fallback = setTimeout(() => setShown(true), SHOW_FALLBACK_MS);
+      return () => clearTimeout(fallback);
     }
     if (prefersReducedMotion()) {
       progress.setValue(1);
@@ -129,14 +140,13 @@ export function AnimatedModal({
       ...(isSheet ? SHEET_SPRING : DESKTOP_SPRING),
       useNativeDriver: true,
     });
-    // The native modal window and its content are created in this commit:
-    // start once they are on screen, or the first frames are lost to it.
+    // One more frame for the content's first draw.
     const cancel = afterMount(() => run.start());
     return () => {
       cancel();
       run.stop();
     };
-  }, [visible, mounted, progress, isSheet]);
+  }, [visible, mounted, shown, progress, isSheet]);
 
   // Exit: play it back down, then take the modal off screen. Reopening
   // mid-exit stops this and springs up from wherever it got to.
@@ -149,7 +159,10 @@ export function AnimatedModal({
       useNativeDriver: true,
     });
     run.start(({ finished }) => {
-      if (finished) setMounted(false);
+      if (finished) {
+        setMounted(false);
+        setShown(false);
+      }
     });
     return () => run.stop();
   }, [visible, mounted, exitDuration, progress]);
@@ -199,7 +212,7 @@ export function AnimatedModal({
   const { backgroundColor: callerScrim, ...layout } =
     StyleSheet.flatten(backdropStyle) ?? {};
   const scrim = glassMode
-    ? liveBlur
+    ? liveBlur && SECONDARY_BLUR
       ? GLASS.scrim
       : GLASS.scrimDense
     : (callerScrim ?? GLASS.scrimDense);
@@ -286,6 +299,7 @@ export function AnimatedModal({
       statusBarTranslucent
       navigationBarTranslucent
       onRequestClose={onRequestClose}
+      onShow={() => setShown(true)}
     >
       <Animated.View
         pointerEvents={visible ? 'auto' : 'none'}
@@ -307,7 +321,10 @@ export function AnimatedModal({
             motion.backdrop,
           ]}
         >
-          {glassMode && liveBlur ? (
+          {/* Android re-blurs the whole screen behind on every frame of the
+              sheet's slide, which is what made sheets stutter in Glass
+              mode. The scrim alone carries it there. */}
+          {glassMode && liveBlur && SECONDARY_BLUR ? (
             <BlurView
               pointerEvents="none"
               intensity={GLASS.blur.backdrop}

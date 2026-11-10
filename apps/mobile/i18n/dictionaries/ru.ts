@@ -212,7 +212,7 @@ export const ru = {
     button: 'Скорость и реверб',
     off: 'Обычный',
     sped: 'Sped up',
-    slowed: 'Slowed + reverb',
+    slowed: 'Slowed',
     speed: 'Скорость',
     reverb: 'Реверб',
     hint: 'Тон меняется вместе со скоростью, как в sped up и slowed-версиях. Работает на лету на любом треке.',

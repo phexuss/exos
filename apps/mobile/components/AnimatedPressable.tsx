@@ -21,6 +21,11 @@ type AnimatedPressableProps = Omit<PressableProps, 'style'> & {
    * equivalent of the desktop row hover. Leave out for no fill.
    */
   highlightRadius?: number;
+  /**
+   * How far the fill reaches past the row on each side, for a row inside a
+   * padded card: the fill then spans the card, not just the text column.
+   */
+  highlightBleed?: number;
   /** Touch response as the finger lands. Leave out for rows and cards. */
   haptic?: HapticKind;
 };
@@ -60,6 +65,7 @@ export function AnimatedPressable({
   children,
   scaleValue = 0.97,
   highlightRadius,
+  highlightBleed = 0,
   haptic,
   onPressIn,
   onPressOut,
@@ -92,6 +98,8 @@ export function AnimatedPressable({
           style={[
             StyleSheet.absoluteFill,
             {
+              left: -highlightBleed,
+              right: -highlightBleed,
               borderRadius: highlightRadius,
               backgroundColor: GLASS.innerGlow,
               opacity: lit,

@@ -12,7 +12,9 @@ export const GLASS = {
   tint: {
     regular: 'rgba(28,28,32,0.42)',
     thin: 'rgba(28,28,32,0.24)',
-    thick: 'rgba(22,22,26,0.66)',
+    // Sheets and dialogs: as dense as the desktop menus (`--glass-tint-menu`).
+    // Thinner, a sheet over a bright cover turns to grey mud.
+    thick: 'rgba(24,24,28,0.84)',
   },
   /**
    * Tint for surfaces that would blur but live blur is off: dense enough
@@ -25,15 +27,16 @@ export const GLASS = {
   },
   /** Modal backdrop scrim when live blur is off. */
   scrimDense: 'rgba(0,0,0,0.6)',
-  rim: 'rgba(255,255,255,0.16)',
-  rimStrong: 'rgba(255,255,255,0.26)',
-  highlightTop: 'rgba(255,255,255,0.14)',
+  rim: 'rgba(255,255,255,0.14)',
+  rimStrong: 'rgba(255,255,255,0.24)',
+  // Barely there: a stronger sheen greys out every card it sits on.
+  highlightTop: 'rgba(255,255,255,0.06)',
   highlightBottom: 'rgba(255,255,255,0)',
   innerGlow: 'rgba(255,255,255,0.05)',
   selection: 'rgba(255,255,255,0.14)',
   /** The playing row in a track list (desktop `--fill-3`). */
   fillActive: 'rgba(255,255,255,0.1)',
-  scrim: 'rgba(0,0,0,0.28)',
+  scrim: 'rgba(0,0,0,0.45)',
   shadow: '#000000',
   blur: {
     // iOS materials already add their own vibrancy, Android needs more raw

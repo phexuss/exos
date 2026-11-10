@@ -43,8 +43,10 @@ function ProfileRow({
   return (
     <AnimatedPressable
       onPress={onPress}
-      scaleValue={0.985}
-      highlightRadius={12}
+      // A row in a grouped card stays put and lights up edge to edge.
+      scaleValue={1}
+      highlightRadius={0}
+      highlightBleed={16}
       accessibilityRole="button"
       style={{
         flexDirection: 'row',

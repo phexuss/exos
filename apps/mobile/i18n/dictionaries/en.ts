@@ -213,7 +213,7 @@ export const en = {
     button: 'Speed and reverb',
     off: 'Normal',
     sped: 'Sped up',
-    slowed: 'Slowed + reverb',
+    slowed: 'Slowed',
     speed: 'Speed',
     reverb: 'Reverb',
     hint: 'Pitch moves with the speed, like sped up and slowed edits. Works live on any track.',
