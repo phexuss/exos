@@ -61,6 +61,21 @@ export function getPositionSeconds(): number {
   return state ? state.progress * getDuration() : 0;
 }
 
+/**
+ * Seconds into the current track, asked from the player itself: the store's
+ * copy is a 250 ms poll, too coarse for tap-along lyric timing.
+ */
+export async function readPositionSeconds(): Promise<number> {
+  const trackPlayer = getTrackPlayer();
+  if (!trackPlayer) return getPositionSeconds();
+  try {
+    const { position } = await trackPlayer.getProgress();
+    return Number.isFinite(position) ? position : getPositionSeconds();
+  } catch {
+    return getPositionSeconds();
+  }
+}
+
 let playbackErrorHandler: (() => void) | null = null;
 
 export function setPlaybackErrorHandler(handler: () => void): void {

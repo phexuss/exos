@@ -21,7 +21,7 @@ function parseLrc(lrc: string): LyricLine[] {
 }
 
 /** [mm:ss.xx], the form nearly every player reads. */
-function lrcStamp(sec: number): string {
+export function lrcStamp(sec: number): string {
   const cs = Math.max(0, Math.round(sec * 100));
   const m = Math.floor(cs / 6000);
   const s = Math.floor((cs % 6000) / 100);
@@ -29,7 +29,7 @@ function lrcStamp(sec: number): string {
   return `[${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(c).padStart(2, '0')}]`;
 }
 
-function toLrc(lines: LyricLine[]): string {
+export function toLrc(lines: LyricLine[]): string {
   return lines.map((l) => `${lrcStamp(l.time)}${l.text}`).join('\n');
 }
 

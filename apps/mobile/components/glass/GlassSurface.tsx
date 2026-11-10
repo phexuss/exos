@@ -78,7 +78,7 @@ export function GlassSurface({
         // Fill the wrapper only when it has a size of its own. Yoga grows a
         // flexGrow child up to the parent's max size, so an auto-sized
         // wrapper (a centered dialog) would otherwise stretch to full screen.
-        floating && fillsWrapper ? { flexGrow: 1 } : undefined,
+        floating && fillsWrapper ? { flexGrow: 1, flexShrink: 1 } : undefined,
       ]}
     >
       {nativeBlur ? (
