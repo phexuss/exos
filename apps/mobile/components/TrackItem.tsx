@@ -12,6 +12,7 @@ import { COLORS } from '@/constants/colors';
 import { GLASS } from '@/constants/glass';
 import { MOTION } from '@/constants/motion';
 import { SPACING } from '@/constants/spacing';
+import { artistPageId } from '@/services/artistPage';
 import type { DownloadResult } from '@/services/download/downloadService';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -144,9 +145,8 @@ function TrackItemComponent({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Pressable
             onPress={() => {
-              if (track.source === 'deezer' && track.artist.id) {
-                useOverlayStore.getState().openArtist(track.artist.id);
-              }
+              const page = artistPageId(track);
+              if (page) useOverlayStore.getState().openArtist(page);
             }}
             hitSlop={4}
             style={{ flexShrink: 1 }}

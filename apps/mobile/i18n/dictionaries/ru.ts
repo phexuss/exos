@@ -375,6 +375,10 @@ export const ru = {
     albums: 'Альбомы',
     topTracks: 'Популярные треки',
     fans: 'Поклонников: {count}',
+    followers: 'Подписчиков: {count}',
+    uploads: 'Все треки',
+    showAll: 'Показать все',
+    showLess: 'Свернуть',
   },
   album: {
     notFound: 'Альбом не найден',

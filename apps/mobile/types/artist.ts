@@ -42,6 +42,9 @@ export type ArtistDetails = {
   pictureUrlLarge: string;
   fanCount: number;
   albumCount: number;
+  source: 'deezer' | 'soundcloud';
+  /** SoundCloud: how many tracks the profile has. */
+  trackCount?: number;
 };
 
 export type ArtistAlbum = {

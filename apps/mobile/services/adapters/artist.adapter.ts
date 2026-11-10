@@ -15,6 +15,7 @@ export function mapDeezerArtistToDetails(
     pictureUrlLarge: raw.picture_xl ?? raw.picture_big ?? raw.picture,
     fanCount: raw.nb_fan ?? 0,
     albumCount: raw.nb_album ?? 0,
+    source: 'deezer',
   };
 }
 

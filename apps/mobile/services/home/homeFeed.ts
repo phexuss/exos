@@ -5,6 +5,7 @@
  */
 import { getArtistTopTracks } from '@/services/api/artists';
 import { getSimilarTracks, type SimilarTrack } from '@/services/api/similar';
+import { artistPageId } from '@/services/artistPage';
 import type { Track } from '@/types/domain';
 
 const HALF_LIFE_MS = 14 * 24 * 3600_000;
@@ -12,7 +13,7 @@ const MIX_ARTISTS = 4;
 const MIX_SIZE = 20;
 
 export type YourArtist = {
-  /** Deezer artist id: opens the artist page. */
+  /** Artist page id (Deezer id or `sc:` ref): opens the artist page. */
   id: string;
   name: string;
   coverUrl?: string;
@@ -20,14 +21,14 @@ export type YourArtist = {
 };
 
 /**
- * Deezer artists from recent plays, ranked by plays that fade with age so
+ * Artists (Deezer and SoundCloud) from recent plays, ranked by plays that fade with age so
  * the list follows what you listen to now.
  */
 export function yourArtists(recent: Track[], now = Date.now()): YourArtist[] {
   const byId = new Map<string, YourArtist>();
   for (const track of recent) {
-    const id = track.artist.id;
-    if (track.source !== 'deezer' || !id) continue;
+    const id = artistPageId(track);
+    if (!id) continue;
     const age = Math.max(0, now - (track.playedAt ?? now));
     const weight = 0.5 ** (age / HALF_LIFE_MS);
     const prev = byId.get(id);

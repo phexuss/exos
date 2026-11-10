@@ -28,6 +28,7 @@ import { GLASS } from '@/constants/glass';
 import { MOTION } from '@/constants/motion';
 import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassMode } from '@/hooks/useGlassMode';
+import { artistPageId } from '@/services/artistPage';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import { haptic } from '@/utils/haptics';
@@ -257,12 +258,8 @@ export function MiniPlayer({ blur = true }: MiniPlayerProps) {
             <Pressable
               onPress={(e) => {
                 e.stopPropagation();
-                if (
-                  currentTrack.source === 'deezer' &&
-                  currentTrack.artist.id
-                ) {
-                  useOverlayStore.getState().openArtist(currentTrack.artist.id);
-                }
+                const page = artistPageId(currentTrack);
+                if (page) useOverlayStore.getState().openArtist(page);
               }}
               hitSlop={4}
               style={{ flexShrink: 1 }}
