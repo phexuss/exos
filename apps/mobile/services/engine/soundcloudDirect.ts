@@ -181,3 +181,117 @@ export async function searchSoundCloudDirect(
     .map(toSearchTrack)
     .filter((t): t is SoundCloudTrack => t !== null);
 }
+
+/* ---------- users (artist pages) ---------- */
+
+type ApiUser = {
+  id: number;
+  username?: string;
+  full_name?: string;
+  avatar_url?: string | null;
+  followers_count?: number;
+  track_count?: number;
+  permalink_url?: string;
+};
+
+export type SoundCloudUser = {
+  id: string;
+  name: string;
+  pictureUrl?: string;
+  followers: number;
+  trackCount: number;
+  url?: string;
+};
+
+/**
+ * A user by numeric id, or by profile name as `@name` (the first part of a
+ * track URL) for tracks that came without an id.
+ */
+async function apiUser(ref: string): Promise<ApiUser> {
+  const user = ref.startsWith('@')
+    ? await apiGet<ApiUser>('/resolve', {
+        url: `https://soundcloud.com/${ref.slice(1)}`,
+      })
+    : await apiGet<ApiUser>(`/users/${encodeURIComponent(ref)}`, {});
+  if (!user?.id) throw new Error('SoundCloud user not found');
+  return user;
+}
+
+const userIds = new Map<string, number>();
+
+async function userId(ref: string): Promise<number> {
+  if (/^\d+$/.test(ref)) return Number(ref);
+  const known = userIds.get(ref);
+  if (known) return known;
+  const { id } = await apiUser(ref);
+  userIds.set(ref, id);
+  return id;
+}
+
+export async function soundCloudUser(ref: string): Promise<SoundCloudUser> {
+  const u = await apiUser(ref);
+  userIds.set(ref, u.id);
+  return {
+    id: String(u.id),
+    name: u.username || u.full_name || 'SoundCloud',
+    pictureUrl: art(u.avatar_url),
+    followers: u.followers_count ?? 0,
+    trackCount: u.track_count ?? 0,
+    url: u.permalink_url,
+  };
+}
+
+/** The user's most played tracks. */
+export async function soundCloudUserTopTracks(
+  ref: string,
+): Promise<SoundCloudTrack[]> {
+  const id = await userId(ref);
+  const page = await apiGet<{ collection?: ApiTrack[] }>(
+    `/users/${id}/toptracks`,
+    { limit: '50', linked_partitioning: '1' },
+  );
+  return (page.collection ?? [])
+    .map(toSearchTrack)
+    .filter((t): t is SoundCloudTrack => t !== null);
+}
+
+/** Pages of up to 100; this many is enough for any real profile. */
+const MAX_UPLOAD_PAGES = 20;
+
+/** `next_href` as a path and params for apiGet (minus the old client id). */
+function splitHref(href: string): [string, Record<string, string>] | null {
+  if (!href.startsWith(API)) return null;
+  const [path, query = ''] = href.slice(API.length).split('?');
+  const params: Record<string, string> = {};
+  for (const pair of query.split('&')) {
+    if (!pair) continue;
+    const eq = pair.indexOf('=');
+    const key = decodeURIComponent(eq < 0 ? pair : pair.slice(0, eq));
+    const value =
+      eq < 0 ? '' : decodeURIComponent(pair.slice(eq + 1).replace(/\+/g, ' '));
+    if (key !== 'client_id') params[key] = value;
+  }
+  return [path, params];
+}
+
+/** Every upload of the user, newest first, following SoundCloud's pages. */
+export async function soundCloudUserUploads(
+  ref: string,
+): Promise<SoundCloudTrack[]> {
+  const id = await userId(ref);
+  const out: SoundCloudTrack[] = [];
+  let next: [string, Record<string, string>] | null = [
+    `/users/${id}/tracks`,
+    { limit: '100', linked_partitioning: '1' },
+  ];
+  for (let i = 0; next && i < MAX_UPLOAD_PAGES; i++) {
+    const page: { collection?: ApiTrack[]; next_href?: string | null } =
+      await apiGet(next[0], next[1]);
+    for (const raw of page.collection ?? []) {
+      const t = toSearchTrack(raw);
+      if (t) out.push(t);
+    }
+    next = page.next_href ? splitHref(page.next_href) : null;
+  }
+  return out;
+}

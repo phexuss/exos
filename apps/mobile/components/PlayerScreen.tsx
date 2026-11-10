@@ -36,6 +36,7 @@ import { useDynamicAccent } from '@/hooks/useDynamicAccent';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import { useTrackLyrics } from '@/hooks/useTrackLyrics';
+import { artistPageId } from '@/services/artistPage';
 import * as audio from '@/services/audio/audioService';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -479,8 +480,7 @@ export default function PlayerScreen({
   const handleGesture = dismissGesture?.handle.enabled(scrollableOpen);
   const artRadius = glassMode ? 22 : 16;
   const artSize = Math.floor(Math.min(stage.width, stage.height));
-  const canOpenArtist =
-    currentTrack.source === 'deezer' && !!currentTrack.artist.id;
+  const artistPage = artistPageId(currentTrack);
 
   const header = (
     <View
@@ -640,10 +640,11 @@ export default function PlayerScreen({
             }}
           >
             <Pressable
-              disabled={!canOpenArtist}
+              disabled={!artistPage}
               onPress={() => {
+                if (!artistPage) return;
                 closePlayer();
-                useOverlayStore.getState().openArtist(currentTrack.artist.id);
+                useOverlayStore.getState().openArtist(artistPage);
               }}
               hitSlop={SPACING.sm}
               style={{ flexShrink: 1 }}

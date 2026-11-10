@@ -374,6 +374,10 @@ export const en = {
     albums: 'Albums',
     topTracks: 'Top tracks',
     fans: '{count} fans',
+    followers: '{count} followers',
+    uploads: 'All tracks',
+    showAll: 'Show all',
+    showLess: 'Show less',
   },
   album: {
     notFound: 'Album not found',

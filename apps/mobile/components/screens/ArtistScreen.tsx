@@ -1,7 +1,7 @@
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import {
   SafeAreaView,
@@ -10,6 +10,7 @@ import {
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { Rise } from '@/components/motion/Rise';
+import { SourceBadge } from '@/components/SourceBadge';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
@@ -22,6 +23,8 @@ import { CollectionSkeleton } from '@/components/ui/CollectionSkeleton';
 import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
 import { LoadFailed } from '@/components/ui/LoadFailed';
 import { SectionTitle } from '@/components/ui/SectionTitle';
+import { Skeleton } from '@/components/ui/Skeleton';
+
 import { COLORS } from '@/constants/colors';
 import { MOTION } from '@/constants/motion';
 import { SPACING } from '@/constants/spacing';
@@ -31,6 +34,7 @@ import {
   getArtist,
   getArtistAlbums,
   getArtistTopTracks,
+  getArtistUploads,
 } from '@/services/api/artists';
 import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
@@ -101,6 +105,44 @@ function AlbumCardComponent({ album }: AlbumCardProps) {
 
 const AlbumCard = memo(AlbumCardComponent);
 
+/** Popular tracks shown before "Show all" on a SoundCloud page. */
+const POPULAR_PREVIEW = 5;
+
+/** One line of the page under the photo: a heading, a track, or a placeholder. */
+type Row =
+  | {
+      kind: 'title';
+      key: string;
+      title: string;
+      count?: number;
+      action?: { label: string; onPress: () => void };
+    }
+  | { kind: 'track'; key: string; track: Track; queue: Track[]; index: number }
+  | { kind: 'loading'; key: string };
+
+function LoadingRows() {
+  return (
+    <View style={{ gap: SPACING.lg, paddingHorizontal: 20, paddingTop: 8 }}>
+      {(['62%', '48%', '70%'] as const).map((width) => (
+        <View
+          key={width}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: SPACING.md,
+          }}
+        >
+          <Skeleton width={48} height={48} radius={8} />
+          <View style={{ flex: 1, gap: 6 }}>
+            <Skeleton width={width} height={12} radius={4} />
+            <Skeleton width="34%" height={10} radius={4} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 type Props = {
   id: string;
 };
@@ -113,6 +155,11 @@ export function ArtistScreen({ id }: Props) {
   const [artist, setArtist] = useState<ArtistDetails | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [albums, setAlbums] = useState<ArtistAlbum[]>([]);
+  // SoundCloud only: every upload, which can take a few pages to fetch, so
+  // it fills in after the page is up.
+  const [uploads, setUploads] = useState<Track[]>([]);
+  const [uploadsLoading, setUploadsLoading] = useState(false);
+  const [showAllPopular, setShowAllPopular] = useState(false);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -130,6 +177,17 @@ export function ArtistScreen({ id }: Props) {
     let cancelled = false;
     setLoading(true);
     setFailed(false);
+    setUploads([]);
+    setShowAllPopular(false);
+    setUploadsLoading(true);
+    getArtistUploads(id)
+      .then((list) => {
+        if (!cancelled) setUploads(list);
+      })
+      .catch((e) => console.warn('[Artist] Uploads error:', e))
+      .finally(() => {
+        if (!cancelled) setUploadsLoading(false);
+      });
 
     // Top tracks and albums are extras: a failure there keeps the page.
     Promise.allSettled([
@@ -157,34 +215,103 @@ export function ArtistScreen({ id }: Props) {
     };
   }, [id, attempt]);
 
-  const handlePlay = useCallback(
-    (track: Track) => {
-      setQueue(tracks);
-      play(track);
+  const isSoundCloud = artist?.source === 'soundcloud';
+
+  const rows = useMemo<Row[]>(() => {
+    const out: Row[] = [];
+    const popular =
+      isSoundCloud && !showAllPopular
+        ? tracks.slice(0, POPULAR_PREVIEW)
+        : tracks;
+    if (tracks.length > 0) {
+      out.push({
+        kind: 'title',
+        key: 'title:top',
+        title: t('artist.topTracks'),
+        action:
+          isSoundCloud && tracks.length > POPULAR_PREVIEW
+            ? {
+                label: t(showAllPopular ? 'artist.showLess' : 'artist.showAll'),
+                onPress: () => setShowAllPopular((v) => !v),
+              }
+            : undefined,
+      });
+      popular.forEach((track, index) => {
+        out.push({
+          kind: 'track',
+          key: `top:${track.id}`,
+          track,
+          queue: tracks,
+          index,
+        });
+      });
+    }
+    if (isSoundCloud && (uploadsLoading || uploads.length > 0)) {
+      out.push({
+        kind: 'title',
+        key: 'title:uploads',
+        title: t('artist.uploads'),
+        count: uploadsLoading ? undefined : uploads.length,
+      });
+      if (uploadsLoading) out.push({ kind: 'loading', key: 'loading' });
+      uploads.forEach((track, index) => {
+        out.push({
+          kind: 'track',
+          key: `up:${track.id}`,
+          track,
+          queue: uploads,
+          index,
+        });
+      });
+    }
+    return out;
+  }, [t, isSoundCloud, tracks, uploads, uploadsLoading, showAllPopular]);
+
+  const renderRow = useCallback<ListRenderItem<Row>>(
+    ({ item }) => {
+      if (item.kind === 'title') {
+        return (
+          <View
+            style={{
+              paddingHorizontal: 20,
+              paddingTop: item.key === 'title:top' ? 0 : SPACING.xxl,
+              paddingBottom: SPACING.xs,
+            }}
+          >
+            <SectionTitle
+              title={item.title}
+              count={item.count}
+              action={item.action}
+            />
+          </View>
+        );
+      }
+      if (item.kind === 'loading') return <LoadingRows />;
+      const { track, queue, index } = item;
+      return (
+        <Rise
+          index={index}
+          after={2}
+          animate={index <= MOTION.staggerCap}
+          style={{ paddingHorizontal: 12, paddingTop: 8 }}
+        >
+          <TrackItem
+            track={track}
+            onPress={(picked) => {
+              setQueue(queue);
+              play(picked);
+            }}
+            isActive={currentTrackId === track.id}
+            showDownload
+          />
+        </Rise>
+      );
     },
-    [play, setQueue, tracks],
+    [play, setQueue, currentTrackId],
   );
 
-  const renderTrack = useCallback<ListRenderItem<Track>>(
-    ({ item, index }) => (
-      <Rise
-        index={index}
-        after={2}
-        animate={index <= MOTION.staggerCap}
-        style={{ paddingHorizontal: 12, paddingTop: 8 }}
-      >
-        <TrackItem
-          track={item}
-          onPress={handlePlay}
-          isActive={currentTrackId === item.id}
-          showDownload
-        />
-      </Rise>
-    ),
-    [handlePlay, currentTrackId],
-  );
-
-  const keyExtractor = useCallback((item: Track) => item.id, []);
+  const keyExtractor = useCallback((item: Row) => item.key, []);
+  const getItemType = useCallback((item: Row) => item.kind, []);
 
   const back = (
     <HeaderIconButton
@@ -217,10 +344,14 @@ export function ArtistScreen({ id }: Props) {
 
   const facts = [
     artist.fanCount > 0
-      ? t('artist.fans', { count: formatFanCount(artist.fanCount) })
+      ? t(isSoundCloud ? 'artist.followers' : 'artist.fans', {
+          count: formatFanCount(artist.fanCount),
+        })
       : null,
     artist.albumCount > 0 ? tn('albums', artist.albumCount) : null,
+    artist.trackCount ? tn('tracks', artist.trackCount) : null,
   ].filter(Boolean);
+  const playable = tracks.length > 0 ? tracks : uploads;
 
   const ListHeader = (
     <View style={{ gap: SPACING.xxl, paddingBottom: SPACING.sm }}>
@@ -284,19 +415,34 @@ export function ArtistScreen({ id }: Props) {
             >
               {artist.name}
             </AppText>
-            {facts.length > 0 ? (
-              <AppText variant="label" style={{ color: COLORS.textSecondary }}>
-                {facts.join('  ·  ')}
-              </AppText>
+            {facts.length > 0 || isSoundCloud ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: SPACING.sm,
+                }}
+              >
+                {isSoundCloud ? <SourceBadge source="soundcloud" /> : null}
+                {facts.length > 0 ? (
+                  <AppText
+                    variant="label"
+                    numberOfLines={1}
+                    style={{ color: COLORS.textSecondary, flexShrink: 1 }}
+                  >
+                    {facts.join('  ·  ')}
+                  </AppText>
+                ) : null}
+              </View>
             ) : null}
           </Rise>
         </View>
-        {tracks.length > 0 ? (
+        {playable.length > 0 ? (
           <Rise
             index={1}
             style={{ paddingHorizontal: 20, paddingTop: SPACING.lg }}
           >
-            <PlayButtons tracks={tracks} />
+            <PlayButtons tracks={playable} />
           </Rise>
         ) : null}
       </View>
@@ -317,12 +463,6 @@ export function ArtistScreen({ id }: Props) {
           </ScrollView>
         </View>
       )}
-
-      {tracks.length > 0 && (
-        <View style={{ paddingHorizontal: 20 }}>
-          <SectionTitle title={t('artist.topTracks')} />
-        </View>
-      )}
     </View>
   );
 
@@ -332,9 +472,10 @@ export function ArtistScreen({ id }: Props) {
       style={{ flex: 1, backgroundColor: background }}
     >
       <FlashList
-        data={tracks}
+        data={rows}
         keyExtractor={keyExtractor}
-        renderItem={renderTrack}
+        getItemType={getItemType}
+        renderItem={renderRow}
         ListHeaderComponent={ListHeader}
         onScroll={header.onScroll}
         scrollEventThrottle={16}
