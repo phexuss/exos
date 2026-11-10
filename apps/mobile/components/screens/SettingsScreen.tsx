@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Switch, View } from 'react-native';
 
@@ -37,7 +36,7 @@ export function SettingsScreen() {
   } = useSettingsStore();
   const closeSettings = useOverlayStore((s) => s.closeSettings);
   const openFaq = useOverlayStore((s) => s.openFaq);
-  const router = useRouter();
+  const openTool = useOverlayStore((s) => s.openTool);
   const user = useAuthStore((s) => s.user);
   const [showRestoreLibrary, setShowRestoreLibrary] = useState(false);
   const [showSpotifyImport, setShowSpotifyImport] = useState(false);
@@ -438,10 +437,7 @@ export function SettingsScreen() {
           </AnimatedPressable>
           {isYtdlpAvailable ? (
             <AnimatedPressable
-              onPress={() => {
-                closeSettings();
-                router.push('/youtube-login' as never);
-              }}
+              onPress={() => openTool('youtube-login')}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -472,10 +468,7 @@ export function SettingsScreen() {
             </AnimatedPressable>
           ) : null}
           <AnimatedPressable
-            onPress={() => {
-              closeSettings();
-              router.push('/ytdlp-lab' as never);
-            }}
+            onPress={() => openTool('ytdlp-lab')}
             style={{
               flexDirection: 'row',
               alignItems: 'center',

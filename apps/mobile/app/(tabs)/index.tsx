@@ -9,6 +9,7 @@ import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
 import { GLASS } from '@/constants/glass';
@@ -197,45 +198,6 @@ const ArtistTile = memo(function ArtistTile({
   );
 });
 
-function SectionTitle({
-  title,
-  action,
-}: {
-  title: string;
-  action?: { label: string; onPress: () => void };
-}) {
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'baseline',
-        justifyContent: 'space-between',
-        gap: SPACING.md,
-      }}
-    >
-      <AppText
-        variant="title"
-        weight="bold"
-        numberOfLines={1}
-        style={{ flexShrink: 1 }}
-      >
-        {title}
-      </AppText>
-      {action ? (
-        <AnimatedPressable onPress={action.onPress} hitSlop={10}>
-          <AppText
-            variant="label"
-            weight="medium"
-            style={{ color: COLORS.textSecondary }}
-          >
-            {action.label}
-          </AppText>
-        </AnimatedPressable>
-      ) : null}
-    </View>
-  );
-}
-
 function MixSkeleton() {
   return (
     <View style={{ gap: SPACING.md }}>
@@ -342,7 +304,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <ScreenContainer withTabBar>
+    <ScreenContainer withTabBar title={t('common.home')}>
       <Rise
         style={{
           flexDirection: 'row',

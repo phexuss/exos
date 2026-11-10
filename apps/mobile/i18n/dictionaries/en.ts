@@ -20,6 +20,7 @@ export const en = {
     confirm: 'Confirm',
     loading: 'Loading...',
     retry: 'Retry',
+    clear: 'Clear',
     error: 'Something went wrong',
     tooManyRequests: 'Too many attempts. Please wait a bit and try again.',
     downloadBusy: 'Downloads are busy right now. Please try again in a moment.',

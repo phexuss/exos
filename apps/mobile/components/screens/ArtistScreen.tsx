@@ -2,7 +2,7 @@ import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -13,11 +13,18 @@ import { Rise } from '@/components/motion/Rise';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import {
+  CollapsingHeader,
+  useCollapsingHeader,
+} from '@/components/ui/CollapsingHeader';
+import { PlayButtons } from '@/components/ui/CollectionHero';
+import { CollectionSkeleton } from '@/components/ui/CollectionSkeleton';
 import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
 import { LoadFailed } from '@/components/ui/LoadFailed';
+import { SectionTitle } from '@/components/ui/SectionTitle';
 import { COLORS } from '@/constants/colors';
-import { LAYOUT } from '@/constants/layout';
 import { MOTION } from '@/constants/motion';
+import { SPACING } from '@/constants/spacing';
 import { useGlassMode } from '@/hooks/useGlassMode';
 import { useI18n } from '@/hooks/useI18n';
 import {
@@ -29,6 +36,9 @@ import { useOverlayStore } from '@/store/useOverlayStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import type { ArtistAlbum, ArtistDetails } from '@/types/artist';
 import type { Track } from '@/types/domain';
+
+/** Height of the artist's photo, status bar included. */
+const HERO = 380;
 
 function formatFanCount(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
@@ -112,6 +122,8 @@ export function ArtistScreen({ id }: Props) {
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const closeArtist = useOverlayStore((s) => s.closeArtist);
   const insets = useSafeAreaInsets();
+  const header = useCollapsingHeader(HERO - 120);
+  const fadeTo = glassMode ? 'rgba(0,0,0,0.7)' : COLORS.background;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` re-runs the load on retry.
   useEffect(() => {
@@ -174,18 +186,21 @@ export function ArtistScreen({ id }: Props) {
 
   const keyExtractor = useCallback((item: Track) => item.id, []);
 
+  const back = (
+    <HeaderIconButton
+      icon="chevron-left"
+      tone="overlay"
+      onPress={closeArtist}
+      accessibilityLabel={t('common.back')}
+    />
+  );
+
   if (loading) {
     return (
-      <SafeAreaView
-        style={{
-          flex: 1,
-          backgroundColor: background,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <ActivityIndicator color={COLORS.accent} size="large" />
-      </SafeAreaView>
+      <View style={{ flex: 1, backgroundColor: background }}>
+        <CollectionSkeleton />
+        <CollapsingHeader shown={header.shown} leading={back} />
+      </View>
     );
   }
 
@@ -200,40 +215,38 @@ export function ArtistScreen({ id }: Props) {
     );
   }
 
+  const facts = [
+    artist.fanCount > 0
+      ? t('artist.fans', { count: formatFanCount(artist.fanCount) })
+      : null,
+    artist.albumCount > 0 ? tn('albums', artist.albumCount) : null,
+  ].filter(Boolean);
+
   const ListHeader = (
-    <View style={{ gap: 24 }}>
-      {}
-      <View style={{ alignItems: 'center', gap: 16 }}>
-        <View style={{ position: 'relative', width: '100%', height: 260 }}>
+    <View style={{ gap: SPACING.xxl, paddingBottom: SPACING.sm }}>
+      <View>
+        {/* The photo runs under the status bar and melts into the page, and
+            the name sits on it: no box around the picture. */}
+        <View
+          style={{
+            width: '100%',
+            height: HERO,
+            overflow: 'hidden',
+            // Glass mode has no flat page colour to melt into, so there the
+            // photo ends in a rounded edge of its own.
+            borderBottomLeftRadius: glassMode ? 28 : 0,
+            borderBottomRightRadius: glassMode ? 28 : 0,
+          }}
+        >
           <Image
             source={{ uri: artist.pictureUrlLarge }}
-            style={{
-              width: '100%',
-              height: 260,
-              borderBottomLeftRadius: 24,
-              borderBottomRightRadius: 24,
-            }}
+            style={{ width: '100%', height: HERO }}
             contentFit="cover"
-            transition={MOTION.dur.quick}
-          />
-          <LinearGradient
-            colors={[
-              'transparent',
-              glassMode ? 'rgba(0,0,0,0.35)' : COLORS.background,
-            ]}
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: 100,
-              borderBottomLeftRadius: 24,
-              borderBottomRightRadius: 24,
-            }}
+            transition={MOTION.dur.base}
           />
           <LinearGradient
             pointerEvents="none"
-            colors={['rgba(0,0,0,0.55)', 'transparent']}
+            colors={['rgba(0,0,0,0.5)', 'transparent']}
             style={{
               position: 'absolute',
               top: 0,
@@ -242,61 +255,61 @@ export function ArtistScreen({ id }: Props) {
               height: insets.top + 64,
             }}
           />
-          <HeaderIconButton
-            icon="chevron-left"
-            tone="overlay"
-            onPress={closeArtist}
-            accessibilityLabel={t('common.back')}
+          <LinearGradient
+            pointerEvents="none"
+            colors={['transparent', 'rgba(0,0,0,0.55)', fadeTo]}
+            locations={[0, 0.6, 1]}
             style={{
               position: 'absolute',
-              top: insets.top + (LAYOUT.headerHeight - LAYOUT.iconButton) / 2,
-              left: LAYOUT.gutter,
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: HERO * 0.6,
             }}
           />
-        </View>
-
-        <View style={{ alignItems: 'center', gap: 6, marginTop: -40 }}>
-          <AppText
-            variant="display"
-            weight="bold"
-            style={{ color: COLORS.textPrimary, fontSize: 26 }}
-          >
-            {artist.name}
-          </AppText>
-          <View style={{ flexDirection: 'row', gap: 16 }}>
-            {artist.fanCount > 0 && (
-              <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-                {t('artist.fans', { count: formatFanCount(artist.fanCount) })}
-              </AppText>
-            )}
-            {artist.albumCount > 0 && (
-              <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-                {tn('albums', artist.albumCount)}
-              </AppText>
-            )}
-          </View>
-        </View>
-      </View>
-
-      {}
-      {albums.length > 0 && (
-        <View style={{ gap: 12 }}>
-          <AppText
-            variant="label"
-            weight="medium"
+          <Rise
             style={{
-              color: COLORS.textSecondary,
-              letterSpacing: 1,
-              fontSize: 12,
-              paddingHorizontal: 16,
+              position: 'absolute',
+              left: 20,
+              right: 20,
+              bottom: SPACING.lg,
+              gap: SPACING.xs,
             }}
           >
-            {t('artist.albums').toUpperCase()}
-          </AppText>
+            <AppText
+              variant="display"
+              weight="bold"
+              numberOfLines={2}
+              style={{ fontSize: 36, lineHeight: 40 }}
+            >
+              {artist.name}
+            </AppText>
+            {facts.length > 0 ? (
+              <AppText variant="label" style={{ color: COLORS.textSecondary }}>
+                {facts.join('  ·  ')}
+              </AppText>
+            ) : null}
+          </Rise>
+        </View>
+        {tracks.length > 0 ? (
+          <Rise
+            index={1}
+            style={{ paddingHorizontal: 20, paddingTop: SPACING.lg }}
+          >
+            <PlayButtons tracks={tracks} />
+          </Rise>
+        ) : null}
+      </View>
+
+      {albums.length > 0 && (
+        <View style={{ gap: 12 }}>
+          <View style={{ paddingHorizontal: 20 }}>
+            <SectionTitle title={t('artist.albums')} />
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 12, paddingHorizontal: 16 }}
+            contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}
           >
             {albums.map((al) => (
               <AlbumCard key={al.id} album={al} />
@@ -305,20 +318,10 @@ export function ArtistScreen({ id }: Props) {
         </View>
       )}
 
-      {}
       {tracks.length > 0 && (
-        <AppText
-          variant="label"
-          weight="medium"
-          style={{
-            color: COLORS.textSecondary,
-            letterSpacing: 1,
-            fontSize: 12,
-            paddingHorizontal: 16,
-          }}
-        >
-          {t('artist.topTracks').toUpperCase()}
-        </AppText>
+        <View style={{ paddingHorizontal: 20 }}>
+          <SectionTitle title={t('artist.topTracks')} />
+        </View>
       )}
     </View>
   );
@@ -333,7 +336,15 @@ export function ArtistScreen({ id }: Props) {
         keyExtractor={keyExtractor}
         renderItem={renderTrack}
         ListHeaderComponent={ListHeader}
+        onScroll={header.onScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
+      />
+      <CollapsingHeader
+        title={artist.name}
+        shown={header.shown}
+        leading={back}
       />
     </SafeAreaView>
   );

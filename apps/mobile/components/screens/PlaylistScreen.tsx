@@ -12,9 +12,14 @@ import { TrackActionsSheet } from '@/components/TrackActionsSheet';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import {
+  CollapsingHeader,
+  useCollapsingHeader,
+} from '@/components/ui/CollapsingHeader';
+import { CollectionHero } from '@/components/ui/CollectionHero';
+import { CollectionSkeleton } from '@/components/ui/CollectionSkeleton';
+import { HeaderIconButton } from '@/components/ui/HeaderIconButton';
 import { LoadFailed } from '@/components/ui/LoadFailed';
-import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS } from '@/constants/colors';
 import { LAYOUT } from '@/constants/layout';
 import { MOTION } from '@/constants/motion';
@@ -49,6 +54,8 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
   const currentTrackId = usePlayerStore((s) => s.currentTrack?.id);
   const closePlaylist = useOverlayStore((s) => s.closePlaylist);
   const accentColor = useDynamicAccent();
+  // The bar's title appears once the cover and the name have scrolled away.
+  const header = useCollapsingHeader(280);
 
   const [playlist, setPlaylist] = useState<PlaylistRow | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -106,7 +113,7 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
 
   const renderTrack = useCallback<ListRenderItem<Track>>(
     ({ item, index }) => (
-      <Rise index={index} after={2} animate={index <= MOTION.staggerCap}>
+      <Rise index={index} after={3} animate={index <= MOTION.staggerCap}>
         <TrackItem
           track={item}
           onPress={handlePlay}
@@ -227,13 +234,19 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
 
   if (!playlist) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: background }}>
-        <View style={{ paddingHorizontal: 20, paddingTop: 60, gap: 12 }}>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} width="100%" height={56} />
-          ))}
-        </View>
-      </SafeAreaView>
+      <View style={{ flex: 1, backgroundColor: background }}>
+        <CollectionSkeleton />
+        <CollapsingHeader
+          shown={header.shown}
+          leading={
+            <HeaderIconButton
+              icon="chevron-left"
+              onPress={closePlaylist}
+              accessibilityLabel={t('common.back')}
+            />
+          }
+        />
+      </View>
     );
   }
 
@@ -242,37 +255,33 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
       style={{ flex: 1, backgroundColor: background }}
       edges={['top']}
     >
-      <ScreenHeader
-        title={playlist.name}
-        leading="back"
-        onLeadingPress={closePlaylist}
-        trailing={{
-          icon: 'settings',
-          onPress: openEditModal,
-          accessibilityLabel: t('library.editPlaylist'),
-        }}
-        gutter={LAYOUT.gutter}
-      />
-
-      <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-        <AppText variant="caption" style={{ color: COLORS.textMuted }}>
-          {tn('tracks', tracks.length)}
-        </AppText>
-      </View>
-
       <FlashList
         data={tracks}
         keyExtractor={keyExtractor}
         renderItem={renderTrack}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
+        onScroll={header.onScroll}
+        scrollEventThrottle={16}
+        ListHeaderComponent={
+          <CollectionHero
+            coverUrl={playlist.cover_url}
+            icon="music"
+            title={playlist.name}
+            detail={tn('tracks', tracks.length)}
+            tracks={tracks}
+          />
+        }
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: LAYOUT.headerHeight,
+          paddingBottom: 100,
+        }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View
             style={{
-              flex: 1,
               alignItems: 'center',
               justifyContent: 'center',
-              paddingTop: 80,
+              paddingTop: 32,
               gap: 8,
             }}
           >
@@ -281,6 +290,25 @@ export function PlaylistScreen({ id }: PlaylistScreenProps) {
               {t('playlist.empty')}
             </AppText>
           </View>
+        }
+      />
+
+      <CollapsingHeader
+        title={playlist.name}
+        shown={header.shown}
+        leading={
+          <HeaderIconButton
+            icon="chevron-left"
+            onPress={closePlaylist}
+            accessibilityLabel={t('common.back')}
+          />
+        }
+        trailing={
+          <HeaderIconButton
+            icon="settings"
+            onPress={openEditModal}
+            accessibilityLabel={t('library.editPlaylist')}
+          />
         }
       />
 

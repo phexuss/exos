@@ -23,6 +23,11 @@ import { TrackActionsSheet } from '@/components/TrackActionsSheet';
 import { TrackItem } from '@/components/TrackItem';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
+import {
+  CollapsingHeader,
+  useCollapsingHeader,
+} from '@/components/ui/CollapsingHeader';
+import { SectionTitle } from '@/components/ui/SectionTitle';
 import { COLORS } from '@/constants/colors';
 import { GLASS } from '@/constants/glass';
 import { LAYOUT } from '@/constants/layout';
@@ -396,6 +401,7 @@ export default function LibraryScreen() {
   );
 
   const keyExtractor = useCallback((item: Track) => item.id, []);
+  const header = useCollapsingHeader();
 
   const ListHeader = (
     <View style={{ gap: SPACING.xxl }}>
@@ -404,17 +410,7 @@ export default function LibraryScreen() {
       </AppText>
 
       <View style={{ gap: 12 }}>
-        <AppText
-          variant="label"
-          weight="medium"
-          style={{
-            color: COLORS.textSecondary,
-            letterSpacing: 1,
-            fontSize: 11,
-          }}
-        >
-          {t('library.playlists').toUpperCase()}
-        </AppText>
+        <SectionTitle title={t('library.playlists')} />
         {playlists.length === 0 ? (
           <View
             style={{
@@ -453,25 +449,10 @@ export default function LibraryScreen() {
         )}
       </View>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <AppText
-          variant="label"
-          weight="medium"
-          style={{
-            color: COLORS.textSecondary,
-            letterSpacing: 1,
-            fontSize: 11,
-          }}
-        >
-          {t('library.downloadedSection').toUpperCase()}
-        </AppText>
-        <AppText
-          variant="caption"
-          style={{ color: COLORS.textMuted, fontSize: 11 }}
-        >
-          {tracks.length}
-        </AppText>
-      </View>
+      <SectionTitle
+        title={t('library.downloadedSection')}
+        count={tracks.length}
+      />
     </View>
   );
 
@@ -489,6 +470,8 @@ export default function LibraryScreen() {
         keyExtractor={keyExtractor}
         renderItem={renderTrack}
         extraData={selectedIds}
+        onScroll={header.onScroll}
+        scrollEventThrottle={16}
         ListHeaderComponent={ListHeader}
         ListHeaderComponentStyle={{ marginBottom: 12 }}
         ListEmptyComponent={
@@ -522,6 +505,7 @@ export default function LibraryScreen() {
         }}
         showsVerticalScrollIndicator={false}
       />
+      <CollapsingHeader title={t('library.title')} shown={header.shown} />
 
       <TrackActionsSheet
         track={selectedTrack}
