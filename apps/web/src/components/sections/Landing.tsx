@@ -10,8 +10,8 @@ import { Showcase } from '@/components/sections/desktop/Showcase';
 import { SoundTuning } from '@/components/sections/desktop/SoundTuning';
 import { Download } from '@/components/sections/download/Download';
 import Faq from '@/components/sections/faq/Faq';
-import Features from '@/components/sections/features/Features';
 import { AndroidHero } from '@/components/sections/mobile/AndroidHero';
+import { MobileFeatures } from '@/components/sections/mobile/MobileFeatures';
 import Sources from '@/components/sections/sources/Sources';
 import type { Releases } from '@/lib/releases';
 
@@ -39,7 +39,7 @@ export function Landing({ releases }: { releases: Releases }) {
         ) : (
           <>
             <AndroidHero android={releases.android} />
-            <Features />
+            <MobileFeatures />
           </>
         )}
         <Sources />
