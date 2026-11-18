@@ -16,22 +16,6 @@
     "description": "A local music player with smart search for Deezer and SoundCloud. Download tracks and listen offline.",
     "download": "Download APK"
   },
-  "Features": {
-    "title": "WHY EXØS",
-    "description": "Fast search, local library, and synchronous lyrics without unnecessary noise.",
-    "search": {
-      "title": "Smart Search",
-      "description": "Search tracks simultaneously on Deezer and SoundCloud. Preview before downloading."
-    },
-    "download": {
-      "title": "Download all",
-      "description": "Save tracks locally and listen offline from SoundCloud or Deezer."
-    },
-    "lyrics": {
-      "title": "Synchronous Lyrics",
-      "description": "Enjoy real-time lyrics while listening to your favorite tracks."
-    }
-  },
   "Sources": {
     "title": "Sources",
     "description": "Choose between the rich database of Deezer and the speed of SoundCloud.",
@@ -90,7 +74,7 @@
     },
     "mobile": {
       "question": "What about the phone app?",
-      "answer": "It is back in development and in beta, with new builds shipping often. The account is shared, so what you downloaded on the phone shows up in the desktop app's cloud."
+      "answer": "It is in beta, with new builds shipping often. Audio is found and downloaded on the phone itself, like on desktop. The account is shared, so what you downloaded on the phone shows up in the desktop app's cloud."
     }
   },
   "Footer": {
@@ -221,7 +205,7 @@
     },
     "inside": {
       "title": "What runs where",
-      "lead": "The phone app asks the server for audio. The desktop app turns that around: your computer finds, plays and downloads the audio itself, and it never passes through the server.",
+      "lead": "The desktop app does not ask the server for audio: your computer finds, plays and downloads it itself, and it never passes through the server. The phone app works the same way, with the server only as a fallback.",
       "local": {
         "title": "On your computer",
         "items": [
@@ -310,7 +294,7 @@
   "Android": {
     "hero": {
       "badge": "Beta",
-      "description": "The phone app is back in development. Playback and downloads now run on the phone itself, and new builds ship often. It is a beta, so some things may still act up.",
+      "description": "The phone app is back in development. Search, playback and downloads run on the phone itself through yt-dlp, from your own IP, and new builds ship often. It is a beta, so some things may still act up.",
       "toDesktop": "The desktop app",
       "badgeVersion": "Beta · {version}"
     },
@@ -320,6 +304,49 @@
       "button": "Download APK",
       "leadFallback": "The latest Android build is on the releases page.",
       "buttonSize": "Download APK · {size} MB"
+    },
+    "features": {
+      "title": "What it does",
+      "engine": {
+        "title": "Your phone does the work",
+        "text": "yt-dlp runs on the phone and goes online from your own IP, like the desktop app. It keeps itself up to date, and SoundCloud is searched and played directly. The EXØS server steps in only when something fails."
+      },
+      "offline": {
+        "title": "Listen offline",
+        "text": "Downloads play instantly with no network, lyrics included. An account is optional: you can search, listen and download without one."
+      },
+      "home": {
+        "title": "A Home that knows you",
+        "text": "Your artists, ranked by what you play lately; a Mix of Last.fm picks and those artists' best tracks; and a shelf of tracks like the one you just played."
+      },
+      "artists": {
+        "title": "Artists and albums",
+        "text": "Deezer artist pages with albums, and SoundCloud artist pages with popular tracks and every upload. Play a whole album with one tap."
+      },
+      "playlists": {
+        "title": "Playlists and Spotify",
+        "text": "Make your own playlists, with a cover. Bring your Liked Songs and your own playlists over from Spotify: EXØS finds the tracks and downloads them into a playlist of the same name."
+      },
+      "sound": {
+        "title": "Sped up and slowed + reverb",
+        "text": "Speed and reverb, live on any track, with pitch following speed. Use the presets or set your own with the sliders."
+      },
+      "lyrics": {
+        "title": "Lyrics you can fix",
+        "text": "Synced lyrics from LRCLIB light up line by line. Missing or the wrong version? Search LRCLIB yourself, paste your own (LRC and SRT work too), or sync them by tapping Line as each line starts."
+      },
+      "cloud": {
+        "title": "Cloud backup",
+        "text": "Downloads, playlists and history live in your account. On a new phone the library comes back with one tap, and your downloads show up in the desktop app's cloud too."
+      },
+      "youtube": {
+        "title": "YouTube sign-in",
+        "text": "If YouTube asks you to confirm you are not a bot, sign in to Google right in the app. The cookies stay on the phone and only ever go to YouTube."
+      },
+      "feel": {
+        "title": "Glass, gestures and haptics",
+        "text": "A glass interface like the desktop app's, and a player tinted by the cover. Pull the mini player up into the player or swipe it sideways to skip, long titles scroll, and taps answer with a light buzz. Controls work from the lock screen too."
+      }
     }
   }
 }
